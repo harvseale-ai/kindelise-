@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kindlelise"
+version = "0.1.0"
+description = "Student-scale, server-rendered Kindlelise MVP"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "Django==5.2.15",
+    "gunicorn==26.0.0",
+    "psycopg[binary]==3.3.4",
+    "stripe==15.3.0",
+    "whitenoise==6.12.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==8.4.2",
+    "pytest-django==4.11.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["config*", "kindlelise*"]
+exclude = ["_achive*"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+addopts = "-ra"
+testpaths = ["tests"]
