@@ -45,6 +45,8 @@ def create_verified_test_profile(user=None, verified_by=None, **changes):
         "verified_by": verified_by,
     }
     values.update(changes)
+    if values.get("available_from") is not None:
+        values.setdefault("availability_start", Profile.AvailabilityStart.TODAY)
     return Profile.objects.create(user=user, **values)
 
 
@@ -134,9 +136,11 @@ def replace_ollama_request_with_fake(monkeypatch, request_owner, outcome):
     """
 
     def fake_request(*args, **kwargs):
+        fake_request.calls.append((args, kwargs))
         if isinstance(outcome, BaseException):
             raise outcome
         return outcome
 
+    fake_request.calls = []
     monkeypatch.setattr(request_owner, "urlopen", fake_request)
     return fake_request
