@@ -27,8 +27,9 @@ register or sign in
 → block or privately report
 ```
 
-Stripe supplies one platform subscription. Ollama Cloud supplies one optional
-unsent-draft editing action.
+Stripe supplies one no-card 30-day Premium trial followed by a GBP 4.99 yearly
+platform subscription. Ollama Cloud supplies one optional unsent-draft editing
+action.
 
 The assessment uses supervised test accounts only. It does not implement age
 verification and must not be presented as ready for unrestricted public use.
@@ -44,10 +45,11 @@ transaction. A partial account/profile pair must not remain after failure.
 
 Django must own password hashing, authentication, sessions and CSRF protection.
 Kindlelise must not store a second password or create a replacement account model.
-Registration and sign-in use Django's normal unique username and password; email
-is not an MVP authentication or ownership identifier. Registration creates the
-account and profile, then redirects to sign-in without authenticating the new
-account. Sign-out is a CSRF-protected POST action.
+Registration and sign-in use one canonical lowercase email and password through
+Django. The same email is stored in the unique username field and email field;
+Stripe still never uses it as ownership proof. Registration creates the account
+and profile, then redirects to sign-in without authenticating the new account.
+Sign-out is a CSRF-protected POST action.
 
 ### PR-ACC-003 — Staff verification gates social access
 
@@ -68,7 +70,7 @@ described as biometric, document, age, identity or safety proof.
 
 ### PR-ACC-005 — Authentication responses do not leak account state
 
-Sign-in errors must not reveal whether a particular username exists. After sign-in,
+Sign-in errors must not reveal whether a particular email exists. After sign-in,
 the server may follow only a validated local redirect destination; it must reject
 external or otherwise unsafe redirect targets. Session rotation and authentication
 remain Django responsibilities.
@@ -78,8 +80,8 @@ remain Django responsibilities.
 ### PR-PRO-001 — Profile fields are deliberately small
 
 A user may edit only display name, short biography, broad named area, controlled
-interests and optional `available_until`. The browser must not edit verification,
-Stripe ownership or subscription fields.
+interests and the optional fixed availability-start choice. The browser must not
+edit verification, Stripe ownership or subscription fields.
 
 The MVP has no uploaded profile image, external social handles, health fields,
 ethnicity, sexuality, weight, private-home meeting preference or dark-profile
@@ -95,14 +97,17 @@ A reviewed initial data migration seeds Coffee, Walking, Museums, Live music,
 Cinema, Food, Games and Study. Staff may maintain the vocabulary through Django
 Admin; initial setup does not depend on manual entry.
 
-### PR-PRO-003 — Available now is temporary and derived
+### PR-PRO-003 — Free now is start-based and derived
 
-“Available now” is true only while `available_until` is later than the current
-time. There is no second boolean or presence-history model. A user may replace or
-clear the timestamp through profile editing.
+`Free now` is true only when the calculated `available_from` exists and is no
+later than the current time. There is no second boolean or presence-history
+model. A form-only Free now switch starts the same signal immediately; it is not
+stored separately. A user may instead choose Today, Tomorrow, This week or As and
+when, or clear the signal through profile editing. Availability is optional and
+never gates profile completion or staff verification.
 
-Expiry removes the current indication and any available-now filter match. It does
-not claim to erase the stored timestamp automatically.
+The start signal remains current until the owner clears or replaces it. It does
+not imply physical presence, agreement to meet or continuous app use.
 
 ## 4. Discovery rules
 
@@ -126,8 +131,8 @@ not reveal why a profile is absent or how many hidden results exist.
 
 ### PR-DSC-004 — Filters have simple free and premium limits
 
-All eligible users may filter controlled interests and optionally require a
-future `available_until`.
+All eligible users may filter controlled interests and optionally require an
+`available_from` start that has arrived.
 
 - Free: current broad area and at most two interest filters.
 - Premium: current area plus configured nearby broad areas and at most five
@@ -280,10 +285,16 @@ report. Eligible message-specific reporting uses the existing report route.
 
 ### PR-PAY-001 — Stripe owns payment collection
 
-Kindlelise provides one subscription product and configured price. Stripe-hosted
-Checkout collects payment information, and Stripe's hosted customer portal
-handles cancellation and payment management. Kindlelise must not render or store
-card or bank fields.
+Kindlelise provides one subscription product and one configured GBP 499 yearly
+price. A local account without recorded Stripe history receives exactly one
+30-day trial through Stripe-hosted Checkout, without required upfront payment
+details. Stripe history prevents another trial; a later eligible Checkout omits
+the trial, and an active or trialing subscription is managed rather than
+duplicated.
+
+At trial end Stripe creates and hosts the first annual invoice. Stripe's hosted
+invoice and customer portal handle GBP 4.99 payment, yearly renewal and
+cancellation. Kindlelise must not render or store card or bank fields.
 
 ### PR-PAY-002 — Stripe ownership never comes from email
 
@@ -303,15 +314,19 @@ Returning from Checkout must not grant Premium. The application accepts only:
 ```text
 checkout.session.completed
 customer.subscription.updated
+invoice.paid
 customer.subscription.deleted
 ```
 
 Checkout completion records identifiers only. A newer verified subscription
-update grants Premium only for `active` or `trialing` with a future
-`access_until`. Deletion sets local status to Cancelled, clears `access_until`
-and updates the latest provider-event time while retaining the Stripe customer and
-subscription identifiers. Local `stripe_status` remains nullable until a supported
-subscription event supplies it.
+update grants only a `trialing` period with a future trial end. An `active`
+subscription update alone is not payment evidence and cannot extend access. A
+verified `invoice.paid` for the linked configured price and active subscription
+grants only its future paid annual service period. Unpaid, past-due and expired
+states deny Premium. Deletion sets local status to Cancelled, clears
+`access_until` and updates the latest provider-event time while retaining the
+Stripe customer and subscription identifiers. Local `stripe_status` remains
+nullable until a supported subscription event supplies it.
 
 ### PR-PAY-004 — Webhook processing is ordered and atomic
 
@@ -337,10 +352,10 @@ Stripe payment must not be presented as identity or age verification.
 
 ### PR-PAY-006 — The customer portal requires a known Stripe customer
 
-The Manage subscription action may open Stripe's hosted customer portal only when
-the signed-in account already has its own recorded Stripe customer ID. Missing or
-conflicting ownership must fail safely and must not create, guess or borrow a
-customer relationship.
+The post-trial Pay or Manage subscription action may open Stripe's hosted invoice
+or customer portal only when the signed-in account already has its own recorded
+Stripe customer ID. Missing or conflicting ownership must fail safely and must
+not create, guess or borrow a customer relationship.
 
 ## 9. Ollama Cloud rules
 
@@ -466,7 +481,8 @@ approved boundary change:
 - blind corroboration, sealed safety experiences or safety circles;
 - check-ins, emergency workflows or continuous monitoring;
 - moderation findings, sanctions, appeals or evidence registries;
-- multiple subscriptions, invoices, usage billing or custom payment forms;
+- multiple subscriptions, local invoice models, usage billing or custom payment
+  forms;
 - AI replies, translation, moderation, profiling or automatic sending;
 - media, external notifications, native applications or third-party advertising;
 - automated retention, privacy-rights or deletion orchestration.

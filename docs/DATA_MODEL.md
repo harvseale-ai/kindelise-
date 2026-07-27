@@ -27,13 +27,16 @@ Implementation status: designed, not yet confirmed by generated migrations. Befo
 
 1. Use Django's existing `User`; do not create a replacement account model.
 2. Put all ten Kindlelise model classes in `kindlelise/models.py`.
-3. Use Django's normal unique username and password authentication and normal
-   primary-key type. Email is not an MVP authentication identifier, and the
-   student MVP does not require a custom UUID scheme.
+3. Use one canonical lowercase email and password through Django authentication,
+   storing the email in both Django's unique username field and email field. Keep
+   Django's normal primary-key type; no custom User model, backend or UUID scheme
+   is required.
 4. Store all datetimes as timezone-aware values through Django and PostgreSQL.
 5. Store only stable broad-area keys configured in `settings.py`; never store
    arbitrary area text, browser coordinates, exact distance or location history.
-6. Store availability once as `Profile.available_until`; do not create a presence model.
+6. Store availability as one start choice plus its calculated
+   `Profile.available_from`; do not create a presence model or stored `free_now`
+   boolean.
 7. Store plain-text messages and escape them when rendering; never mark user text as safe HTML.
 8. Keep verification and plan approval as fields on their owning records; do not create provider, evidence or decision-history models.
 9. Preserve plan and participation history through states rather than routine hard deletion.
@@ -124,14 +127,14 @@ forms; views do not invent different limits.
 
 Django's built-in user model owns:
 
-- username and the minimum registration fields;
+- one canonical email stored in both the unique username field and email field;
 - password hashing and password validation;
 - `is_active` for account eligibility;
 - session authentication;
 - `is_staff` and permissions for Django Admin.
 
-Kindlelise does not add email-based authentication, date of birth, age, payment
-state, verification-provider data or exact location to `User`. Manual profile
+Kindlelise does not add a custom authentication backend, date of birth, age,
+payment state, verification-provider data or exact location to `User`. Manual profile
 verification is the MVP eligibility gate. Stripe is not an age-verification
 service. The assessment uses supervised test accounts only and must not be
 presented as ready for unrestricted public use.
@@ -145,7 +148,8 @@ presented as ready for unrestricted public use.
 | `biography` | bounded `TextField` | No | Short public introduction. |
 | `broad_area` | bounded `CharField(blank=True, default="")` | Before verification | Stable configured area key whose label is shown as the named discovery district. |
 | `interests` | `ManyToManyField(Interest)` | No | Controlled interests selected by the profile owner. |
-| `available_until` | nullable `DateTimeField` | No | Expiring “available now” statement. |
+| `availability_start` | bounded choice `CharField` | No | Owner's `today`, `tomorrow`, `this_week` or `as_and_when` start choice. |
+| `available_from` | nullable `DateTimeField` | No | Start instant calculated from the relative choice. |
 | `is_verified` | `BooleanField` | Yes | Staff-controlled eligibility state; default false. |
 | `verified_at` | nullable `DateTimeField` | No | Time of the current manual verification. |
 | `verified_by` | nullable `ForeignKey(User)` | No | Staff account that recorded the current verification. |
@@ -154,19 +158,23 @@ Registration must be able to create the one-to-one profile before the user has
 completed it. The initial unverified row therefore stores empty strings for
 `display_name` and `broad_area`; these are deliberate onboarding values, not
 valid completed-profile values. `ProfileDetailsForm` requires a non-empty display
-name and a stable key from `KINDLELISE_AREAS`, and the staff verification action
-refuses the profile until both values are valid. Once the profile is complete,
+name and a stable key from `KINDLELISE_AREAS`, and both staff verification
+controls refuse the profile until both values are valid. Once the profile is complete,
 the two fields are required and ordinary profile edits cannot clear them.
+Availability is optional throughout onboarding and verification and may be added
+or cleared later.
 
 Derived, not stored:
 
-- `Profile.is_available_now(at_time)` is true only when `available_until` is later than the supplied time;
+- `Profile.is_available_now(at_time)` is true only when `available_from` exists
+  and is no later than the supplied time;
 - age, distance, coordinates and online status do not exist in this slice;
 - discovery visibility is a policy result, not a profile boolean.
 
 Browser profile forms may update only display name, biography, a configured stable
-area key, availability and interests. They reject arbitrary area text and must
-never bind `is_verified`, `verified_at` or `verified_by`.
+area key, availability and interests. The form-only `Free now` switch maps to the
+same availability fields and is not stored separately. Forms reject arbitrary
+area text and must never bind `is_verified`, `verified_at` or `verified_by`.
 
 Verification fields must remain consistent:
 
@@ -324,7 +332,7 @@ searchable accusation.
 | `stripe_customer_id` | nullable unique `CharField` | No | Stripe customer ownership link. |
 | `stripe_subscription_id` | nullable unique `CharField` | No | Stripe subscription ownership link. |
 | `stripe_status` | nullable bounded provider-state field | No | Latest accepted subscription status; remains null until a subscription event supplies it. |
-| `access_until` | nullable `DateTimeField` | No | Latest accepted billing-period end. |
+| `access_until` | nullable `DateTimeField` | No | Verified trial end or paid annual service-period end. |
 | `latest_provider_event_at` | nullable `DateTimeField` | No | Orders accepted subscription-state events; Checkout completion does not advance it. |
 | `updated_at` | `DateTimeField` | Yes | Local projection update time. |
 
@@ -335,17 +343,32 @@ stripe_status is active or trialing
 AND access_until is later than the current time
 ```
 
+The configured Stripe price—not a database field—is GBP 499 recurring yearly.
+Trial eligibility is derived from the absence of recorded Stripe customer and
+subscription history. The first completed Checkout may create one 30-day trial;
+retained identifiers ensure cancellation cannot manufacture a second trial. No
+new trial-count or payment model is required.
+
 Checkout creation, browser return and `checkout.session.completed` never grant
 Premium. That event records trusted identifiers only and does not advance
 `latest_provider_event_at`. A newer `customer.subscription.updated` may grant
-access. `customer.subscription.deleted` sets `stripe_status` to `cancelled`,
-clears `access_until` and updates `latest_provider_event_at`.
+only a `trialing` period through its future trial end. An `active` update alone
+does not prove payment and cannot extend access. A verified `invoice.paid` for
+the linked configured annual price sets `stripe_status` to `active` and may extend
+`access_until` to its future paid service-period end.
+`customer.subscription.deleted` sets `stripe_status` to `cancelled`, clears
+`access_until` and updates `latest_provider_event_at`.
 
 Provider timestamps can tie. For equal-time subscription-state events, deletion
 has fail-closed precedence and may revoke access; an equal-time non-deletion event
 cannot overwrite an already accepted state. A safely refused supported event is
 still recorded as processed so Stripe does not retry it forever. Older events
 never change the projection.
+
+A delayed `invoice.paid` may extend `access_until` to a later paid service-period
+end only when the linked subscription has not been revoked by a newer deletion or
+ineligible state. This asynchronous-event allowance never rewinds the accepted
+status or revives a cancelled subscription.
 
 Subscription deletion retains `stripe_customer_id` and `stripe_subscription_id`. Keeping those identifiers allows safe matching of later provider events and continued access to Stripe's customer portal; it does not retain payment-card data or Premium access.
 
@@ -356,7 +379,7 @@ Email is never subscription ownership proof. Ownership comes from the immutable 
 | Field | Intended type | Required | Purpose |
 | --- | --- | ---: | --- |
 | `stripe_event_id` | unique bounded `CharField` | Yes | Makes verified provider-event processing idempotent. |
-| `event_type` | bounded `CharField` | Yes | One of the three supported event types. |
+| `event_type` | bounded `CharField` | Yes | One of the four supported event types. |
 | `provider_created_at` | `DateTimeField` | Yes | Provider ordering time. |
 | `processed_at` | nullable `DateTimeField` | No | Set only after subscription processing succeeds. |
 
@@ -364,6 +387,7 @@ Supported types are exactly:
 
 - `checkout.session.completed`;
 - `customer.subscription.updated`;
+- `invoice.paid`;
 - `customer.subscription.deleted`.
 
 Receipt and subscription changes share one short transaction: lock or create the nullable receipt, stop a processed duplicate, compare provider time, validate ownership, apply permitted projection changes and then set `processed_at`. If any step fails, the transaction rolls back both the subscription change and the new receipt, so no failed unprocessed receipt remains committed. Nullability is needed only while that atomic workflow is in progress; it is not a retry queue or processing-state design.
@@ -422,7 +446,7 @@ These rules require policies, selectors or services because they depend on sever
   and a broad-area key currently present in `KINDLELISE_AREAS`.
 - Discovery uses permitted broad named areas and the approved free or Premium interest limit.
 - Discovery excludes the viewer and a block in either direction.
-- “Available now” includes only profiles whose `available_until` remains in the future.
+- “Free now” includes only profiles whose `available_from` start has arrived.
 - Premium changes area and filter limits only; it never overrides verification, blocking or visibility rules.
 
 ### Plans and participation
@@ -460,11 +484,12 @@ These rules require policies, selectors or services because they depend on sever
 ### Stripe and Ollama
 
 - Stripe signatures are checked against the exact raw request body before trusted event parsing.
-- Only the three supported event types reach the subscription update service.
+- Only the four supported event types reach the subscription update service.
 - A signature-valid unsupported event is acknowledged without a receipt row or subscription change.
 - Duplicate and older events cannot overwrite an already accepted newer projection.
 - A committed receipt always has `processed_at`; a processing failure rolls back the new receipt and subscription change together.
-- Premium requires both an allowed status and future `access_until`.
+- Premium requires a webhook-authorised trial or paid state and future
+  `access_until`; active status alone is not payment evidence.
 - Subscription deletion clears status-based access but retains the stored Stripe identifiers.
 - Ollama editing requires current conversation membership, active verification and no block in either direction.
 - Only the unsent draft and fixed editing goal are sent to Ollama.
@@ -478,11 +503,13 @@ These rules require policies, selectors or services because they depend on sever
 ```text
 registered with empty profile fields
 → user completes display name and broad area → unverified complete profile
-→ staff verifies → verified
-→ staff removes verification → unverified
+→ authorised staff verifies through either mapped Admin control → verified
+→ authorised staff removes verification through either control → unverified
 ```
 
-Staff cannot verify the initial incomplete profile. Removing verification denies
+Both the Profile actions and User Permissions checkbox update the same three
+Profile fields; there is no User verification duplicate. Staff cannot verify the
+initial incomplete profile. Removing verification denies
 discovery, plans and messaging without deleting the completed profile or existing
 product records.
 
@@ -524,8 +551,12 @@ checkout.session.completed
 → record trusted Stripe identifiers only
 
 newer customer.subscription.updated
-→ record provider status and billing-period end
-→ Premium is derived only when status and time both qualify
+→ record provider status
+→ grant only a trialing period through its future trial end
+
+invoice.paid for linked configured annual price and active subscription
+→ stripe_status = active
+→ access_until = future paid annual service-period end
 
 customer.subscription.deleted
 → stripe_status = cancelled
@@ -553,7 +584,7 @@ Selectors return only data needed by the mapped page.
 
 | Projection | Durable inputs | Required exclusions |
 | --- | --- | --- |
-| Discovery grid | `Profile`, interests, current subscription projection | Self, inactive/unverified accounts, disallowed areas, either-direction blocks, expired availability when filter selected. |
+| Discovery grid | `Profile`, interests, current subscription projection | Self, inactive/unverified accounts, disallowed areas, either-direction blocks, missing/not-yet-started availability when the filter is selected. |
 | Plan list | `Plan`, participation state | Other owners' pending/rejected/cancelled plans; past or unapproved public plans. |
 | Plan page | `Plan`, joined count, viewer participation | Any plan the viewer is not authorised to see. |
 | Inbox | `Conversation`, other profile, `updated_at` | Conversations blocked in either direction. |
@@ -569,7 +600,7 @@ Selectors never mutate records, repair state, call Stripe or call Ollama.
 | --- | --- | --- |
 | Display name, biography and selected interests | Public within authorised product pages | Eligible profiles only. |
 | Broad area | Coarse public product data | Eligible discovery/profile views; never coordinates. |
-| `available_until` | Time-limited profile signal | May produce “available now”; exact expiry need not be displayed. |
+| `availability_start`, `available_from` | Coarse profile availability signal | May produce “Free now”; no history or duplicate presence boolean is stored. |
 | Verification fields | Restricted staff/account state | Public UI may show a simple state, not reviewer identity. |
 | Plan fields and joined count | Product-visible | Only under plan visibility rules. |
 | Participation | Relationship data | The user's own participation; plan pages derive only the current joined count required by the slice. |
@@ -650,6 +681,10 @@ Before building views or templates, confirm:
 - [ ] Concurrent first-conversation creation returns one authoritative pair.
 - [ ] A left participant can rejoin only through the mapped service rules.
 - [ ] Checkout completion cannot produce Premium access.
+- [ ] A first eligible Checkout receives exactly 30 trial days without required
+      upfront payment details; Stripe history prevents a second trial.
+- [ ] Active status alone cannot grant a paid period; a valid `invoice.paid`
+      event for the configured annual price can grant its bounded service period.
 - [ ] An older or duplicate Stripe event cannot overwrite newer accepted state.
 - [ ] Subscription deletion clears `access_until`.
 - [ ] Subscription deletion sets `stripe_status` to `cancelled`, retains Stripe

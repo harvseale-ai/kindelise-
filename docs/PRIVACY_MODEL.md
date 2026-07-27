@@ -22,9 +22,10 @@ account and profile
 → optional block or private report
 ```
 
-Stripe provides one premium subscription. Ollama Cloud may suggest an edit to one
-unsent message draft after an explicit button press. Neither integration becomes
-an identity, age-verification, moderation or profiling system.
+Stripe provides one no-card 30-day Premium trial followed by a GBP 4.99 yearly
+subscription. Ollama Cloud may suggest an edit to one unsent message draft after
+an explicit button press. Neither integration becomes an identity,
+age-verification, moderation or profiling system.
 
 Privacy is enforced by server-side queries and permissions. Hiding a field or
 button in a template is never treated as access control.
@@ -53,11 +54,11 @@ verification and must not be presented as ready for unrestricted public use.
 
 | Data | Why Kindlelise needs it | Normal visibility |
 | --- | --- | --- |
-| Django username, password hash and session | Authentication and account ownership | Account owner and necessary Django authentication processes; password is never displayed. Email is not an MVP authentication identifier. |
+| Canonical authentication email, Django password hash and session | Authentication and account ownership | Account owner and necessary Django authentication processes; password is never displayed. The email is stored in both Django's unique username field and email field but is not public profile data or Stripe ownership proof. |
 | Display name and biography | A small public social profile | Eligible verified users who may open the profile. |
 | Stable configured broad-area key and displayed label | Coarse discovery grouping | Eligible verified users; never presented as exact location. Arbitrary area text is rejected. |
 | Controlled interests | Profile description and optional discovery filtering | Eligible verified users. |
-| `available_until` | Derive a temporary “available now” display/filter | Eligible verified users while current; no separate presence history. |
+| `availability_start`, `available_from` | Derive the coarse `Free now` display/filter | Eligible verified users after the start arrives; no separate presence history. |
 | Verification state, reviewer and time | Gate discovery, plans and messaging | Account owner sees current state; authorised staff manage it. |
 | Plan details and public URL | Describe one proposed public-place activity for staff review and participation | Owner and staff while pending; eligible users after approval. |
 | Plan approval reviewer and time | Record the minimal staff decision | Authorised staff; users see the plan status, not internal staff details. |
@@ -105,12 +106,14 @@ weakens verification, blocking, reporting or object-level permissions.
 - Free accounts may filter their current broad area and at most two interests.
 - Premium accounts may use configured nearby broad areas and at most five
   interests.
-- The optional available-now filter checks only whether `available_until` is
-  later than the current time.
-- An expired value is not displayed as current availability. Expiry does not
-  create a history row or silently delete the stored timestamp.
-- The account owner may replace or clear `available_until` through profile
-  editing.
+- The optional `Free now` filter checks only whether `available_from` exists and
+  is no later than the current time.
+- The account owner may choose a coarse relative availability start, replace it
+  or clear it through profile editing. Availability is optional during profile
+  completion and staff verification.
+- The profile's Free now switch is form input only and updates the same start
+  fields; it creates no stored presence boolean.
+- No history row or duplicate presence boolean is created.
 - No result contains coordinates, a distance, direction, movement, hidden-result
   count or paid ranking.
 
@@ -207,9 +210,12 @@ claimed as an emergency service.
 
 ## 9. Stripe boundary
 
-Stripe-hosted Checkout collects payment information. Stripe's hosted customer
-portal handles cancellation and payment management. Kindlelise never renders or
-stores card or bank fields.
+Stripe-hosted Checkout creates the subscription but does not require payment
+details for an account's first 30-day trial. At trial end Stripe creates and
+hosts the GBP 4.99 annual invoice; its hosted invoice and customer portal handle
+payment and cancellation. Kindlelise never renders or stores card or bank fields.
+Recorded Stripe history prevents a second trial, and a paid subscription renews
+yearly unless cancelled through the hosted portal.
 
 Checkout success, Checkout cancellation and portal-return destinations are built
 by the server from the named local account route. The browser cannot supply them.
@@ -217,13 +223,14 @@ by the server from the named local account route. The browser cannot supply them
 Checkout receives the immutable local user ID as `client_reference_id` and
 subscription metadata. Kindlelise never assigns Stripe ownership from email.
 Returning from Checkout grants no access. Only a verified, newer subscription
-webhook may set an `active` or `trialing` status with a future `access_until`.
-Deletion clears premium access.
+webhook may grant a future trial end, and only a verified paid-invoice webhook may
+grant the paid annual service period. An active subscription status by itself is
+not payment evidence. Deletion clears premium access.
 
 The webhook accepts only `checkout.session.completed`,
-`customer.subscription.updated` and `customer.subscription.deleted`. Unsupported
-signed event types receive a success acknowledgement but create no receipt and no
-local subscription change.
+`customer.subscription.updated`, `invoice.paid` and
+`customer.subscription.deleted`. Unsupported signed event types receive a
+success acknowledgement but create no receipt and no local subscription change.
 
 The raw webhook body is used to verify Stripe's signature and must not be logged
 or stored as the webhook receipt. The minimal receipt contains the Stripe event
@@ -291,7 +298,7 @@ procedure and clear explanation of any records that must be retained.
   result set.
 - Ollama failure preserves the original draft and sends nothing automatically.
 - Stripe failure or a browser return leaves premium access unchanged until a
-  verified webhook establishes it.
+  verified trialing update or paid invoice establishes it.
 - Duplicate or older Stripe events cannot overwrite newer accepted state.
 - Invalid report references are rejected without creating a partial report.
 - Failed plan review or an unavailable external URL does not publish the plan.
@@ -321,14 +328,15 @@ Before demonstrating the MVP, verify that:
 
 1. only active verified profiles enter discovery;
 2. broad areas are used and no coordinates are collected;
-3. the available-now filter uses only future `available_until` values;
+3. the `Free now` filter uses only `available_from` values whose start has arrived;
 4. either-direction blocking excludes discovery and conversation access;
 5. pending/rejected plans stay private to their owner and staff;
 6. plan pages show joined counts rather than participant identities;
 7. messages are escaped and absent from logs;
 8. reports are private, references are validated and the reported account is not
    notified;
-9. Stripe Checkout cannot grant premium access and no card data is stored;
+9. Stripe Checkout cannot grant premium access, the trial requires no upfront
+   card data and Kindlelise stores no card data;
 10. Stripe deletion clears `access_until` and premium access;
 11. Ollama receives only an explicitly submitted unsent draft and fixed goal;
 12. AI failure preserves the original draft and never sends a message;

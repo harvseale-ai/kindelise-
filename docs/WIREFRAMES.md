@@ -136,7 +136,7 @@ They are never premium-only.
 ├─────────────────────────────────┤
 │ Create an account               │
 │                                 │
-│ Username                        │
+│ Email                           │
 │ [_____________________________] │
 │ Password                        │
 │ [_____________________________] │
@@ -159,7 +159,7 @@ verification is required before discovery, plans or messages become available.
 ├─────────────────────────────────┤
 │ Sign in                         │
 │                                 │
-│ Username                        │
+│ Email                           │
 │ [_____________________________] │
 │ Password                        │
 │ [_____________________________] │
@@ -169,8 +169,8 @@ verification is required before discovery, plans or messages become available.
 └─────────────────────────────────┘
 ```
 
-Errors do not reveal whether a particular username is registered. Email is not an
-MVP registration or sign-in field.
+Errors do not reveal whether a particular email is registered. Registration and
+sign-in canonicalise the supplied email to lowercase through Django authentication.
 
 ## 7. Own account and profile editing
 
@@ -187,7 +187,7 @@ Reference shape: captures 06, 10 and 14.
 │       broad area                │
 ├─────────────────────────────────┤
 │ Verification: Pending/Verified  │
-│ Available now: On/Off           │
+│ Availability: Free now/Not set  │
 │ Interests                       │
 │ [interest] [interest]           │
 │ About                           │
@@ -222,8 +222,10 @@ approved profile fields.
 │ Interests                    [>]│
 ├─────────────────────────────────┤
 │ AVAILABILITY                    │
-│ Available until             [>] │
-│ [Clear availability]            │
+│ Free now                    [●] │
+│ Available from              [>] │
+│ Today · Tomorrow · This week    │
+│ As and when · Add later         │
 ├─────────────────────────────────┤
 │ ACCOUNT                         │
 │ Verification status             │
@@ -234,8 +236,8 @@ approved profile fields.
 ```
 
 The form never exposes staff verification or Stripe fields as editable input.
-“Available now” is derived from whether `available_until` is still in the future;
-there is no separate stored switch.
+Availability is optional during profile completion. The fixed relative choice is
+converted to one `available_from` start; there is no separate stored switch.
 
 ## 8. Public profile
 
@@ -257,7 +259,7 @@ identity surface rather than an uploaded image.
 │                                 │
 │ About                           │
 │ biography text                  │
-│ Available now, when current     │
+│ Free now, when start arrived    │
 │                                 │
 │ [ Message ] [ Block ] [ Report ]│
 └─────────────────────────────────┘
@@ -309,7 +311,7 @@ The existing compact bottom-sheet shape is retained with only implemented fields
 │ Filters                   Clear │
 │ Broad area                  [>] │
 │ Interests                   [>] │
-│ Available now               [ ] │
+│ Free now                    [●] │
 │                                 │
 │            [Apply filters]      │
 └─────────────────────────────────┘
@@ -586,7 +588,13 @@ This is a panel or rendering mode inside the existing account page and
 ┌─────────────────────────────────┐
 │ [back]          Premium         │
 ├─────────────────────────────────┤
-│ Current status: Free/Premium    │
+│ 30 days free                    │
+│ Then £4.99 for one year         │
+│ Renews yearly unless cancelled  │
+│ No payment details upfront      │
+│                                 │
+│ Status: Free/Trial/Payment due/ │
+│         Premium                 │
 │ Access until: date, if active   │
 │                                 │
 │ Premium includes:              │
@@ -596,23 +604,33 @@ This is a panel or rendering mode inside the existing account page and
 │ It does not change verification│
 │ blocking or reporting rules.   │
 │                                 │
-│ [Upgrade with Stripe]          │
-│ or [Manage subscription]       │
+│ [Start 30-day trial]            │
+│ or [Pay £4.99 for one year]     │
+│ or [Manage subscription]        │
 └─────────────────────────────────┘
 ```
 
-Checkout and subscription management open Stripe-hosted pages. Kindlelise never
-renders or stores card fields, and returning from Checkout does not itself prove
-premium access.
+Only the action appropriate to the server-derived state is rendered. `Start
+30-day trial` is available only before that local account has recorded Stripe
+history. `Pay £4.99 for one year` or `Manage subscription` opens Stripe's hosted
+invoice/customer-portal surface after the trial; a second trial is never offered.
+
+Checkout, post-trial payment and subscription management open Stripe-hosted
+pages. Kindlelise never renders or stores card fields, and returning from Checkout
+does not itself prove premium access. Stripe creates the first annual invoice when
+the no-card trial ends. The interface does not promise an email notification
+unless the applicable Stripe email setting is enabled.
 
 Checkout success, Checkout cancellation and portal-return destinations are built
 by the server from the named account route. No browser field or query parameter
 chooses those destinations.
 
 After a Checkout return, the account page may show `Waiting for Stripe
-confirmation` while access remains Free. Only a verified subscription webhook
-changes the display to Premium. Accounts with a recorded Stripe customer may use
-Manage subscription even when current premium access is inactive.
+confirmation` while access remains Free. A verified trialing webhook changes the
+display to Trial; only a verified paid invoice changes an ended trial to paid
+Premium. An active subscription status without paid-invoice evidence cannot do
+so. Accounts with a recorded Stripe customer may use Manage subscription even
+when current premium access is inactive.
 
 ## 18. Empty, error and restricted states
 
@@ -657,7 +675,7 @@ file responsibilities rather than obsolete production domains.
 | `services.py` | Changes saved state and owns transactions. |
 | `selectors.py` | Reads authorised page data without changing it. |
 | `views.py` | Translates HTTP requests and responses. |
-| `admin.py` | Performs staff verification and manual plan review. |
+| `admin.py` | Performs staff verification—including the User Permissions checkbox—and manual plan review. |
 | `ai_message_editor.py` | Requests one bounded unsent-draft suggestion. |
 
 Templates display only values returned by authorised views/selectors. They do not
@@ -703,7 +721,8 @@ A student MVP screen is acceptable only if it:
 12. makes Block and private Report plainly reachable, including an eligible
     message-specific report action;
 13. uses only server-approved report references and shows private confirmation;
-14. presents one Stripe premium subscription through hosted pages;
+14. presents one 30-day trial followed by a Stripe-hosted GBP 4.99 yearly
+    Premium subscription, without a repeat trial;
 15. explains that premium never weakens verification, blocking or reporting;
 16. treats the premium comparison as an account-page mode, not a new route;
 17. includes loading, empty, error, offline and restricted states;

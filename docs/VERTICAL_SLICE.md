@@ -65,8 +65,9 @@ age verification and must not be presented as ready for unrestricted public use.
    library when they already solve the problem adequately.
 9. **One authoritative owner per behaviour.** Views translate HTTP requests, forms validate
    user input, policies answer permission questions, services own user/provider
-   workflows, mapped admin actions own staff review, selectors read state and
-   models enforce durable truth.
+   workflows, mapped admin actions and the mapped User-admin verification
+   control own staff review, selectors read state and models enforce durable
+   truth.
 10. **Fail closed.** Missing verification, permission, Stripe state or provider
     response must never grant access.
 11. **Keep private data out of logs.** Never log message bodies, report text,
@@ -87,12 +88,25 @@ age verification and must not be presented as ready for unrestricted public use.
 ### Accounts and profiles
 
 - Django authentication, password hashing, sessions and CSRF protection.
-- Username and password are the only MVP authentication credentials. Email is not
-  used to register, sign in or resolve account ownership.
+- Email address and password are the only MVP authentication credentials. The
+  registration form trims and canonicalises the email address to lowercase, then
+  stores that same value in Django User's unique `username` field and `email`
+  field. Sign-in canonicalises the supplied email in the same way before using
+  Django authentication. This keeps Django's existing User model and unique
+  account identifier without a custom authentication backend or migration.
 - One profile per account.
 - A display name, short biography, broad named area and controlled interests.
-- Optional `available_until` for a small “available now” indication.
+- Optional `available_from` for a small user-set availability-start indication.
+  Profile completion and staff verification never require it. The profile form
+  offers a form-only `Free now` switch plus `Today`, `Tomorrow`, `This week` and
+  `As and when`: the switch, Today, This week and As and when start at the
+  submission time, while Tomorrow starts at local midnight. The user may clear
+  the signal later. The switch is input convenience, not a stored boolean.
 - Staff-controlled `is_verified`, `verified_at` and `verified_by` fields.
+- Authorised staff may set or remove that profile verification either through
+  the Profile list actions or a `Profile verified` checkbox in the related
+  Django User change page's Permissions section. Both entry points enforce the
+  same profile-completion and reviewer/time rules.
 - Only active, verified accounts may use discovery, plans or messaging.
 
 ### Discovery
@@ -102,7 +116,8 @@ age verification and must not be presented as ready for unrestricted public use.
   nearby-area mapping. Forms store stable keys rather than free-text area names.
 - Optional filtering by the reviewed data migration's initial interest vocabulary:
   Coffee, Walking, Museums, Live music, Cinema, Food, Games and Study.
-- Optional filtering to profiles whose `available_until` is still in the future.
+- An optional `Free now` switch filtering to profiles whose `available_from`
+  exists and is no later than the current time.
 - Mutual block exclusion before a profile enters the result set.
 - Free accounts: current broad area and at most two interest filters.
 - Premium accounts: current area plus configured nearby named areas and at most
@@ -167,21 +182,42 @@ the stable-key and explicit-nearby-map rules remain unchanged.
 
 ### Stripe premium subscription
 
-- One subscription product and one configured Stripe price ID.
-- Stripe-hosted Checkout starts a subscription.
+- One subscription product and one configured recurring Stripe price of GBP 499
+  (£4.99) per year.
+- Each local account may receive one 30-day Premium trial. Trial eligibility is
+  exhausted once that account has a recorded Stripe customer or subscription;
+  cancelling and starting again never creates a second trial.
+- Stripe-hosted Checkout starts the subscription with
+  `payment_method_collection=if_required`, `trial_period_days=30` and
+  `trial_settings.end_behavior.missing_payment_method=create_invoice` for a
+  trial-eligible account. This does not require payment details before the trial.
+- A later eligible Checkout for an account with Stripe history uses the same
+  annual price without another trial. An existing `active` or `trialing`
+  subscription cannot be duplicated and is managed through the portal instead.
+- At trial end Stripe creates the first GBP 4.99 annual invoice. Stripe's hosted
+  invoice and customer-portal surfaces request and manage payment; Kindlelise
+  does not render a local card form or promise that an email is sent unless the
+  applicable Stripe email setting is enabled.
+- The paid subscription renews yearly at GBP 4.99 unless it is cancelled through
+  Stripe's hosted customer portal.
 - Stripe's hosted customer portal handles cancellation and payment management.
 - A verified webhook is authoritative for local premium access.
-- Only `checkout.session.completed`, `customer.subscription.updated` and
-  `customer.subscription.deleted` are handled.
+- Only `checkout.session.completed`, `customer.subscription.updated`,
+  `invoice.paid` and `customer.subscription.deleted` are handled.
 - Checkout completion records the Stripe customer and subscription identifiers;
-  a newer subscription update grants access only for `active` or `trialing`, and
-  subscription deletion removes access.
+  a trialing update grants trial access, a paid invoice grants the paid service
+  period, and subscription deletion removes access.
 - Checkout includes the immutable local user ID as `client_reference_id` and as
   `kindlelise_user_id` in subscription metadata. Webhooks resolve ownership from
   those trusted identifiers or an existing unique Stripe-ID link, never email.
 - `checkout.session.completed` records identifiers only and never grants premium.
-- `customer.subscription.updated` grants premium only for `active` or `trialing`
-  with a future billing-period end stored as `access_until`.
+- `customer.subscription.updated` grants Premium only for `trialing` with a
+  future trial end stored as `access_until`. An `active` status without a
+  verified paid invoice is not payment evidence and cannot extend access.
+- `invoice.paid` grants Premium only for the linked configured annual price, an
+  `active` subscription and a future paid service-period end stored as
+  `access_until`. An unpaid, `past_due`, `unpaid`, expired or otherwise
+  ineligible state denies Premium.
 - No card or bank details are stored by Kindlelise.
 
 ### Ollama Cloud message editing
@@ -212,7 +248,7 @@ The following are future work and must not enter the MVP without approval:
 - Verification history as a separate model.
 - Message attachments, live delivery, typing state or read receipts.
 - Moderation findings, sanctions, appeals or evidence registries.
-- Multiple subscription tiers, invoices, usage billing or custom cancellation UI.
+- Multiple subscription tiers, usage billing or custom payment/cancellation UI.
 - AI reply generation, translation, moderation or automatic sending.
 - Native mobile applications and third-party advertising.
 
@@ -303,7 +339,7 @@ behaviour.
 
 | Entity | Essential fields |
 | --- | --- |
-| `Profile` | `user`, `display_name`, `biography`, `broad_area`, `interests`, `available_until`, `is_verified`, `verified_at`, `verified_by` |
+| `Profile` | `user`, `display_name`, `biography`, `broad_area`, `interests`, `available_from`, `is_verified`, `verified_at`, `verified_by` |
 | `Interest` | `name` |
 | `Plan` | `owner`, `title`, `description`, `public_place`, `public_url`, `starts_at`, `capacity`, `status`, `approved_at`, `approved_by`, `meeting_details_locked_at`, `created_at` |
 | `Participation` | `plan`, `user`, `status[joined\|left]`, `joined_at`, `left_at` |
@@ -323,8 +359,9 @@ Registration creates the required one-to-one profile before profile completion.
 That new unverified row may therefore have empty `display_name` and `broad_area`
 values. `ProfileDetailsForm` requires a non-empty display name and a configured
 broad-area key when the account completes or updates the profile, and staff
-verification refuses a profile until both values are valid. Empty profile values
-are an onboarding state only and never make an account eligible for social
+verification refuses a profile until both values are valid. Availability remains
+optional and may be added after profile completion or verification. Empty profile
+values are an onboarding state only and never make an account eligible for social
 features.
 
 ### Exact input and provider-value bounds
@@ -333,7 +370,7 @@ Models and forms reuse these limits; views do not invent different limits:
 
 | Value | Maximum or approved choices |
 | --- | --- |
-| Username | Django's normal 150-character username limit |
+| Authentication email | Valid email address, canonical lowercase, at most 150 characters because Django's unique `username` field stores the same value |
 | Profile display name | 80 characters |
 | Profile biography | 500 characters |
 | Broad-area key | 20 characters and present in `KINDLELISE_AREAS` |
@@ -431,15 +468,26 @@ Application invariants must enforce:
   metadata or an existing unique Stripe-ID link; customer email is never used.
 - A Stripe customer or subscription ID already linked to another account is
   rejected rather than reassigned.
+- The configured Stripe price is one GBP 499 yearly recurring price. A first
+  completed subscription Checkout may apply exactly 30 trial days without
+  upfront payment details; any later Checkout for that local account omits the
+  trial, and an existing active or trialing subscription is not duplicated.
 - Duplicate Stripe events are harmless because the event ID is unique.
 - Older Stripe events cannot overwrite a newer accepted subscription state.
+- Because Stripe delivers related event types asynchronously, a delayed
+  `invoice.paid` may extend `access_until` to its later paid service-period end
+  only while the linked subscription remains active and has not been revoked or
+  made ineligible by a newer event. It never rewinds status or revives a
+  cancelled subscription.
 - `checkout.session.completed` stores identifiers only. A newer
-  `customer.subscription.updated` supplies status and `access_until`;
-  `customer.subscription.deleted` removes access.
+  `customer.subscription.updated` supplies status but grants or extends access
+  only for a trialing period. A verified `invoice.paid` supplies the paid annual
+  service-period end; `customer.subscription.deleted` removes access.
 - Subscription deletion retains the stored Stripe customer and subscription IDs
   for safe event matching and customer-portal ownership.
-- Premium access requires `stripe_status` to be `active` or `trialing` and
-  `access_until` to be later than the current time.
+- Premium access requires a webhook-authorised `trialing` or paid `active` state
+  and `access_until` later than the current time. An active subscription update
+  alone, or an unpaid, past-due or expired invoice, cannot grant a paid year.
 - Stripe event receipt and subscription updates occur in one short database
   transaction: lock or create receipt, reject a processed event, compare provider
   time, update subscription, then mark the receipt processed. No Stripe network
@@ -506,6 +554,15 @@ fields, constraints or an already mapped service cannot do the job more simply.
 
 ### `kindlelise/admin.py`
 
+- `KindleliseUserAdmin` — Extend Django's existing User change page with a
+  form-only `Profile verified` checkbox in Permissions. Show and accept the
+  control only for staff who have both Django User change permission and
+  Kindlelise Profile change permission. On save, recheck that the related
+  profile has a non-empty display name and configured broad-area key before
+  verification; record the requesting staff account/time when checked and clear
+  all three verification fields when unchecked. Do not add a custom admin URL,
+  duplicate verification field or alternative public workflow.
+
 - `verify_selected_profiles_for_discovery_plans_and_messages(model_admin, request, profiles)` —
   Recheck each selected profile, verify only currently unverified profiles with a
   non-empty display name and configured broad-area key for discovery, plans and
@@ -521,8 +578,9 @@ fields, constraints or an already mapped service cannot do the job more simply.
   out of discovery, without deleting them or exposing private staff notes.
 
 Ordinary `ModelAdmin` registrations provide list, filter and read views for
-profiles, interests, plans, reports, subscriptions and webhook receipts. No
-custom admin URLs or review forms are planned.
+profiles, interests, plans, reports, subscriptions and webhook receipts. The
+User Permissions checkbox uses a private admin-bound form only; no custom admin
+URL or public review form is added.
 
 Admin actions iterate through selected records and recheck each state; they never
 blindly call `queryset.update()`. They skip already locked, cancelled or otherwise
@@ -551,8 +609,8 @@ Model classes:
 Readable model helpers:
 
 - `Profile.is_available_now(at_time)` — Return `True` only when the profile has an
-  `available_until` time later than the supplied timezone-aware time; never change
-  the stored availability.
+  `available_from` time no later than the supplied timezone-aware time; never
+  change the stored availability.
 - `Plan.is_open_for_joining(at_time)` — Return `True` only when the plan is
   approved, starts after the supplied time, is not cancelled and has spare
   capacity; never create participation here.
@@ -573,15 +631,19 @@ ID. A report label must never include its private description.
 
 Form classes:
 
-- `AccountSignUpForm` — Validates one unique username, password and password
-  confirmation using Django's normal username rules; it does not collect email.
-- `ProfileDetailsForm` — Validates display name, biography, broad area,
-  availability and selected interests. It accepts only configured stable area keys
-  and never exposes verification fields.
+- `AccountSignUpForm` — Validates one canonical lowercase email address, password
+  and password confirmation using Django's password rules. It rejects an email
+  already stored in Django's unique `username` field; the service stores the same
+  canonical value in both `username` and `email`.
+- `ProfileDetailsForm` — Validates display name, biography, broad area, optional
+  form-only `Free now` switch, availability-start choice and selected interests.
+  It accepts only configured stable area keys, converts the switch or four fixed
+  relative choices to one timezone-aware `available_from` value, permits a
+  missing/cleared choice and never exposes verification fields.
 - `DiscoveryFiltersForm` — Validates selected broad area, interest filters and an
-  optional available-now filter, applying the caller's free or premium area and
-  interest limits. Availability is derived from `available_until`; the form does
-  not create a second stored availability value.
+  optional `Free now` filter, applying the caller's free or premium area and
+  interest limits. Current availability is derived from `available_from`; the
+  form does not create a second stored availability value.
 - `PlanDetailsForm` — Validates plan content and a normal HTTPS public URL; it does
   not fetch or approve the URL.
 - `MessageDraftForm` — Validates one bounded non-empty plain-text draft.
@@ -664,10 +726,14 @@ notify or call Stripe or Ollama.
   and was visible to the reporter; never notify the reported user.
 - `start_stripe_subscription_checkout(user, success_url, cancel_url)` — Create
   one Stripe-hosted subscription Checkout session for the configured premium
-  price, set the immutable local user ID in `client_reference_id` and subscription
-  metadata, accept only success and cancellation URLs already constructed by the
-  view from the named local account route, and return its URL without granting
-  premium access locally.
+  GBP 499 yearly price, set the immutable local user ID in
+  `client_reference_id` and subscription metadata, and apply exactly 30 trial
+  days with payment-method collection only if required and missing-payment-method
+  invoice creation only when the account has no recorded Stripe history. Omit
+  the trial for any later eligible Checkout, refuse a duplicate active or
+  trialing subscription, accept only success and cancellation URLs already
+  constructed by the view from the named local account route, and return its URL
+  without granting premium access locally.
 - `open_stripe_customer_portal(user, return_url)` — Create a hosted portal session
   for the account's known Stripe customer and return its URL; refuse safely when
   the account has no recorded Stripe customer ID. Accept only the return URL
@@ -677,10 +743,14 @@ notify or call Stripe or Ollama.
   access; never select an account by email. In one short transaction, lock or
   create the receipt, confirm Stripe IDs are not linked to another account, update
   identifiers only for checkout completion without advancing the subscription-
-  state cursor, update status and `access_until` for a newer subscription event,
-  allow an equal-time deletion to revoke access, refuse an equal-time non-deletion
-  from overwriting accepted state, then mark a safely handled receipt processed.
-  Store no card data and make no Stripe network call in the transaction.
+  state cursor, grant trial access only from an eligible trialing subscription
+  update, grant a paid annual period only from a paid invoice for the linked
+  configured price and active subscription, allow an equal-time deletion to
+  revoke access, refuse an equal-time non-deletion from overwriting accepted
+  state, and permit a delayed paid invoice to extend only a still-active,
+  non-revoked subscription to its later paid service-period end, then mark a
+  safely handled receipt processed. Store no card data and make no Stripe network
+  call in the transaction.
 
 Services receive validated values, enforce policy again and change state. They do
 not render templates or trust IDs supplied by a browser.
@@ -689,8 +759,9 @@ not render templates or trust IDs supplied by a browser.
 
 - `get_profiles_for_discovery_grid(viewer, selected_filters)` — Return the
   verified profiles in the viewer's allowed broad areas that match the permitted
-  interest filters and, when requested, still have `available_until` in the
-  future. Exclude either-direction blocks before returning any row.
+  interest filters and, when `Free now` is requested, have an `available_from`
+  time no later than now. Exclude either-direction blocks before returning any
+  row.
 - `get_profile_page_if_viewer_is_allowed(viewer, profile_id)` — Return one
   profile only when `can_view_profile_page()` allows it; otherwise return no
   result without revealing whether the profile exists or why it was hidden.
@@ -882,7 +953,7 @@ configuration. Never contain a working secret, customer ID or webhook payload.
 #### 03 — `README.md`
 
 Explain local setup, migrations, seeded interests, staff approval, test commands,
-fixed broad-area configuration, username authentication, Stripe CLI use, Ollama
+fixed broad-area configuration, email authentication, Stripe CLI use, Ollama
 Cloud setup, supervised-test-account limits and the demonstration journey. It must
 describe the implemented system, not promise deferred production features.
 
@@ -940,9 +1011,10 @@ driven workflows.
 
 #### 13 — `kindlelise/admin.py`
 
-Own ordinary staff screens and the four mapped verification/plan actions. Staff
-may review reports and subscription projections but must not edit webhook receipt
-identity or expose report text to users.
+Own ordinary staff screens, the four mapped verification/plan actions and the
+mapped related-profile verification checkbox on Django's User Permissions
+section. Staff may review reports and subscription projections but must not edit
+webhook receipt identity or expose report text to users.
 
 #### 14 — `kindlelise/models.py`
 
@@ -1099,8 +1171,12 @@ Accounts and discovery
   account
 - staff cannot verify a profile until its display name and configured broad area
   are complete
+- the User Permissions verification checkbox is shown only with both User and
+  Profile change permission, applies the same completeness rule, records the
+  reviewer/time and can withdraw verification consistently
 - sign-in and sign-out use Django authentication safely
-- registration and sign-in use username rather than email
+- registration and sign-in use one canonical email address through Django
+  authentication, while Stripe ownership continues to use immutable local IDs
 - unverified or inactive users cannot access discovery, plans or messages
 - the home page sends verified accounts to discovery, unverified accounts to their
   account page and unauthenticated visitors to sign-in
@@ -1108,8 +1184,11 @@ Accounts and discovery
 - profile and filter forms accept configured stable area keys and reject arbitrary
   area text
 - the reviewed initial data migration creates the eight fixed interests once
-- the optional available-now filter returns only profiles whose
-  `available_until` is still in the future
+- availability is optional during profile completion; the form-only `Free now`
+  switch and four fixed start choices calculate one `available_from` value from
+  the current local date/time without storing a duplicate boolean
+- the optional `Free now` filter returns only profiles whose `available_from`
+  exists and has arrived
 - free and premium interest/area limits differ without weakening safety
 
 Plans
@@ -1153,14 +1232,26 @@ Stripe
 - invalid signatures are rejected before processing
 - unsupported signed events create no receipt and do not change access
 - duplicate event IDs are harmless
+- Checkout uses the configured GBP 499 yearly price; a first eligible Checkout
+  applies exactly 30 trial days, does not require upfront payment details and
+  creates the annual invoice when the trial ends without a payment method
+- the same local account never receives a second trial, and an active or trialing
+  subscription cannot be duplicated
 - checkout stores customer/subscription IDs but never grants premium
 - checkout and subscription metadata map to immutable local user ID, never email
 - Stripe IDs already linked to another account are rejected
-- active or trialing updates grant premium only until future `access_until`
-- an active local status with expired or missing `access_until` denies premium
+- a trialing update grants Premium only until its future trial end
+- an active subscription update without a paid invoice never grants or extends a
+  paid annual period
+- a verified paid invoice for the linked configured price and active subscription
+  grants Premium only until its future annual service-period end
+- an unpaid, past-due, unpaid-status, expired or missing `access_until` state
+  denies Premium
 - deletion sets local status to cancelled, clears `access_until`, retains Stripe
   identifiers and updates `latest_provider_event_at`
 - an older event cannot overwrite newer accepted state
+- a delayed paid invoice may extend a still-active, non-revoked subscription to
+  its later service-period end but cannot rewind status or revive cancellation
 - checkout completion does not advance the subscription-state ordering cursor;
   equal-time deletion may revoke access and equal-time non-deletion cannot
   overwrite an already accepted subscription state

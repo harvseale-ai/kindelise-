@@ -24,7 +24,8 @@ the guardrails but never replaces the vertical slice.
 
 ## Approved MVP boundary
 
-- Username/password authentication through Django; no email-based ownership.
+- Email/password authentication through Django; Stripe ownership still uses
+  immutable local account and Stripe identifiers rather than email.
 - One initially incomplete, unverified profile per registered account.
 - Manual staff verification before discovery, plans or messaging.
 - Broad configured area keys and controlled interests; no coordinates, PostGIS
@@ -82,10 +83,11 @@ configuration and must not be committed or logged.
 
 ## Authentication and assessment limits
 
-The MVP uses Django username/password authentication. Email is not collected for
-registration and never proves account or Stripe ownership. Registration will
-create an initially incomplete, unverified profile; authorised staff verification
-will be required before discovery, plans or messaging when those phases exist.
+The MVP uses Django email/password authentication. Registration canonicalises the
+email to lowercase and stores it in Django's unique username field as well as its
+email field. The email never proves Stripe ownership. Registration creates an
+initially incomplete, unverified profile; authorised staff verification is
+required before discovery, plans or messaging.
 
 The assessment uses supervised test accounts only. Kindlelise does not implement
 age or identity verification, does not guarantee venue safety and must not be

@@ -31,7 +31,9 @@ register or sign in
 
 Two deliberately small external integrations support that journey:
 
-- Stripe provides one Premium subscription through hosted Checkout and the hosted customer portal.
+- Stripe provides one no-card 30-day Premium trial followed by one GBP 4.99
+  yearly subscription through hosted Checkout, invoices and the hosted customer
+  portal.
 - Ollama Cloud can edit the user's current unsent message draft after an explicit button press.
 
 Neither integration is an identity, age-verification, safety or moderation authority.
@@ -87,7 +89,8 @@ The boundaries mean:
 - `selectors.py` performs reusable, side-effect-free reads.
 - `services.py` owns state changes and transaction boundaries.
 - `views.py` translates HTTP requests into calls to those modules.
-- `admin.py` exposes the four approved staff decisions.
+- `admin.py` exposes the four approved staff actions and the related-profile
+  verification checkbox on Django's User Permissions form.
 - `ai_message_editor.py` is the only module permitted to call Ollama Cloud.
 
 Do not introduce repositories, command buses, event buses, plugin systems, generic workflow engines or background-task abstractions for this slice.
@@ -217,15 +220,17 @@ Registration creates the Django user and its initially incomplete, unverified
 profile together in one transaction. The new profile may begin with empty
 `display_name` and `broad_area` onboarding values. Profile editing uses the mapped
 account form and service to require a non-empty display name and a configured
-broad-area key. Staff verification is a manual Django Admin action and refuses an
+broad-area key. Staff verification is a manual Django Admin control and refuses an
 incomplete profile; Stripe and Ollama never verify identity or age.
 
 Successful registration redirects to the named sign-in route without starting a
 session. After the user signs in, the unverified account lands on its private
 account page.
 
-Registration and sign-in use Django's normal unique username and password. Email
-is not an MVP authentication identifier. Authenticated verified users land on
+Registration and sign-in use one canonical lowercase email and password through
+Django's normal authentication. The same value is stored in Django's unique
+username field and email field, avoiding a custom User model or authentication
+backend. Authenticated verified users land on
 discovery; authenticated unverified users land on their private account page.
 
 Only authenticated, active and manually verified accounts may use discovery, plans or messaging.
@@ -237,7 +242,12 @@ The MVP stores a stable configured broad-area key, displayed as a named district
 reject arbitrary area text. It does not collect browser coordinates, calculate
 exact distance or retain location history.
 
-`available_until` is an optional, expiring availability statement. A user can clear it immediately. The “Available now” discovery filter returns only profiles whose availability has not expired.
+`available_from` is an optional availability-start statement calculated from the
+profile owner's form-only Free now switch or Today, Tomorrow, This week or As and
+when choice. It is not required for profile completion or staff verification and
+can be cleared later. The profile switch stores no duplicate boolean.
+The `Free now` discovery switch returns only profiles whose start has arrived;
+there is no second stored presence boolean.
 
 ### Discovery flow
 
@@ -361,6 +371,14 @@ Checkout success, Checkout cancellation and customer-portal return destinations
 are constructed by the server from the named account route. Browser input never
 supplies a Stripe return URL.
 
+The one configured Stripe Price is GBP 499 recurring yearly. A local account
+without recorded Stripe history receives exactly 30 trial days through Checkout,
+with payment-method collection only if required and post-trial invoice creation
+when no payment method exists. Stripe history exhausts trial eligibility; later
+eligible Checkout omits the trial, while an active or trialing subscription is
+managed rather than duplicated. The paid subscription renews yearly unless it is
+cancelled in Stripe's customer portal.
+
 ### Browser-initiated billing
 
 ```text
@@ -379,6 +397,7 @@ The MVP processes only:
 
 - `checkout.session.completed`;
 - `customer.subscription.updated`;
+- `invoice.paid`;
 - `customer.subscription.deleted`.
 
 ```text
@@ -392,18 +411,27 @@ receive raw request body
 → mark the receipt processed
 ```
 
-Premium access requires an allowed Stripe status and a future `access_until`. Email is never used as subscription ownership proof.
+Premium access requires webhook-authorised trial or paid evidence and a future
+`access_until`. Email is never used as subscription ownership proof.
 
 `checkout.session.completed` records trusted customer and subscription identifiers
-only. It never grants Premium or advances `latest_provider_event_at`. Only a newer
-`customer.subscription.updated` event may grant access when its status is
-`active` or `trialing` and its billing-period end is in the future.
+only. It never grants Premium or advances `latest_provider_event_at`. A verified
+`customer.subscription.updated` event may grant trial access only when its status
+is `trialing` and its trial end is in the future. An `active` update alone is not
+payment evidence and cannot extend the paid period. Only `invoice.paid` for the
+linked configured price and active subscription grants the invoice's future paid
+annual service period.
 
 Provider timestamps can tie. At the current ordering timestamp, deletion may
 revoke access, while an equal-time non-deletion event cannot overwrite already
 accepted state. Older, duplicate and safely refused equal-time events do not
 change the subscription projection; safely handled supported events still have a
 committed receipt with `processed_at`.
+
+Because Stripe delivers related event types asynchronously, a delayed
+`invoice.paid` may extend `access_until` to its later paid service-period end when
+the linked subscription has not been revoked by a newer deletion or ineligible
+state. It never rewinds status or revives a cancelled subscription.
 
 For `customer.subscription.deleted`, the projection must set:
 
@@ -473,7 +501,7 @@ All message and user text is stored as plain text and escaped by Django template
 
 The ordinary Django Admin screens expose profiles, interests, plans, reports, subscriptions and webhook receipts.
 
-Only four custom staff actions are required:
+Four custom staff list actions are required:
 
 1. mark a profile verified only after its display name and configured broad area
    are complete;
@@ -481,7 +509,16 @@ Only four custom staff actions are required:
 3. approve a pending future unlocked plan after manually reviewing its public-place URL;
 4. reject a pending unlocked plan.
 
-These transitions are owned by the clearly named functions in `admin.py`; the vertical slice does not map separate verification or approval services. Each action iterates through its selected records, rechecks that every transition remains valid, changes eligible records individually and reports how many were changed or skipped. It must not blindly use `queryset.update()`. Custom admin routes, moderation dashboards and provider work queues are not part of this slice.
+Profile verification is also available as a form-only checkbox in Django's User
+Permissions section. It requires both User and Profile change permission, applies
+the same completion rule and records or clears the same reviewer/time fields.
+
+These transitions are owned by `admin.py`; the vertical slice does not map
+separate verification or approval services. Each list action iterates through
+its selected records, rechecks that every transition remains valid, changes
+eligible records individually and reports how many were changed or skipped. No
+path blindly uses `queryset.update()`. Custom admin routes, moderation dashboards
+and provider work queues are not part of this slice.
 
 ## 13. Configuration and deployment
 
@@ -573,7 +610,8 @@ The following are outside this implementation and must remain future-work docume
 - private safety experiences, blind corroboration, check-ins or trusted contacts;
 - moderation findings, sanctions, appeals or public safety labels;
 - image uploads, albums, social links or content moderation pipelines;
-- multiple subscriptions, invoices, coupons or a general billing ledger;
+- multiple subscriptions, local invoice models, coupons or a general billing
+  ledger;
 - AI reply generation, moderation, translation, conversation memory or automatic sending;
 - analytics warehouses, general audit-event systems or complex observability platforms.
 

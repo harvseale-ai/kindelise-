@@ -41,8 +41,9 @@ Acceptance criteria:
 - A valid registration creates both records.
 - Successful registration redirects to the named sign-in route without starting
   an authenticated session.
-- Registration uses one unique Django username, password and password
-  confirmation; email is not an MVP authentication identifier.
+- Registration uses one valid canonical lowercase email address, password and
+  password confirmation. The same email occupies Django's unique username field
+  and email field, without a custom User model or authentication backend.
 - A failed registration leaves neither a partial account nor a partial profile.
 - The new profile does not enter discovery before staff verification.
 - Passwords are handled by Django authentication and are never stored as plain
@@ -56,7 +57,7 @@ Acceptance criteria:
 
 - Successful sign-in rotates/authenticates the session through Django.
 - A post-sign-in redirect is followed only when it is a safe local destination.
-- An invalid sign-in does not reveal whether a supplied username is registered.
+- An invalid sign-in does not reveal whether a supplied email is registered.
 - The home route sends an authenticated verified account to discovery, an
   authenticated unverified account to its private account page and an
   unauthenticated visitor to sign-in.
@@ -86,6 +87,9 @@ Acceptance criteria:
 
 - Verification records the responsible staff account and time.
 - Each selected profile is rechecked before its state changes.
+- The Django User change page includes `Profile verified` in Permissions only
+  for staff who can change both the User and Profile; it applies the same rules
+  and can also withdraw verification.
 - An incomplete profile with an empty display name or a broad-area key absent
   from `KINDLELISE_AREAS` cannot be verified.
 - Already-correct or otherwise ineligible records are skipped safely.
@@ -95,7 +99,7 @@ Acceptance criteria:
 ### ACC-005 — Edit the permitted profile fields
 
 A signed-in account must be able to edit its own display name, short biography,
-broad named area, controlled interests and optional availability time.
+broad named area, controlled interests and optional availability-start choice.
 
 Acceptance criteria:
 
@@ -112,13 +116,19 @@ Acceptance criteria:
 
 ### ACC-006 — Derive and clear current availability
 
-The profile may show “Available now” from one optional `available_until` value.
+The profile may show `Free now` from one optional calculated `available_from`
+value.
 
 Acceptance criteria:
 
-- Availability is current only while the timestamp is in the future.
-- The user can replace or clear the timestamp through profile editing.
-- An expired timestamp no longer displays or matches as Available now.
+- Profile completion and staff verification do not require availability.
+- The profile form provides a form-only Free now switch and accepts only Today,
+  Tomorrow, This week or As and when, or an empty choice to add it later/clear
+  it. The switch is not stored as a second boolean.
+- Today, This week and As and when start immediately; Tomorrow starts at local
+  midnight on the next day.
+- Availability is current once `available_from` has arrived and remains so until
+  the owner clears or replaces it.
 - No second online-status value or presence-history record is created.
 
 ## 3. Discovery
@@ -149,8 +159,8 @@ Acceptance criteria:
   interest filters.
 - `settings.py` owns the stable area keys, display labels and nearby-area mapping
   used by profile and discovery forms.
-- Available-now filtering returns only profiles with a future
-  `available_until`.
+- The `Free now` switch returns only profiles with an `available_from` value no
+  later than the current time.
 - Invalid or excessive filters produce a clear validation error and never expand
   the permitted result set.
 
@@ -405,14 +415,25 @@ Acceptance criteria:
 
 ## 7. Stripe Premium subscription
 
-### PAY-001 — Start one hosted Stripe subscription
+### PAY-001 — Start one hosted annual Stripe subscription
 
 An account must be able to start the configured Premium subscription through
 Stripe-hosted Checkout.
 
 Acceptance criteria:
 
-- The Checkout session uses the single configured subscription price.
+- The Checkout session uses the single configured recurring price: GBP 499
+  (£4.99) per year.
+- An account with no recorded Stripe customer or subscription receives exactly
+  30 trial days, with `payment_method_collection=if_required` and missing-payment-
+  method end behaviour `create_invoice`; it is not required to enter payment
+  details before the trial.
+- Once an account has recorded Stripe history, any later eligible Checkout omits
+  the trial. An active or trialing subscription is not duplicated and is managed
+  through the hosted customer portal.
+- At the end of the trial Stripe creates the first GBP 4.99 annual invoice. The
+  hosted invoice/customer portal asks for payment, and a paid subscription
+  renews yearly unless it is cancelled in the portal.
 - It carries the immutable local user ID as `client_reference_id` and subscription
   metadata.
 - Kindlelise does not render or store card or bank fields.
@@ -437,6 +458,7 @@ before processing:
 ```text
 checkout.session.completed
 customer.subscription.updated
+invoice.paid
 customer.subscription.deleted
 ```
 
@@ -451,9 +473,15 @@ Acceptance criteria:
 
 Acceptance criteria:
 
-- A newer `active` or `trialing` subscription update grants Premium only when
-  `access_until` is in the future.
-- Active/`trialing` status with missing or expired `access_until` denies Premium.
+- A verified `trialing` subscription update grants Premium only until its future
+  trial end.
+- An `active` subscription update without paid-invoice evidence does not grant or
+  extend the annual Premium period.
+- A verified `invoice.paid` for the linked configured price and active
+  subscription grants Premium only until that invoice's future annual service-
+  period end.
+- Unpaid, `past_due`, `unpaid`, cancelled, missing or expired access denies
+  Premium.
 - A deletion event sets local status to Cancelled, clears `access_until` and
   updates the latest accepted provider-event time.
 - A deletion event retains the recorded Stripe customer and subscription
@@ -467,6 +495,9 @@ Acceptance criteria:
 - Each accepted supported Stripe event ID has one durable receipt.
 - A duplicate processed event is harmless.
 - An older event cannot overwrite newer accepted subscription state.
+- A delayed paid-invoice event may extend `access_until` to its later paid
+  service-period end only when it cannot revive a subscription already revoked
+  by a newer deletion or ineligible state.
 - Receipt and subscription changes either complete together or neither completes.
 - Failed supported-event processing leaves no committed receipt or partial
   subscription update.
@@ -487,7 +518,7 @@ Acceptance criteria:
 ### PAY-007 — Open the hosted customer portal safely
 
 An account with its own recorded Stripe customer ID must be able to open Stripe's
-hosted portal for cancellation and payment management.
+hosted portal for the post-trial invoice, cancellation and payment management.
 
 Acceptance criteria:
 

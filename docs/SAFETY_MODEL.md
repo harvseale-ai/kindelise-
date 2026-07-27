@@ -101,9 +101,9 @@ Either-direction blocks are applied before a profile enters the result set.
 `settings.py` owns the approved stable area keys, labels and nearby-area mapping.
 Profile and discovery forms reject arbitrary area text.
 
-The user may filter controlled interests and current availability. “Available
-now” means only that the profile owner set an `available_until` time that remains
-in the future. It must not imply that the person is physically at a particular
+The user may filter controlled interests and current availability. `Free now`
+means only that the profile owner's optional `available_from` start has arrived
+and has not been cleared. It must not imply that the person is physically at a particular
 place, has agreed to meet, is actively watching the application or is permanently
 available.
 
@@ -281,17 +281,20 @@ safety, privacy, uptime or price guarantee.
 
 ## 12. Stripe boundary
 
-Stripe-hosted Checkout and the hosted customer portal own payment collection and
-management for one Premium subscription. Kindlelise stores a minimal subscription
-projection and no card or bank details.
+Stripe-hosted Checkout, invoices and the hosted customer portal own payment
+collection and management for one Premium subscription: one no-card 30-day trial
+per local account followed by GBP 4.99 yearly. Kindlelise stores a minimal
+subscription projection and no card or bank details.
 
 The server constructs Checkout success, Checkout cancellation and portal-return
 destinations from the named local account route. The browser cannot supply them.
 
-Returning from Checkout does not grant Premium. Only a verified newer Stripe
-subscription event with an `active` or `trialing` status and future
-`access_until` grants access. Deletion clears access. Premium affects configured
-broad-area choices and interest-filter count only.
+Returning from Checkout does not grant Premium. Only a verified trialing update
+with a future trial end grants trial access; active status alone does not prove
+payment. Only a verified paid invoice for the linked configured price and active
+subscription grants its bounded paid annual period. Unpaid, past-due and expired
+states deny access, and deletion clears access. Premium affects configured broad-
+area choices and interest-filter count only.
 
 Each accepted supported event ID receives one durable receipt. Correctly signed
 unsupported events are acknowledged without a receipt or state change. Failed
@@ -315,7 +318,7 @@ Use language that matches the system's authority:
 | --- | --- |
 | “Staff reviewed the public place and URL.” | “This meeting is safe.” |
 | “This profile may use the student MVP.” | “This person's identity and age are verified.” |
-| “Available now until 18:00.” | “This person is currently at this location.” |
+| “Free now is a user-set signal.” | “This person is currently at this location.” |
 | “Your report was submitted privately.” | “Kindlelise confirmed what happened.” |
 | “AI suggested an edit.” | “AI made this message safe or accurate.” |
 | “Premium access is active until this date.” | “Premium members are more trustworthy.” |
@@ -367,7 +370,7 @@ Before demonstrating the MVP, prove that:
 1. unverified and inactive accounts cannot use social features;
 2. staff verification does not claim identity or age proof;
 3. discovery uses broad areas and excludes either-direction blocks;
-4. Available now is derived only from a future `available_until`;
+4. Free now is derived only from an `available_from` start that has arrived;
 5. only manually approved future plans enter the public list;
 6. staff approval makes no preserved-evidence or venue-safety claim;
 7. concurrent joins cannot exceed capacity;

@@ -4,10 +4,10 @@
 > vertical-slice revision below.
 >
 > **Synchronized vertical-slice revision:** SHA-256
-> `3e807378f9fa5800a8b5dd756df6961f4bfe3a1fdf98e7741489ac236935cb9b`
+> `f9a61f9119614549585ea3c0315f20c809c807566101d88e3c8308ba4db67e5e`
 > of [`docs/VERTICAL_SLICE.md`](VERTICAL_SLICE.md).
 >
-> **Synchronized date:** 2026-07-22.
+> **Synchronized date:** 2026-07-27.
 >
 > **Authority:** this document is an aid, not a second specification. The vertical
 > slice remains the sole implementation authority. If this prompt is incomplete,
@@ -115,8 +115,10 @@ FIXED PROJECT BOUNDARY
 - The assessed journey is registration/sign-in, profile completion, manual
   staff verification, broad-area discovery, plan creation and staff approval,
   join/leave, direct messages, blocking and private reporting.
-- Stripe is limited to one hosted Premium subscription, hosted customer portal
-  and webhook-authoritative local access projection.
+- Stripe is limited to one hosted Premium subscription: one no-card 30-day trial
+  per local account, followed by GBP 4.99 recurring yearly, with hosted invoice
+  and customer-portal payment/cancellation and a webhook-authoritative local
+  access projection.
 - Ollama Cloud is limited to grammar or clarity suggestions for one unsent
   message draft. The user reviews the suggestion and sends manually.
 - Thirty-six implementation files is a maximum, not a target. The authoritative
@@ -131,7 +133,8 @@ FIXED PROJECT BOUNDARY
   exactly ten Kindlelise models: Profile, Interest, Plan, Participation,
   Conversation, Message, Block, Report, PlatformSubscription and
   StripeWebhookReceipt.
-- The mapped inventory is four admin actions, four read-only model helpers, seven
+- The mapped inventory is four admin actions, one Django User-admin profile
+  verification control, four read-only model helpers, seven public browser
   forms, eight policies, fourteen services, eight selectors, twenty-five views
   and named routes, one Ollama function, two browser functions and seven test
   setup helpers. Consult the vertical slice for their exact names and contracts;
@@ -159,7 +162,8 @@ OWNERSHIP AND DEPENDENCY RULES
   transaction boundaries. They never render templates or trust browser IDs.
 - Selectors read authorised presentation data only. They never mutate or repair
   state or call providers.
-- The four mapped admin actions own manual profile verification and plan review.
+- `admin.py` owns manual profile verification and plan review through the four
+  mapped admin actions and the User Permissions verification control.
 - Models own durable fields, relationships, constraints, indexes and the four
   mapped read-only helpers. Model save methods do not run workflows or providers.
 - ai_message_editor.py owns only the single bounded Ollama request.
@@ -219,13 +223,21 @@ SECURITY AND PRIVACY INVARIANTS
 
 CORE BEHAVIOUR THAT MUST NOT DRIFT
 
-- Registration atomically creates Django User plus an initially incomplete,
-  unverified Profile, then redirects to the named sign-in route without
-  authenticating. Profile completion and staff verification are separate.
+- Registration validates one canonical lowercase email and Django-validated
+  password, stores that email in both Django's unique username field and email
+  field, atomically creates Django User plus an initially incomplete, unverified
+  Profile, then redirects to the named sign-in route without authenticating.
+  Sign-in canonicalises the email in the same way. Profile completion and staff
+  verification are separate.
 - Discovery uses configured stable broad-area keys, controlled seeded interests,
-  future available_until and either-direction block exclusion. Free permits the
-  current area and two interest filters; Premium permits configured nearby areas
-  and five. Premium never overrides verification, blocks or visibility.
+  an optional start-based availability signal and either-direction block
+  exclusion. Profile completion does not require availability. The profile's
+  form-only `Free now` switch writes the same start fields rather than a second
+  boolean. The discovery `Free now` switch matches only profiles whose
+  `available_from` start has arrived. Free
+  permits the current area and two interest filters; Premium permits configured
+  nearby areas and five. Premium never overrides verification, blocks or
+  visibility.
 - Plans begin pending. Staff manually reviews the public-place URL outside the
   application. Only approved future plans are public/joinable. The first
   successful join locks the entire plan against editing except cancellation.
@@ -240,10 +252,19 @@ CORE BEHAVIOUR THAT MUST NOT DRIFT
   sanction or notification to the reported account.
 - Stripe ownership uses immutable local user IDs in trusted metadata or an
   existing unique Stripe-ID link, never email. Checkout records identifiers but
-  never grants access. Only verified supported webhook events update access;
-  duplicates are harmless, older events do not overwrite newer state,
-  equal-time deletion may revoke, and equal-time non-deletion may not overwrite
-  accepted state. Receipt and projection changes commit atomically.
+  never grants access. The first eligible Checkout uses the configured GBP 499
+  yearly price with exactly 30 trial days, payment-method collection only if
+  required and post-trial invoice creation; retained Stripe history prevents a
+  second trial or duplicate active/trialing subscription. A trialing update may
+  grant only the bounded trial. Active status alone never proves payment;
+  `invoice.paid` for the linked configured price and active subscription grants
+  only its future paid annual service period. Only verified supported webhook
+  events update access; duplicates are harmless, older events do not overwrite
+  newer state, equal-time deletion may revoke, and equal-time non-deletion may
+  not overwrite accepted state. A delayed paid invoice may extend only a still-
+  active, non-revoked subscription to its later service-period end; it cannot
+  rewind status or revive cancellation. Receipt and projection changes commit
+  atomically.
 - Ollama receives only the bounded unsent draft and fixed grammar/clarity goal
   after current conversation authorisation. Invalid/failed output preserves the
   original. Accepting a suggestion only replaces the unsent draft in the

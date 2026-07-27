@@ -343,7 +343,7 @@ budgets, not a public production SLA.
 Emit concise operational events from the existing views, admin actions and
 services; do not add a logging service, route, model, dependency or background
 worker. Log an event name, outcome and safe local record IDs where useful, but
-never user text, credentials, secrets, raw provider bodies or attempted usernames
+never user text, credentials, secrets, raw provider bodies or attempted emails
 on a failed sign-in.
 
 The minimum content-safe events are successful sign-in/sign-out, generic sign-in
@@ -407,7 +407,7 @@ kindlelise/migrations/__init__.py
   configuration to `.env.example`; include no working secret.
 - Mount Django Admin in `config/urls.py`. Defer the application include until
   Phase 4 creates `kindlelise/urls.py`; do not create an empty route placeholder.
-- Document username authentication, supervised test accounts and local setup in
+- Document email authentication, supervised test accounts and local setup in
   the README.
 
 ### Exit gate
@@ -492,12 +492,12 @@ tests/test_vertical_slice.py
 
 | Owner | Approved functions/classes | Reads and inputs | Changes | Refusal and transaction proof |
 | --- | --- | --- | --- | --- |
-| Forms | `AccountSignUpForm`, `ProfileDetailsForm` | Submitted username/password and the signed-in user's editable profile fields | None | Reject duplicate/invalid username, bad passwords, empty display name, unknown area/interest and oversized text |
+| Forms | `AccountSignUpForm`, `ProfileDetailsForm` | Submitted email/password and the signed-in user's editable profile fields | None | Reject duplicate/invalid email, bad passwords, empty display name, unknown area/interest and oversized text |
 | Policy | `can_access_discovery_plans_and_messages()` | Authenticated account, active flag and verification fields | None | False for every missing, inactive, anonymous or unverified state |
 | Services | `create_account_and_profile()`, `update_signed_in_user_profile()` | Validated form values plus server-known user | User/profile/interests/availability only | Account/profile creation is atomic; browser authority fields are ignored |
 | Selector | `get_signed_in_user_account_summary()` | Signed-in account | None | Returns only that account's safe account, verification, plan and subscription summary |
 
-Tests prove account/profile atomicity, username-only authentication, ownership,
+Tests prove account/profile atomicity, canonical email authentication, ownership,
 stable area keys, availability replacement/clearing and server-controlled
 verification. No row lock is needed beyond normal atomic account/profile creation.
 
@@ -664,6 +664,9 @@ tests/test_vertical_slice.py
   `remove_verification_from_selected_profiles()`,
   `approve_selected_plans_after_manual_url_check()` and
   `reject_selected_plans()`.
+- Extend Django's existing User change Permissions section with the mapped
+  `Profile verified` checkbox. Require both User and Profile change permission,
+  reuse the profile-completion rule and keep the reviewer/time fields consistent.
 - Grant verification only when the profile has a non-empty display name and a
   broad-area key currently present in `KINDLELISE_AREAS`.
 - Iterate selected rows and recheck each state instead of using a blind bulk
@@ -677,9 +680,10 @@ tests/test_vertical_slice.py
 ### Exit gate
 
 An authorised staff account can move only eligible records through the documented
-states, receives an understandable changed/skipped count, cannot verify an
-incomplete profile and cannot approve a cancelled, locked, past or otherwise
-ineligible plan.
+states, receives an understandable changed/skipped count for bulk actions,
+cannot verify an incomplete profile through either Admin control and cannot
+approve a cancelled, locked, past or otherwise ineligible plan. The User
+Permissions checkbox is absent without Profile change permission.
 
 ## 14. Phase 4 — Account and profile journey
 
@@ -699,9 +703,9 @@ tests/test_vertical_slice.py
 
 ```text
 visitor
-→ username registration
+→ email registration
 → atomic User + unverified Profile
-→ sign in with the new username
+→ sign in with the new email
 → private account page
 → profile editing
 → staff verification
@@ -712,7 +716,7 @@ visitor
 
 - Successful registration creates both records and redirects to the named sign-in
   route without starting an authenticated session.
-- Sign-in errors do not reveal whether a username exists.
+- Sign-in errors do not reveal whether an email exists.
 - Sign-out is a CSRF-protected POST.
 - Safe local post-login redirects are allowed; external redirects are refused.
 - Verified users go to discovery, unverified users to their account page and
@@ -744,7 +748,7 @@ tests/test_vertical_slice.py
 ```text
 verified user
 → permitted area and interest filters
-→ optional Available now filter
+→ optional Free now filter
 → selector removes self, inactive, unverified and either-direction-blocked rows
 → profile grid
 → authorised profile detail
@@ -754,7 +758,7 @@ verified user
 
 - Free users can use only their area and two interest filters.
 - Current Premium users can use mapped nearby areas and five interest filters.
-- Availability matches only a future `available_until`.
+- Free now matches only an `available_from` start that has arrived.
 - Exact location, hidden-result counts and exclusion reasons never appear.
 - Direct requests cannot open a profile excluded by current policy.
 
@@ -902,34 +906,50 @@ tests/test_vertical_slice.py
 
 ### Build order
 
-1. Implement `start_stripe_subscription_checkout()` to create one hosted Checkout
-   session using the configured subscription price.
-2. Put the immutable local user ID in `client_reference_id` and subscription
+1. Configure one recurring Stripe price for GBP 499 (£4.99) per year and place
+   only that test/live environment's price ID in `STRIPE_PRICE_ID`.
+2. Implement `start_stripe_subscription_checkout()` to create one hosted Checkout
+   session. For an account without recorded Stripe history, apply exactly 30
+   trial days, `payment_method_collection=if_required` and missing-payment-method
+   end behaviour `create_invoice`; for any later eligible Checkout, omit the
+   trial. Refuse a duplicate active or trialing subscription.
+3. Put the immutable local user ID in `client_reference_id` and subscription
    metadata.
-3. Construct Checkout success/cancellation and portal-return URLs on the server
+4. Construct Checkout success/cancellation and portal-return URLs on the server
    from the named account route.
-4. Verify the webhook signature against the exact raw request body.
-5. Accept only `checkout.session.completed`,
-   `customer.subscription.updated` and `customer.subscription.deleted`.
-6. Implement `update_premium_access_from_verified_stripe_event()` to apply receipt
+5. Verify the webhook signature against the exact raw request body.
+6. Accept only `checkout.session.completed`, `customer.subscription.updated`,
+   `invoice.paid` and `customer.subscription.deleted`.
+7. Implement `update_premium_access_from_verified_stripe_event()` to apply receipt
    and subscription projection changes atomically and in provider time order.
-7. Grant Premium only for `active` or `trialing` with future `access_until`.
-8. Implement `open_stripe_customer_portal()` to open the customer portal only for
+8. Grant trial access only from `trialing` with a future trial end. Grant a paid
+   annual period only from `invoice.paid` for the linked configured price and
+   active subscription; never extend paid access from active status alone.
+9. Implement `open_stripe_customer_portal()` to open Stripe's hosted invoice and
+   customer-management surface only for
    the signed-in account's recorded customer ID.
 
 ### Provider tests
 
 - Checkout and browser return never grant access.
+- First eligible Checkout uses GBP 499 per year, exactly 30 trial days, no
+  required upfront payment method and post-trial invoice creation.
+- A local account cannot receive a second trial or duplicate an active/trialing
+  subscription; any later eligible Checkout uses no trial.
 - Ownership never comes from email.
 - Conflicting Stripe identifiers are rejected rather than reassigned.
 - Unsupported signed events create no receipt or subscription change.
 - Duplicate supported event IDs are harmless.
 - Older events cannot overwrite newer accepted state.
+- A delayed paid invoice can extend only a still-active, non-revoked subscription
+  to its later service-period end; it cannot rewind status or revive cancellation.
 - Checkout completion does not advance `latest_provider_event_at`; an equal-time
   deletion may revoke access and an equal-time non-deletion cannot overwrite
   accepted state.
-- An `active` or `trialing` local status with missing or expired `access_until`
-  does not grant Premium.
+- A trialing update grants only the bounded trial; active status alone and every
+  unpaid, past-due, missing or expired state deny paid Premium.
+- Only a valid paid invoice for the linked configured annual price extends paid
+  access to its future annual service-period end.
 - Failed supported processing commits no receipt or partial subscription update.
 - Deletion sets status to cancelled, clears `access_until`, retains Stripe IDs and
   updates `latest_provider_event_at`.
@@ -1070,7 +1090,7 @@ through the boundary-change procedure before adding it.
 ### 22.3 Account and staff journey
 
 ```text
-[ ] Register with username and password, then sign in with the new account.
+[ ] Register with email and password, then sign in with the new account.
 [ ] Arrive at the unverified private account page after sign-in.
 [ ] Edit only permitted profile fields.
 [ ] Staff grant verification through Django Admin.
@@ -1082,7 +1102,7 @@ through the boundary-change procedure before adding it.
 
 ```text
 [ ] Free and Premium area/interest limits are visibly different.
-[ ] Available now includes only a future timestamp.
+[ ] Free now includes only an availability start that has arrived.
 [ ] Either-direction block removes discovery visibility.
 [ ] Create a Pending plan and approve it manually.
 [ ] Change an Approved plan's public place, URL or start time before joining and
@@ -1109,9 +1129,16 @@ through the boundary-change procedure before adding it.
 ### 22.6 Stripe journey
 
 ```text
-[ ] Checkout uses Stripe test mode and server-built local return URLs.
+[ ] The configured test-mode Price is GBP 4.99 recurring yearly.
+[ ] A first Checkout uses server-built local return URLs, grants 30 trial days
+    and does not require payment details upfront.
+[ ] A second trial is refused; an active/trialing subscription is not duplicated.
 [ ] Checkout return remains Free before the authoritative update.
-[ ] Supported signed update grants bounded Premium access.
+[ ] A signed trialing update grants only bounded trial access.
+[ ] At trial end Stripe creates the GBP 4.99 invoice and its hosted payment
+    surface is reachable from the owning account.
+[ ] Active status without payment does not extend access; a signed paid invoice
+    grants one bounded annual Premium period.
 [ ] Duplicate, old, equal-time, unsupported and invalid events return the
     documented response and preserve or change state exactly as specified.
 [ ] Deletion removes access but retains provider identifiers.
@@ -1134,7 +1161,7 @@ through the boundary-change procedure before adding it.
 [ ] Logs contain no password, session, message body or report description.
 [ ] Logs contain no raw Stripe body, secret, Ollama draft or suggestion.
 [ ] Required content-safe authentication, staff, report, Stripe and Ollama
-    outcomes are present without attempted usernames or private content.
+    outcomes are present without attempted emails or private content.
 [ ] The post-deploy home-route smoke request succeeds.
 [ ] There are no unexplained HTTP 500s, database errors or failed Stripe webhook
     retries in the assessment window.
@@ -1176,7 +1203,7 @@ in progress; do not replace it with a verbal assurance.
 Prepare deterministic supervised accounts and perform this short assessment path:
 
 ```text
-1. Register a username, sign in and show the unverified gate.
+1. Register an email, sign in and show the unverified gate.
 2. Verify the profile in Django Admin.
 3. Discover another verified profile using a broad-area filter.
 4. Create and manually approve a public-place plan.

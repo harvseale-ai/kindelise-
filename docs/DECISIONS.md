@@ -14,7 +14,7 @@
 
 ## ADR-001: Use the 36-implementation-file vertical slice as the authority
 
-**Status:** Accepted  
+**Status:** Accepted
 **Recorded:** 2026-07-18  
 **Clarified:** 2026-07-22
 
@@ -39,8 +39,9 @@ register or sign in
 → block or privately report
 ```
 
-Stripe provides one premium subscription. Ollama Cloud edits one unsent message
-draft. `docs/VERTICAL_SLICE.md` owns the exact files, functions, routes, states,
+Stripe provides one no-card 30-day Premium trial followed by a GBP 4.99 yearly
+subscription. Ollama Cloud edits one unsent message draft.
+`docs/VERTICAL_SLICE.md` owns the exact files, functions, routes, states,
 constraints and tests.
 
 Registration creates the account and initial unverified profile, then redirects
@@ -63,7 +64,7 @@ remain reference material only and cannot leak into implementation.
 
 ## ADR-002: Treat 36 implementation files as a maximum and use one Django application
 
-**Status:** Accepted  
+**Status:** Accepted
 **Recorded:** 2026-07-18
 
 ### Context
@@ -141,9 +142,12 @@ StripeWebhookReceipt
 
 Django's existing `User` owns the account. The automatic profile-interest join
 table has no custom model because the relationship has no additional behaviour.
-Authentication uses Django's normal unique username and password. Email is not an
-MVP registration, sign-in or ownership identifier. `Interest.name` is the
-interest's unique identity in this slice; no slug or second identifier is added.
+Authentication uses one canonical lowercase email and password through Django's
+normal authentication. The same email is stored in Django's unique `username`
+field and `email` field, so no replacement User model or authentication backend
+is required. Stripe ownership remains independent of email. `Interest.name` is
+the interest's unique identity in this slice; no slug or second identifier is
+added. This authentication portion was amended by ADR-017 on 2026-07-27.
 
 ### Alternatives rejected
 
@@ -182,10 +186,11 @@ create privacy, provider and operational work beyond the assessment.
   broad-area key when the user completes or later edits the profile.
 - Let authorised staff set the profile's verification state in Django Admin, but
   refuse verification until those two profile values are valid.
-- Store optional `available_until`; derive “available now” instead of storing a
-  second presence value.
+- Store optional `available_from`; derive current availability instead of storing
+  a second presence value. ADR-018 defines the relative choices and replaces the
+  earlier expiry semantics.
 - Allow discovery to filter broad area, controlled interests and, optionally,
-  profiles whose `available_until` remains in the future.
+  profiles whose availability start has arrived.
 - Apply active-account, verification and either-direction block exclusions before
   any profile enters presentation data.
 
@@ -346,30 +351,51 @@ manual; the product must not claim to provide a full safeguarding service.
 **Recorded:** 2026-07-18  
 **Clarified:** 2026-07-22
 
+**Amended:** 2026-07-27
+
 ### Context
 
 Stripe is required, but custom billing, multiple products and local payment forms
-would distract from the social journey and increase payment-data exposure.
+would distract from the social journey and increase payment-data exposure. The
+approved offer is one no-card-required 30-day trial followed by GBP 4.99 for one
+year of Premium.
 
 ### Decision
 
-- Configure one Stripe product and price.
+- Configure one Stripe product and one recurring GBP 499 yearly price.
+- Permit one 30-day trial per local account. A recorded Stripe customer or
+  subscription exhausts trial eligibility; cancellation cannot reset it.
+- For the first eligible Checkout, set `payment_method_collection=if_required`,
+  `trial_period_days=30` and missing-payment-method end behaviour to
+  `create_invoice`. A later eligible Checkout omits the trial, and an existing
+  active or trialing subscription is managed through the customer portal rather
+  than duplicated.
+- At trial end, let Stripe create and host the first GBP 4.99 annual invoice.
+  Use Stripe's hosted invoice/customer-portal surfaces for payment, and renew the
+  annual subscription unless the customer cancels it through the portal.
 - Use Stripe-hosted Checkout and customer portal.
 - Construct Checkout success/cancellation and portal-return URLs on the server from
   the named account route; never accept these destinations from browser input.
 - Pass the immutable Kindlelise user ID through `client_reference_id` and
   subscription metadata; never resolve ownership from email.
-- Accept only `checkout.session.completed`,
-  `customer.subscription.updated` and `customer.subscription.deleted`.
+- Accept only `checkout.session.completed`, `customer.subscription.updated`,
+  `invoice.paid` and `customer.subscription.deleted`.
 - Let Checkout store identifiers only; it never grants premium access.
-- Grant premium only for a newer verified `active` or `trialing` update with a
-  future `access_until`.
+- Grant trial access only from a verified `trialing` update with a future trial
+  end. An `active` subscription update alone is not payment evidence.
+- Grant paid access only from a verified `invoice.paid` event for the linked
+  configured price and active subscription, using its future paid service-period
+  end as `access_until`. Unpaid, past-due and expired states deny access.
 - On deletion, set the local status to cancelled, clear `access_until` and update
   the latest provider-event time.
 - Order subscription-state events by `provider_created_at`; Checkout completion
   does not advance that ordering cursor. At an equal timestamp, deletion may
   revoke access, while a non-deletion event cannot overwrite an already accepted
   state.
+- Permit a delayed `invoice.paid` to extend `access_until` to its later paid
+  service-period end only while the linked subscription remains active and has
+  not been revoked or made ineligible by a newer event. It cannot rewind status
+  or revive a cancelled subscription.
 - Process the unique event receipt and subscription projection atomically, with no
   Stripe network request inside the database transaction.
 - Create a durable receipt for each safely handled supported event ID, including
@@ -384,15 +410,18 @@ would distract from the social journey and increase payment-data exposure.
 ### Alternatives rejected
 
 - Email-based Stripe ownership.
-- Inline card collection, invoices, usage billing or multiple tiers.
+- Collecting payment details before the free trial.
+- Repeating trials after cancellation or creating duplicate active subscriptions.
+- Inline card collection, usage billing or multiple tiers.
 - Treating a Checkout return or successful payment as age/identity verification.
 - Granting permanent premium from a stale local boolean.
 
 ### Consequences
 
 Kindlelise stores no card or bank details. Premium expands configured discovery
-areas and interest-filter count only. Duplicate and older events cannot overwrite
-newer accepted state.
+areas and interest-filter count only. Stripe owns the post-trial invoice and
+annual payment surfaces. Duplicate and older events cannot overwrite newer
+accepted state, and an unpaid invoice cannot create a free paid year.
 
 ## ADR-009: Limit Ollama Cloud to explicit unsent-draft editing
 
@@ -680,3 +709,152 @@ The implementation plan remains stable and reviewable while progress updates are
 small and auditable. Every phase still uses the plan's state meanings, closure
 record and exit gates, and the vertical slice remains the implementation
 authority.
+
+## ADR-017: Use canonical email addresses for account authentication
+
+**Status:** Accepted
+**Recorded:** 2026-07-27
+
+### Context
+
+The implemented account journey asked users to invent a separate username even
+though the requested product experience is registration and sign-in with an
+email address and password. The approved vertical slice previously prohibited
+email authentication, so this change required an explicit boundary decision.
+The user approved the change on 2026-07-27 and requested a small surgical slice.
+
+### Decision
+
+Keep Django's existing User model, default authentication backend, password
+validation, sessions and routes. `AccountSignUpForm` validates an email address,
+trims it and canonicalises the complete value to lowercase. The account service
+stores that value in both Django's unique 150-character `username` field and its
+`email` field. Sign-in labels the existing Django authentication field as Email
+and applies the same canonicalisation before authentication.
+
+The unique `username` column remains the database uniqueness authority, so two
+case variants cannot create separate accounts. The application does not expose a
+second public username, add a custom User model, add an authentication backend or
+require a schema migration. Email is authentication data only: Stripe webhook
+ownership continues to use immutable local account IDs or existing Stripe-ID
+links and never selects an account by email.
+
+### Alternatives rejected
+
+- Keep a separate user-chosen username, because it contradicts the requested
+  registration and sign-in experience.
+- Add a custom User model or authentication backend, because the existing unique
+  username field can safely own the canonical login identifier.
+- Make Django's non-unique email field the sole database authority, because that
+  would require a schema/manager change and introduce a case-variant race.
+- Resolve Stripe ownership from the authentication email, because mutable or
+  provider-supplied email is not an authoritative billing link.
+
+### Consequences
+
+Registration and sign-in display Email and Password, duplicate case variants are
+rejected, and successful registration still creates one unverified Profile
+atomically without starting a session. Authentication emails are private account
+data and must not enter logs or public profile output. Existing supervised demo
+fixtures may be replaced or updated because no production account migration is
+part of this pre-assessment MVP change.
+
+## ADR-018: Use an optional availability-start signal
+
+**Status:** Accepted
+**Recorded:** 2026-07-27
+
+### Context
+
+The implemented profile form exposed a raw `available_until` date/time. That
+field communicated an expiry, produced browser date/time validation errors and
+did not match the requested start-oriented choices or the requested `Free now`
+control. Availability must also remain optional so it cannot prevent profile
+completion or later staff verification. The user approved the replacement on
+2026-07-27.
+
+### Decision
+
+Replace `Profile.available_until` with one nullable `available_from` timestamp.
+Do not add a stored presence boolean, model, route, dependency or workflow.
+`ProfileDetailsForm` presents a form-only `Free now` switch and one optional fixed
+choice: `Today`, `Tomorrow`, `This week` or `As and when`. The switch, Today,
+This week and As and when store the current submission time; Tomorrow stores
+midnight at the start of the next day in the configured local timezone. An
+unchecked switch with an empty choice clears the signal. The switch is input
+convenience and is never stored as a second presence value.
+
+`Profile.is_available_now(at_time)` is true only when `available_from` exists and
+is no later than the supplied time. Discovery presents the ordinary optional
+filter as a `Free now` switch and applies the same comparison. Availability is
+not a profile-completion or staff-verification prerequisite.
+
+The reviewed migration clears existing expiry values before renaming the column.
+An old expiry must not silently become a future start and accidentally expose a
+profile as currently available after that time.
+
+### Alternatives rejected
+
+- Keep `available_until` and only relabel it, because the stored meaning and UI
+  would disagree.
+- Store a second `free_now` boolean, because it could drift from the timestamp.
+- Add a presence/history model, because the MVP needs only one current signal.
+- Require availability during onboarding, because it is a later optional social
+  choice rather than staff-verification evidence.
+
+### Consequences
+
+Users avoid raw date/time input and can add or clear availability later. The
+relative options deliberately remain coarse: Today, This week and As and when
+all start immediately, while Tomorrow becomes current at local midnight. A start
+signal remains current until the owner clears or replaces it; no availability
+history is stored. Tests must cover optional completion, conversion at the local
+day boundary, clearing and the `Free now` discovery filter.
+
+## ADR-019: Expose profile verification on the Django User permissions form
+
+**Status:** Accepted
+**Recorded:** 2026-07-27
+
+### Context
+
+Manual profile verification existed only as a bulk action on the separate
+Profile changelist. Staff reviewing an account through Django's User page could
+see Active, Staff status and Superuser status but had no nearby way to grant the
+profile verification required for discovery. The resulting navigation made the
+account appear active while the user continued to receive the verification gate
+message. The user explicitly requested a verification control in that Permissions
+section on 2026-07-27.
+
+### Decision
+
+Keep `Profile.is_verified`, `verified_at` and `verified_by` as the only durable
+verification truth. In `kindlelise/admin.py`, replace Django's registered
+`UserAdmin` with `KindleliseUserAdmin`, preserving Django's standard User admin
+behaviour and adding one form-only `Profile verified` checkbox to the User change
+page's Permissions fieldset.
+
+Only a staff request already authorised to change the User and holding
+`kindlelise.change_profile` may see and submit the checkbox. Checking it rechecks
+the related Profile's non-empty display name and configured broad-area key, then
+records the current staff reviewer and time. Unchecking it clears all three
+verification fields. A missing or incomplete Profile cannot be verified. The
+existing Profile list actions remain available and enforce the same state rules.
+
+### Alternatives rejected
+
+- Treat Active, Staff status or Superuser status as profile verification,
+  because those Django account permissions have different security meanings.
+- Add a second verification field to User, because it could drift from Profile.
+- Add a custom admin route or public approval page, because Django's existing
+  User change form can safely host the control.
+- Remove the existing Profile bulk action, because it remains useful for staff
+  reviewing several complete profiles.
+
+### Consequences
+
+Staff can approve a complete account from the User page they are already using,
+while durable verification remains consistent and attributable. This adds no
+model, migration, route, dependency or implementation file. Tests must prove
+placement, successful verification and withdrawal, incomplete-profile refusal,
+and omission of the control when Profile change permission is absent.
