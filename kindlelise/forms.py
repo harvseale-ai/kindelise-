@@ -1,5 +1,7 @@
 """Validate the seven mapped kinds of untrusted browser input."""
 
+from datetime import datetime, time, timedelta
+
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -10,11 +12,29 @@ from kindlelise.models import Interest, Plan, Profile, Report
 
 
 class AccountSignUpForm(UserCreationForm):
-    """Validate one unique username and a confirmed Django-validated password."""
+    """Validate one canonical email and a confirmed Django-validated password."""
+
+    email = forms.EmailField(
+        max_length=150,
+        widget=forms.EmailInput(
+            attrs={
+                "autocomplete": "email",
+                "autocapitalize": "none",
+                "spellcheck": "false",
+            }
+        ),
+    )
 
     class Meta(UserCreationForm.Meta):
         model = get_user_model()
-        fields = ("username",)
+        fields = ("email",)
+
+    def clean_email(self):
+        """Return one lowercase email not already used as a login identifier."""
+        email = self.cleaned_data["email"].strip().lower()
+        if get_user_model().objects.filter(username__iexact=email).exists():
+            raise forms.ValidationError("An account already uses this email address.")
+        return email
 
 
 class ProfileDetailsForm(forms.ModelForm):
@@ -22,6 +42,21 @@ class ProfileDetailsForm(forms.ModelForm):
 
     display_name = forms.CharField(max_length=80, strip=True)
     broad_area = forms.ChoiceField(choices=())
+    free_now = forms.BooleanField(
+        required=False,
+        label="Free now",
+        help_text="Turn this off and leave Available from unset to clear it.",
+        widget=forms.CheckboxInput(attrs={"class": "availability-toggle"}),
+    )
+    availability_start = forms.ChoiceField(
+        choices=(("", "Add later / not set"), *Profile.AvailabilityStart.choices),
+        required=False,
+        label="Available from",
+        help_text=(
+            "Today, This week and As and when start now. Tomorrow starts at "
+            "local midnight. You can add or clear this later."
+        ),
+    )
 
     class Meta:
         model = Profile
@@ -29,7 +64,8 @@ class ProfileDetailsForm(forms.ModelForm):
             "display_name",
             "biography",
             "broad_area",
-            "available_until",
+            "free_now",
+            "availability_start",
             "interests",
         )
 
@@ -41,6 +77,34 @@ class ProfileDetailsForm(forms.ModelForm):
             for area_key, area_label in settings.KINDLELISE_AREAS.items()
         ]
         self.fields["interests"].queryset = Interest.objects.order_by("name")
+        if not self.is_bound and self.instance.pk:
+            is_available = self.instance.is_available_now(timezone.now())
+            self.initial["free_now"] = is_available
+            if is_available:
+                self.initial["availability_start"] = ""
+
+    def clean(self):
+        """Convert the optional relative availability choice to one start time."""
+        cleaned_data = super().clean()
+        availability_start = cleaned_data.get("availability_start")
+        if cleaned_data.get("free_now"):
+            cleaned_data["availability_start"] = Profile.AvailabilityStart.TODAY
+            cleaned_data["available_from"] = timezone.now()
+            return cleaned_data
+        if not availability_start:
+            cleaned_data["available_from"] = None
+            return cleaned_data
+
+        current_time = timezone.now()
+        if availability_start == Profile.AvailabilityStart.TOMORROW:
+            local_tomorrow = timezone.localdate(current_time) + timedelta(days=1)
+            cleaned_data["available_from"] = timezone.make_aware(
+                datetime.combine(local_tomorrow, time.min),
+                timezone.get_current_timezone(),
+            )
+        else:
+            cleaned_data["available_from"] = current_time
+        return cleaned_data
 
 
 class DiscoveryFiltersForm(forms.Form):
@@ -51,7 +115,7 @@ class DiscoveryFiltersForm(forms.Form):
         queryset=Interest.objects.none(),
         required=False,
     )
-    available_now = forms.BooleanField(required=False)
+    available_now = forms.BooleanField(required=False, label="Free now")
 
     def __init__(self, *args, allowed_areas, interest_limit, **kwargs):
         """Apply trusted policy output to this request's available filters."""
@@ -110,6 +174,18 @@ class MessageDraftForm(forms.Form):
     """Validate one bounded non-empty plain-text message draft."""
 
     body = forms.CharField(max_length=1_000, strip=True)
+
+
+class MessageEditRequestForm(forms.Form):
+    """Validate one bounded unsent draft and one fixed editing goal."""
+
+    EDITING_GOALS = (
+        ("fix_grammar", "Fix grammar"),
+        ("improve_clarity", "Improve clarity"),
+    )
+
+    draft = forms.CharField(max_length=1_000, strip=True)
+    editing_goal = forms.ChoiceField(choices=EDITING_GOALS)
 
 
 class PrivateReportForm(forms.ModelForm):

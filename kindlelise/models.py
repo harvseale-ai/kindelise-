@@ -11,9 +11,19 @@ class Interest(models.Model):
 
     name = models.CharField(max_length=50, unique=True)
 
+    def __str__(self):
+        """Return the controlled interest name in forms and staff screens."""
+        return self.name
+
 
 class Profile(models.Model):
     """Store public profile details, broad area and staff verification state."""
+
+    class AvailabilityStart(models.TextChoices):
+        TODAY = "today", "Today"
+        TOMORROW = "tomorrow", "Tomorrow"
+        THIS_WEEK = "this_week", "This week"
+        AS_AND_WHEN = "as_and_when", "As and when"
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -24,7 +34,13 @@ class Profile(models.Model):
     biography = models.TextField(max_length=500, blank=True, default="")
     broad_area = models.CharField(max_length=20, blank=True, default="")
     interests = models.ManyToManyField(Interest, blank=True, related_name="profiles")
-    available_until = models.DateTimeField(null=True, blank=True)
+    availability_start = models.CharField(
+        max_length=11,
+        choices=AvailabilityStart.choices,
+        blank=True,
+        default="",
+    )
+    available_from = models.DateTimeField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     verified_at = models.DateTimeField(null=True, blank=True)
     verified_by = models.ForeignKey(
@@ -37,6 +53,13 @@ class Profile(models.Model):
 
     class Meta:
         constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(availability_start="", available_from__isnull=True)
+                    | (~Q(availability_start="") & Q(available_from__isnull=False))
+                ),
+                name="profile_availability_fields_match",
+            ),
             models.CheckConstraint(
                 condition=(
                     Q(
@@ -61,14 +84,14 @@ class Profile(models.Model):
         ]
 
     def is_available_now(self, at_time):
-        """Return true only while this profile's availability is still future.
+        """Return true only after this profile's availability start has arrived.
 
         Inputs: a timezone-aware time used as the comparison point.
-        Returns: whether available_until exists and is later than that time.
+        Returns: whether available_from exists and is no later than that time.
         Changes: none.
-        Privacy: does not expose or change the stored expiry.
+        Privacy: does not expose or change the stored start time.
         """
-        return self.available_until is not None and self.available_until > at_time
+        return self.available_from is not None and self.available_from <= at_time
 
 
 class Plan(models.Model):

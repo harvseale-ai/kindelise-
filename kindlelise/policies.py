@@ -1,6 +1,7 @@
 """Answer the eight mapped Kindlelise permission questions."""
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 
 from kindlelise.models import (
@@ -20,12 +21,14 @@ def can_access_discovery_plans_and_messages(user):
     Refuses: anonymous, inactive, missing-profile and unverified states.
     Privacy: returns only a decision and no profile details.
     """
-    if not getattr(user, "is_authenticated", False) or not user.is_active:
+    if not getattr(user, "is_authenticated", False) or getattr(user, "pk", None) is None:
         return False
-    try:
-        return user.profile.is_verified
-    except (AttributeError, Profile.DoesNotExist):
-        return False
+    # Query durable state so a cached request relation cannot outlive staff removal.
+    return get_user_model().objects.filter(
+        pk=user.pk,
+        is_active=True,
+        profile__is_verified=True,
+    ).exists()
 
 
 def get_allowed_discovery_areas_and_interest_limit(user):
@@ -40,14 +43,17 @@ def get_allowed_discovery_areas_and_interest_limit(user):
     if not can_access_discovery_plans_and_messages(user):
         return (), 0
 
-    current_area = user.profile.broad_area
+    current_area = Profile.objects.filter(user_id=user.pk).values_list(
+        "broad_area",
+        flat=True,
+    ).first()
     if current_area not in settings.KINDLELISE_AREAS:
         return (), 0
 
-    try:
-        has_premium_access = user.platform_subscription.has_premium_access()
-    except PlatformSubscription.DoesNotExist:
-        has_premium_access = False
+    subscription = PlatformSubscription.objects.filter(user_id=user.pk).first()
+    has_premium_access = (
+        subscription.has_premium_access() if subscription is not None else False
+    )
 
     if not has_premium_access:
         return (current_area,), 2

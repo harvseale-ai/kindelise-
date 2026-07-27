@@ -1,8 +1,15 @@
 """Own the fourteen mapped state-changing Kindlelise workflows."""
 
+from collections.abc import Mapping
+from datetime import datetime, timezone as datetime_timezone
+from urllib.parse import urlsplit
+
+import stripe
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from kindlelise.models import (
@@ -11,8 +18,10 @@ from kindlelise.models import (
     Message,
     Participation,
     Plan,
+    PlatformSubscription,
     Profile,
     Report,
+    StripeWebhookReceipt,
 )
 from kindlelise.policies import (
     can_access_discovery_plans_and_messages,
@@ -27,14 +36,16 @@ from kindlelise.policies import (
 def create_account_and_profile(new_account_details):
     """Create one Django account and its empty unverified profile atomically.
 
-    Inputs: validated AccountSignUpForm values containing username and password1.
+    Inputs: validated AccountSignUpForm values containing email and password1.
     Returns: the newly created Django account.
     Changes: creates one account and exactly one empty unverified profile.
     Refuses: invalid or duplicate values through normal Django database errors.
     Privacy: hashes the password through Django and ignores every extra field.
     """
+    email = new_account_details["email"]
     account = get_user_model().objects.create_user(
-        username=new_account_details["username"],
+        username=email,
+        email=email,
         password=new_account_details["password1"],
     )
     Profile.objects.create(user=account)
@@ -63,7 +74,8 @@ def update_signed_in_user_profile(user, profile_changes):
         "display_name",
         "biography",
         "broad_area",
-        "available_until",
+        "availability_start",
+        "available_from",
     )
     changed_fields = []
     for field_name in scalar_fields:
@@ -148,13 +160,24 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
     for field_name in editable_fields:
         if field_name not in plan_changes:
             continue
+        current_value = getattr(current_plan, field_name)
+        submitted_value = plan_changes[field_name]
+        values_differ = current_value != submitted_value
+        if field_name == "starts_at":
+            # Django's ordinary form display omits database microseconds; that
+            # formatting loss is not a user-visible change requiring rereview.
+            values_differ = current_value.replace(microsecond=0) != (
+                submitted_value.replace(microsecond=0)
+            )
+            if not values_differ:
+                submitted_value = current_value
         if (
             current_plan.status == Plan.Status.APPROVED
             and field_name in review_fields
-            and getattr(current_plan, field_name) != plan_changes[field_name]
+            and values_differ
         ):
             review_reset_required = True
-        setattr(current_plan, field_name, plan_changes[field_name])
+        setattr(current_plan, field_name, submitted_value)
         changed_fields.append(field_name)
 
     if review_reset_required:
@@ -448,3 +471,459 @@ def submit_private_report_about_user(
         status=Report.Status.RECEIVED,
         **context_values,
     )
+
+
+def _require_signed_in_active_account(user):
+    if (
+        not getattr(user, "is_authenticated", False)
+        or not getattr(user, "is_active", False)
+        or getattr(user, "pk", None) is None
+    ):
+        raise PermissionDenied("A signed-in active account is required")
+
+
+def _require_absolute_return_url(return_url):
+    parsed_url = urlsplit(return_url)
+    if (
+        parsed_url.scheme not in {"http", "https"}
+        or not parsed_url.netloc
+        or parsed_url.username
+        or parsed_url.password
+    ):
+        raise PermissionDenied("A server-built return URL is required")
+
+
+def _require_stripe_hosted_url(url, expected_host):
+    if not isinstance(url, str):
+        raise ValueError("Stripe did not return a hosted URL")
+    parsed_url = urlsplit(url)
+    if parsed_url.scheme != "https" or parsed_url.hostname != expected_host:
+        raise ValueError("Stripe did not return the expected hosted URL")
+    return url
+
+
+def start_stripe_subscription_checkout(user, success_url, cancel_url):
+    """Create hosted Checkout for the one configured Premium subscription.
+
+    Inputs: a server-known account and account-route URLs built by the view.
+    Returns: the validated Stripe-hosted Checkout URL.
+    Changes: creates a Stripe Checkout session outside a database transaction.
+    Refuses: inactive accounts, unsafe URLs, missing configuration and duplicate
+        active/trialing subscriptions.
+    Privacy: sends only the immutable local user ID and known Stripe customer ID.
+    """
+    _require_signed_in_active_account(user)
+    _require_absolute_return_url(success_url)
+    _require_absolute_return_url(cancel_url)
+    if not settings.STRIPE_SECRET_KEY or not settings.STRIPE_PRICE_ID:
+        raise PermissionDenied("Stripe subscription configuration is unavailable")
+
+    subscription = PlatformSubscription.objects.filter(user=user).first()
+    if subscription is not None and subscription.stripe_status in {
+        "active",
+        "trialing",
+    }:
+        raise PermissionDenied("Use the existing Stripe subscription")
+
+    has_stripe_history = bool(
+        subscription
+        and (
+            subscription.stripe_customer_id
+            or subscription.stripe_subscription_id
+        )
+    )
+    subscription_data = {
+        "metadata": {"kindlelise_user_id": str(user.pk)},
+    }
+    checkout_values = {
+        "api_key": settings.STRIPE_SECRET_KEY,
+        "mode": "subscription",
+        "line_items": [{"price": settings.STRIPE_PRICE_ID, "quantity": 1}],
+        "client_reference_id": str(user.pk),
+        "payment_method_collection": "if_required",
+        "subscription_data": subscription_data,
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+    }
+    if subscription is not None and subscription.stripe_customer_id:
+        checkout_values["customer"] = subscription.stripe_customer_id
+    if not has_stripe_history:
+        subscription_data.update(
+            {
+                "trial_period_days": 30,
+                "trial_settings": {
+                    "end_behavior": {
+                        "missing_payment_method": "create_invoice",
+                    }
+                },
+            }
+        )
+
+    checkout_session = stripe.checkout.Session.create(**checkout_values)
+    return _require_stripe_hosted_url(
+        getattr(checkout_session, "url", None),
+        "checkout.stripe.com",
+    )
+
+
+def open_stripe_customer_portal(user, return_url):
+    """Create a hosted portal session for the account's known Stripe customer.
+
+    Inputs: a server-known account and account-route return URL built by the view.
+    Returns: the validated Stripe-hosted customer-portal URL.
+    Changes: creates a Stripe portal session outside a database transaction.
+    Refuses: inactive accounts, unsafe URLs, missing configuration or customer ID.
+    Privacy: sends only the account's already-linked Stripe customer identifier.
+    """
+    _require_signed_in_active_account(user)
+    _require_absolute_return_url(return_url)
+    if not settings.STRIPE_SECRET_KEY:
+        raise PermissionDenied("Stripe portal configuration is unavailable")
+    subscription = PlatformSubscription.objects.filter(user=user).first()
+    if subscription is None or not subscription.stripe_customer_id:
+        raise PermissionDenied("A linked Stripe customer is required")
+
+    portal_session = stripe.billing_portal.Session.create(
+        api_key=settings.STRIPE_SECRET_KEY,
+        customer=subscription.stripe_customer_id,
+        return_url=return_url,
+    )
+    return _require_stripe_hosted_url(
+        getattr(portal_session, "url", None),
+        "billing.stripe.com",
+    )
+
+
+def _as_mapping(value):
+    return value if isinstance(value, Mapping) else {}
+
+
+def _stripe_identifier(value):
+    if isinstance(value, Mapping):
+        value = value.get("id")
+    if not isinstance(value, str) or not value or len(value) > 255:
+        return None
+    return value
+
+
+def _provider_time(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError("Stripe event time is invalid")
+    try:
+        return datetime.fromtimestamp(value, tz=datetime_timezone.utc)
+    except (OverflowError, OSError, ValueError) as error:
+        raise ValueError("Stripe event time is invalid") from error
+
+
+def _positive_local_user_id(*values):
+    local_user_ids = set()
+    for value in values:
+        if value in (None, ""):
+            continue
+        try:
+            local_user_id = int(value)
+        except (TypeError, ValueError) as error:
+            raise ValueError("Stripe account metadata is invalid") from error
+        if local_user_id < 1:
+            raise ValueError("Stripe account metadata is invalid")
+        local_user_ids.add(local_user_id)
+    if len(local_user_ids) > 1:
+        raise ValueError("Stripe account metadata conflicts")
+    return next(iter(local_user_ids), None)
+
+
+def _stripe_event_identity(event_type, stripe_object):
+    object_metadata = _as_mapping(stripe_object.get("metadata"))
+    client_reference_id = None
+    subscription_metadata_id = object_metadata.get("kindlelise_user_id")
+    if event_type == "checkout.session.completed":
+        client_reference_id = stripe_object.get("client_reference_id")
+        subscription_id = _stripe_identifier(stripe_object.get("subscription"))
+    elif event_type.startswith("customer.subscription."):
+        subscription_id = _stripe_identifier(stripe_object.get("id"))
+    else:
+        invoice_parent = _as_mapping(stripe_object.get("parent"))
+        subscription_details = _as_mapping(
+            invoice_parent.get("subscription_details")
+        )
+        subscription_value = subscription_details.get("subscription")
+        if subscription_value is None:
+            subscription_value = stripe_object.get("subscription")
+        subscription_id = _stripe_identifier(subscription_value)
+        subscription_metadata = _as_mapping(subscription_details.get("metadata"))
+        subscription_metadata_id = subscription_metadata.get(
+            "kindlelise_user_id",
+            subscription_metadata_id,
+        )
+
+    customer_id = _stripe_identifier(stripe_object.get("customer"))
+    if customer_id is None or subscription_id is None:
+        raise ValueError("Stripe ownership identifiers are missing")
+    local_user_id = _positive_local_user_id(
+        client_reference_id,
+        subscription_metadata_id,
+    )
+    return local_user_id, customer_id, subscription_id
+
+
+def _resolve_stripe_event_user_id(
+    local_user_id,
+    customer_id,
+    subscription_id,
+):
+    linked_user_ids = set(
+        PlatformSubscription.objects.filter(
+            Q(stripe_customer_id=customer_id)
+            | Q(stripe_subscription_id=subscription_id)
+        ).values_list("user_id", flat=True)
+    )
+    if len(linked_user_ids) > 1:
+        raise ValueError("Stripe identifiers are linked to different accounts")
+    linked_user_id = next(iter(linked_user_ids), None)
+    if local_user_id is not None and linked_user_id not in {None, local_user_id}:
+        raise ValueError("Stripe ownership metadata conflicts with the stored link")
+    resolved_user_id = local_user_id or linked_user_id
+    if resolved_user_id is None or not get_user_model().objects.filter(
+        pk=resolved_user_id
+    ).exists():
+        raise ValueError("Stripe event has no trusted local account")
+    return resolved_user_id
+
+
+def _paid_invoice_period_end(stripe_object, subscription_id):
+    if (
+        stripe_object.get("status") != "paid"
+        or stripe_object.get("currency") != "gbp"
+        or not isinstance(stripe_object.get("amount_paid"), int)
+        or stripe_object["amount_paid"] < 499
+    ):
+        raise ValueError("Stripe invoice is not a paid GBP annual invoice")
+
+    paid_period_ends = []
+    invoice_lines = _as_mapping(stripe_object.get("lines")).get("data", [])
+    if not isinstance(invoice_lines, list):
+        raise ValueError("Stripe invoice lines are invalid")
+    for invoice_line in invoice_lines:
+        invoice_line = _as_mapping(invoice_line)
+        pricing = _as_mapping(invoice_line.get("pricing"))
+        price_details = _as_mapping(pricing.get("price_details"))
+        if _stripe_identifier(price_details.get("price")) != settings.STRIPE_PRICE_ID:
+            continue
+        if invoice_line.get("currency") != "gbp" or invoice_line.get("quantity") != 1:
+            raise ValueError("Stripe invoice price values are invalid")
+        line_parent = _as_mapping(invoice_line.get("parent"))
+        subscription_item_details = _as_mapping(
+            line_parent.get("subscription_item_details")
+        )
+        line_subscription_id = _stripe_identifier(
+            subscription_item_details.get("subscription")
+            or invoice_line.get("subscription")
+        )
+        if line_subscription_id not in {None, subscription_id}:
+            raise ValueError("Stripe invoice line belongs to another subscription")
+        period_end = _as_mapping(invoice_line.get("period")).get("end")
+        paid_period_ends.append(_provider_time(period_end))
+    if len(paid_period_ends) != 1:
+        raise ValueError("Stripe invoice must contain one configured annual line")
+    paid_period_end = paid_period_ends[0]
+    if paid_period_end <= timezone.now():
+        raise ValueError("Stripe paid service period is not in the future")
+    return paid_period_end
+
+
+def _active_invoice_subscription_status(stripe_object, subscription_id):
+    invoice_parent = _as_mapping(stripe_object.get("parent"))
+    subscription_details = _as_mapping(invoice_parent.get("subscription_details"))
+    subscription_value = subscription_details.get("subscription")
+    if isinstance(subscription_value, Mapping):
+        if _stripe_identifier(subscription_value) != subscription_id:
+            raise ValueError("Stripe invoice subscription is inconsistent")
+        return subscription_value.get("status")
+    provider_subscription = stripe.Subscription.retrieve(
+        subscription_id,
+        api_key=settings.STRIPE_SECRET_KEY,
+    )
+    if _stripe_identifier(provider_subscription) != subscription_id:
+        raise ValueError("Stripe returned another subscription")
+    return provider_subscription.get("status")
+
+
+def _store_processed_receipt(receipt):
+    receipt.processed_at = timezone.now()
+    receipt.save(update_fields=["processed_at"])
+
+
+def update_premium_access_from_verified_stripe_event(stripe_event):
+    """Project one verified supported Stripe event into local Premium access.
+
+    Inputs: a signature-verified supported Stripe event from the webhook view.
+    Returns: true when projection data changed and false for a safe no-op.
+    Changes: atomically records one event receipt and the permitted subscription
+        identifiers, trial state, paid period or cancellation state.
+    Refuses: malformed, unowned, conflicting, unpaid or provider-invalid events.
+    Privacy: never uses email or stores card, bank, invoice or raw payload data.
+    """
+    stripe_event = _as_mapping(stripe_event)
+    event_id = _stripe_identifier(stripe_event.get("id"))
+    event_type = stripe_event.get("type")
+    if event_id is None or event_type not in {
+        "checkout.session.completed",
+        "customer.subscription.updated",
+        "invoice.paid",
+        "customer.subscription.deleted",
+    }:
+        raise ValueError("Stripe event is not supported")
+    provider_created_at = _provider_time(stripe_event.get("created"))
+    stripe_object = _as_mapping(_as_mapping(stripe_event.get("data")).get("object"))
+    if not stripe_object:
+        raise ValueError("Stripe event object is missing")
+    local_user_id, customer_id, subscription_id = _stripe_event_identity(
+        event_type,
+        stripe_object,
+    )
+    resolved_user_id = _resolve_stripe_event_user_id(
+        local_user_id,
+        customer_id,
+        subscription_id,
+    )
+
+    paid_period_end = None
+    provider_subscription_status = None
+    if event_type == "invoice.paid":
+        if not settings.STRIPE_SECRET_KEY or not settings.STRIPE_PRICE_ID:
+            raise ValueError("Stripe subscription configuration is unavailable")
+        paid_period_end = _paid_invoice_period_end(stripe_object, subscription_id)
+        # Stripe recommends granting paid access only when the related
+        # subscription is active. This authenticated read stays outside the
+        # database transaction when the webhook did not expand the subscription.
+        provider_subscription_status = _active_invoice_subscription_status(
+            stripe_object,
+            subscription_id,
+        )
+
+    with transaction.atomic():
+        receipt, receipt_created = (
+            StripeWebhookReceipt.objects.select_for_update().get_or_create(
+                stripe_event_id=event_id,
+                defaults={
+                    "event_type": event_type,
+                    "provider_created_at": provider_created_at,
+                },
+            )
+        )
+        if not receipt_created:
+            if (
+                receipt.event_type != event_type
+                or receipt.provider_created_at != provider_created_at
+            ):
+                raise ValueError("Stripe event ID was reused inconsistently")
+            if receipt.processed_at is not None:
+                return False
+
+        subscription, _created = (
+            PlatformSubscription.objects.select_for_update().get_or_create(
+                user_id=resolved_user_id
+            )
+        )
+        if PlatformSubscription.objects.exclude(user_id=resolved_user_id).filter(
+            Q(stripe_customer_id=customer_id)
+            | Q(stripe_subscription_id=subscription_id)
+        ).exists():
+            raise ValueError("Stripe identifiers already belong to another account")
+
+        latest_event_at = subscription.latest_provider_event_at
+        if event_type == "checkout.session.completed":
+            if latest_event_at is not None and provider_created_at <= latest_event_at:
+                _store_processed_receipt(receipt)
+                return False
+        elif latest_event_at is not None:
+            if provider_created_at < latest_event_at and event_type != "invoice.paid":
+                _store_processed_receipt(receipt)
+                return False
+            if provider_created_at == latest_event_at and event_type != (
+                "customer.subscription.deleted"
+            ):
+                _store_processed_receipt(receipt)
+                return False
+
+        replacing_subscription = bool(
+            subscription.stripe_subscription_id
+            and subscription.stripe_subscription_id != subscription_id
+        )
+        if subscription.stripe_customer_id not in {None, customer_id}:
+            raise ValueError("Stripe customer ownership cannot be reassigned")
+        if replacing_subscription:
+            replacement_is_newer = (
+                latest_event_at is None or provider_created_at > latest_event_at
+            )
+            if (
+                local_user_id is None
+                or subscription.stripe_status in {"active", "trialing"}
+                or not replacement_is_newer
+            ):
+                _store_processed_receipt(receipt)
+                return False
+
+        changed_fields = []
+        if subscription.stripe_customer_id != customer_id:
+            subscription.stripe_customer_id = customer_id
+            changed_fields.append("stripe_customer_id")
+        if subscription.stripe_subscription_id != subscription_id:
+            subscription.stripe_subscription_id = subscription_id
+            changed_fields.append("stripe_subscription_id")
+
+        if event_type == "checkout.session.completed":
+            if changed_fields:
+                subscription.save(update_fields=changed_fields)
+            _store_processed_receipt(receipt)
+            return bool(changed_fields)
+
+        if event_type == "customer.subscription.deleted":
+            subscription.stripe_status = "cancelled"
+            subscription.access_until = None
+            subscription.latest_provider_event_at = provider_created_at
+            changed_fields.extend(
+                ["stripe_status", "access_until", "latest_provider_event_at"]
+            )
+        elif event_type == "customer.subscription.updated":
+            stripe_status = stripe_object.get("status")
+            if not isinstance(stripe_status, str) or len(stripe_status) > 80:
+                raise ValueError("Stripe subscription status is invalid")
+            subscription.stripe_status = stripe_status
+            changed_fields.append("stripe_status")
+            if stripe_status == "trialing":
+                trial_end = _provider_time(stripe_object.get("trial_end"))
+                if trial_end <= timezone.now():
+                    raise ValueError("Stripe trial end is not in the future")
+                subscription.access_until = trial_end
+                changed_fields.append("access_until")
+            elif stripe_status != "active":
+                subscription.access_until = None
+                changed_fields.append("access_until")
+            subscription.latest_provider_event_at = provider_created_at
+            changed_fields.append("latest_provider_event_at")
+        else:
+            if provider_subscription_status != "active":
+                _store_processed_receipt(receipt)
+                return False
+            if latest_event_at is not None and provider_created_at < latest_event_at:
+                if (
+                    subscription.stripe_status != "active"
+                    or subscription.access_until is not None
+                    and paid_period_end <= subscription.access_until
+                ):
+                    _store_processed_receipt(receipt)
+                    return False
+                subscription.access_until = paid_period_end
+                changed_fields.append("access_until")
+            else:
+                subscription.stripe_status = "active"
+                subscription.access_until = paid_period_end
+                subscription.latest_provider_event_at = provider_created_at
+                changed_fields.extend(
+                    ["stripe_status", "access_until", "latest_provider_event_at"]
+                )
+
+        subscription.save(update_fields=dict.fromkeys(changed_fields))
+        _store_processed_receipt(receipt)
+        return True

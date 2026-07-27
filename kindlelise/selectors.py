@@ -43,19 +43,30 @@ def get_signed_in_user_account_summary(user):
         "status": None,
         "access_until": None,
         "customer_portal_available": False,
+        "has_stripe_history": False,
+        "trial_available": True,
+        "checkout_available": True,
     }
     if subscription is not None:
+        has_stripe_history = bool(
+            subscription.stripe_customer_id
+            or subscription.stripe_subscription_id
+        )
         subscription_summary.update(
             {
                 "has_premium_access": subscription.has_premium_access(),
                 "status": subscription.stripe_status,
                 "access_until": subscription.access_until,
                 "customer_portal_available": bool(subscription.stripe_customer_id),
+                "has_stripe_history": has_stripe_history,
+                "trial_available": not has_stripe_history,
+                "checkout_available": subscription.stripe_status
+                not in {"active", "trialing"},
             }
         )
 
     return {
-        "account": {"username": user.get_username()},
+        "account": {"email": user.email},
         "profile": profile,
         "plans": Plan.objects.filter(owner=user).order_by("-created_at"),
         "subscription": subscription_summary,
@@ -112,7 +123,7 @@ def get_profiles_for_discovery_grid(viewer, selected_filters):
     if interest_ids:
         profiles = profiles.filter(interests__id__in=interest_ids).distinct()
     if selected_filters.get("available_now"):
-        profiles = profiles.filter(available_until__gt=timezone.now())
+        profiles = profiles.filter(available_from__lte=timezone.now())
     return profiles.order_by("display_name", "pk")
 
 
@@ -194,7 +205,7 @@ def get_plan_page_if_viewer_is_allowed(viewer, plan_id):
         return None
     current_time = timezone.now()
     plan = (
-        Plan.objects.select_related("owner")
+        Plan.objects.select_related("owner", "owner__profile")
         .annotate(
             joined_count=Count(
                 "participations",
@@ -238,7 +249,9 @@ def get_unblocked_conversations_for_inbox(user):
     return (
         Conversation.objects.select_related(
             "first_user",
+            "first_user__profile",
             "second_user",
+            "second_user__profile",
         )
         .filter(
             Q(first_user=user) | Q(second_user=user),
@@ -269,7 +282,12 @@ def get_messages_if_user_can_open_conversation(user, conversation_id):
     if not can_access_discovery_plans_and_messages(user):
         return None
     conversation = (
-        Conversation.objects.select_related("first_user", "second_user")
+        Conversation.objects.select_related(
+            "first_user",
+            "first_user__profile",
+            "second_user",
+            "second_user__profile",
+        )
         .filter(pk=conversation_id)
         .first()
     )
