@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ other_profile.display_name }} · Messages · Kindlelise{% endblock %}
+
+{% block content %}
+  <section class="card" aria-labelledby="conversation-title">
+    <a class="back-link" href="{% url 'inbox' %}">← Back to Messages</a>
+    <p class="eyebrow">Direct conversation</p>
+    <h1 id="conversation-title">{{ other_profile.display_name }}</h1>
+    <p><a href="{% url 'report_create' other_profile.pk %}?context_type=conversation&amp;context_id={{ conversation.pk }}">Report this conversation privately</a></p>
+    <details>
+      <summary>Block {{ other_profile.display_name }}</summary>
+      <p>Blocking removes both profiles from each other's discovery and stops direct messages. The other account is not notified.</p>
+      <form method="post" action="{% url 'profile_block_messages_and_discovery' other_profile.pk %}">
+        {% csrf_token %}
+        <button class="danger secondary" type="submit">Confirm block</button>
+      </form>
+    </details>
+
+    <ol class="plain-list" aria-label="Conversation messages">
+      {% for conversation_message in conversation_messages %}
+        <li>
+          <div>
+            <strong>{% if conversation_message.sender_id == user.pk %}You{% else %}{{ other_profile.display_name }}{% endif %}</strong>
+            <p>{{ conversation_message.body }}</p>
+            {% if conversation_message.sender_id != user.pk %}
+              <a href="{% url 'report_create' other_profile.pk %}?context_type=message&amp;context_id={{ conversation_message.pk }}&amp;context_conversation_id={{ conversation.pk }}">Report this message</a>
+            {% endif %}
+          </div>
+          <time datetime="{{ conversation_message.sent_at|date:'c' }}">{{ conversation_message.sent_at }}</time>
+        </li>
+      {% empty %}
+        <li>
+          <div>
+            <strong>No messages yet.</strong>
+            <p class="state-label">Write the first direct message below.</p>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+
+    <form id="message-composer" method="post" action="{% url 'conversation_message_send' conversation.pk %}" novalidate>
+      {% csrf_token %}
+      {{ form.as_p }}
+      <fieldset>
+        <legend>Edit this unsent draft</legend>
+        <p class="state-label">Only this draft and your chosen editing goal go to Ollama Cloud. No profile or previous messages are included.</p>
+        <button type="button" data-message-edit-goal="fix_grammar" data-conversation-id="{{ conversation.pk }}" aria-controls="message-edit-suggestion">Fix grammar</button>
+        <button type="button" class="secondary" data-message-edit-goal="improve_clarity" data-conversation-id="{{ conversation.pk }}" aria-controls="message-edit-suggestion">Improve clarity</button>
+        <p id="message-edit-status" class="state-label" role="status" aria-live="polite"></p>
+      </fieldset>
+      <section id="message-edit-suggestion" class="state-panel" aria-labelledby="message-edit-title" aria-live="polite" hidden>
+        <h2 id="message-edit-title">Edit unsent draft</h2>
+        <p><strong>Original draft</strong></p>
+        <p id="message-edit-original"></p>
+        <p><strong>Suggested draft</strong></p>
+        <p id="message-edit-suggested"></p>
+        <button id="message-edit-keep" class="secondary" type="button">Keep original</button>
+        <button id="message-edit-use" type="button">Use suggestion</button>
+      </section>
+      <button type="submit">Send message</button>
+    </form>
+  </section>
+{% endblock %}

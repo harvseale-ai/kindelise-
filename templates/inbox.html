@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Messages · Kindlelise{% endblock %}
+
+{% block content %}
+  <section class="card" aria-labelledby="inbox-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Direct conversations</p>
+        <h1 id="inbox-title">Messages</h1>
+      </div>
+      <a class="button secondary" href="{% url 'discover' %}">Discover</a>
+    </div>
+    <p>Messages refresh when you open a conversation. Only permitted direct conversations appear here.</p>
+
+    <ul class="plain-list" aria-label="Recent direct conversations">
+      {% for row in conversation_rows %}
+        <li>
+          <div>
+            <strong><a href="{% url 'conversation_detail' row.conversation.pk %}">{{ row.other_profile.display_name }}</a></strong>
+            <div class="state-label">Direct conversation</div>
+          </div>
+          <time datetime="{{ row.conversation.updated_at|date:'c' }}">{{ row.conversation.updated_at }}</time>
+        </li>
+      {% empty %}
+        <li class="empty-state">
+          <div>
+            <strong>No direct conversations yet.</strong>
+            <p class="state-label">Open a verified profile to start a direct conversation.</p>
+            <a class="button secondary" href="{% url 'discover' %}">Return to Discover</a>
+          </div>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

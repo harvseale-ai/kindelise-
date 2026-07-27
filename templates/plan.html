@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if mode == "create" %}Create plan{% elif mode == "edit" %}Edit plan{% elif mode == "detail" %}{{ summary.plan.title }}{% else %}Plans{% endif %} · Kindlelise
+{% endblock %}
+
+{% block content %}
+  {% if mode == "list" %}
+    <section class="card" aria-labelledby="plans-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Public-place activities</p>
+          <h1 id="plans-title">Plans</h1>
+        </div>
+        <a class="button" href="{% url 'plan_create' %}">New plan</a>
+      </div>
+      <p>Approved future plans are public. Your own review states remain visible only to you.</p>
+      <p><a href="{% url 'discover' %}">← Discover profiles</a></p>
+    </section>
+
+    <section aria-labelledby="plan-list-title">
+      <h2 id="plan-list-title">Upcoming and my plans</h2>
+      <ul class="plain-list">
+        {% for plan in plans %}
+          <li class="card">
+            <div>
+              <strong><a href="{% url 'plan_detail' plan.pk %}">{{ plan.title }}</a></strong>
+              <p>{{ plan.public_place }} · {{ plan.starts_at }}</p>
+              <p class="state-label">{{ plan.get_status_display }}{% if plan.owner_id == user.pk %} · Your plan{% endif %}</p>
+            </div>
+          </li>
+        {% empty %}
+          <li class="card empty-state">
+            <strong>No approved plans are available.</strong>
+            <p><a href="{% url 'plan_create' %}">Create a plan for staff review.</a></p>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+
+  {% elif mode == "create" or mode == "edit" %}
+    <section class="card" aria-labelledby="plan-form-title">
+      <a class="back-link" href="{% url 'plan_list' %}">← Back to plans</a>
+      <p class="eyebrow">Manual staff review</p>
+      <h1 id="plan-form-title">{% if mode == "edit" %}Edit plan{% else %}Create plan{% endif %}</h1>
+      <p>Use an established public place and a normal HTTPS public evidence URL. Staff will open the URL manually outside Kindlelise.</p>
+      {% if mode == "edit" and plan.status == plan.Status.REJECTED %}
+        <div class="state-panel" role="status">Saving this rejected plan resubmits it as Pending review.</div>
+      {% endif %}
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
+        {{ form.as_p }}
+        <button type="submit">{% if mode == "edit" %}Save changes{% else %}Submit for review{% endif %}</button>
+      </form>
+    </section>
+
+  {% else %}
+    <article class="card" aria-labelledby="plan-title">
+      <div class="section-heading">
+        <div>
+          <a class="back-link" href="{% url 'plan_list' %}">← Back to plans</a>
+          <p class="eyebrow">{% if is_past %}Past{% else %}{{ summary.plan.get_status_display }}{% endif %} plan</p>
+          <h1 id="plan-title">{{ summary.plan.title }}</h1>
+        </div>
+        {% if can_edit %}<a class="button secondary" href="{% url 'plan_edit' summary.plan.pk %}">Edit</a>{% endif %}
+      </div>
+
+      <p>{{ summary.plan.description }}</p>
+      <dl class="account-facts">
+        <div><dt>Owner</dt><dd>{{ summary.plan.owner.profile.display_name }}</dd></div>
+        <div><dt>Public place</dt><dd>{{ summary.plan.public_place }}</dd></div>
+        <div><dt>Starts</dt><dd>{{ summary.plan.starts_at }}</dd></div>
+        <div><dt>Capacity</dt><dd>{{ summary.joined_count }} joined / {{ summary.plan.capacity }}</dd></div>
+        <div><dt>Status</dt><dd>{% if is_past %}Past{% else %}{{ summary.plan.get_status_display }}{% endif %}</dd></div>
+        <div><dt>Your participation</dt><dd>{{ summary.viewer_participation_status|default:"Not joined"|title }}</dd></div>
+      </dl>
+
+      <p><a href="{{ summary.plan.public_url }}" target="_blank" rel="noopener noreferrer">Open public evidence URL</a></p>
+      <div class="state-panel">
+        <strong>Manual review has limits</strong>
+        <p>Staff manually reviewed the public place and URL before approval. Kindlelise does not preserve the reviewed webpage, prove that the venue is safe or guarantee that the page has not changed.</p>
+      </div>
+
+      {% if summary.plan.meeting_details_locked_at %}
+        <p><strong>This plan can no longer be edited because someone has joined.</strong></p>
+      {% endif %}
+
+      {% if not is_owner %}
+        <p>
+          <a href="{% url 'report_create' summary.plan.owner.profile.pk %}{% if summary.viewer_participation_status %}?context_type=plan&amp;context_id={{ summary.plan.pk }}{% endif %}">Report the plan owner privately</a>
+        </p>
+      {% endif %}
+
+      {% if can_join %}
+        <form method="post" action="{% url 'plan_join' summary.plan.pk %}">
+          {% csrf_token %}
+          <button type="submit">{% if summary.viewer_participation_status == "left" %}Join again{% else %}Join plan{% endif %}</button>
+        </form>
+      {% elif summary.viewer_participation_status == "joined" %}
+        <form method="post" action="{% url 'plan_leave' summary.plan.pk %}">
+          {% csrf_token %}
+          <button class="secondary" type="submit">Leave plan</button>
+        </form>
+      {% endif %}
+
+      {% if can_cancel %}
+        <details>
+          <summary>Cancel plan</summary>
+          <p>Cancellation is terminal. The plan and participation history will be retained.</p>
+          <form method="post" action="{% url 'plan_cancel' summary.plan.pk %}">
+            {% csrf_token %}
+            <button class="danger secondary" type="submit">Confirm cancellation</button>
+          </form>
+        </details>
+      {% endif %}
+    </article>
+  {% endif %}
+{% endblock %}

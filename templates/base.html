@@ -1,0 +1,49 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Kindlelise{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'app.css' %}">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="{% url 'home' %}">Kindlelise</a>
+    <span class="site-context">Supervised student MVP</span>
+  </header>
+
+  {% if user.is_authenticated %}
+    {% with route_name=request.resolver_match.url_name %}
+      <nav class="primary-navigation" aria-label="Primary navigation">
+        <a href="{% url 'discover' %}"{% if route_name == "discover" or route_name == "profile_detail" %} aria-current="page"{% endif %}>Discover</a>
+        <a href="{% url 'plan_list' %}"{% if route_name == "plan_list" or route_name == "plan_create" or route_name == "plan_detail" or route_name == "plan_edit" %} aria-current="page"{% endif %}>Plans</a>
+        <a href="{% url 'inbox' %}"{% if route_name == "inbox" or route_name == "conversation_detail" %} aria-current="page"{% endif %}>Messages</a>
+        <a href="{% url 'account' %}"{% if route_name == "account" or route_name == "profile_edit" %} aria-current="page"{% endif %}>Profile</a>
+      </nav>
+    {% endwith %}
+  {% endif %}
+
+  <p id="connection-status" class="connection-status" role="status" hidden>
+    You appear to be offline. Keep this page open to preserve current form text, then retry when connected.
+  </p>
+
+  {% if messages %}
+    <div class="messages" aria-label="Notifications">
+      {% for message in messages %}
+        <p class="message {{ message.tags }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <main id="main-content" class="page-shell" tabindex="-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <p>Student MVP for supervised test accounts. No age or identity verification.</p>
+  </footer>
+  <script src="{% static 'app.js' %}" defer></script>
+</body>
+</html>

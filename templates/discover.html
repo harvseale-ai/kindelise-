@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Discover profiles · Kindlelise{% endblock %}
+
+{% block content %}
+  <section class="card" aria-labelledby="discover-title">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">Broad-area discovery</p>
+        <h1 id="discover-title">Discover profiles</h1>
+      </div>
+    </div>
+
+    <p>Browse verified profiles by broad named area and controlled interests. No exact location or distance is shown.</p>
+
+    <form method="get" aria-label="Discovery filters" novalidate>
+      {{ form.non_field_errors }}
+      <div class="form-row">
+        {{ form.broad_area.errors }}
+        {{ form.broad_area.label_tag }}
+        {{ form.broad_area }}
+      </div>
+      <div class="form-row">
+        {{ form.interests.errors }}
+        <label for="{{ form.interests.id_for_label }}">
+          Interests
+          <span class="helptext">Select up to {{ interest_limit }} interests on your {% if is_premium %}Premium{% else %}Free{% endif %} access.</span>
+        </label>
+        {{ form.interests }}
+      </div>
+      <div class="form-row checkbox-row toggle-row">
+        {{ form.available_now.errors }}
+        {{ form.available_now }}
+        {{ form.available_now.label_tag }}
+      </div>
+      <div class="action-row">
+        <button type="submit">Apply filters</button>
+        <a class="button secondary" href="{% url 'discover' %}">Clear filters</a>
+      </div>
+    </form>
+  </section>
+
+  <section aria-labelledby="results-title">
+    <h2 id="results-title">Profiles</h2>
+    <ul class="plain-list discovery-grid">
+      {% for card in profile_cards %}
+        <li class="card">
+          <div>
+            <strong><a href="{% url 'profile_detail' card.profile.pk %}">{{ card.profile.display_name }}</a></strong>
+            <p>{{ card.broad_area_label }} · Verified{% if card.is_available_now %} · Free now{% endif %}</p>
+            <ul class="chips" aria-label="Interests">
+              {% for interest in card.profile.interests.all %}
+                <li>{{ interest.name }}</li>
+              {% empty %}
+                <li class="muted">No interests listed</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </li>
+      {% empty %}
+        <li class="card empty-state">
+          <strong>No profiles match these area and interest filters.</strong>
+          <p class="muted">Try clearing or changing the permitted filters.</p>
+          <a class="button secondary" href="{% url 'discover' %}">Clear filters</a>
+        </li>
+      {% endfor %}
+    </ul>
+  </section>
+{% endblock %}

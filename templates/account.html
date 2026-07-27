@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if mode == "sign_up" %}Create an account{% elif mode == "sign_in" %}Sign in{% elif mode == "profile_edit" %}Edit profile{% elif mode == "public_profile" %}{{ profile.display_name }}{% else %}Profile{% endif %} · Kindlelise
+{% endblock %}
+
+{% block content %}
+  {% if mode == "sign_up" %}
+    <section class="card auth-card" aria-labelledby="sign-up-title">
+      <p class="eyebrow">Supervised test accounts</p>
+      <h1 id="sign-up-title">Create an account</h1>
+      <p>Use your email address and a password. Staff verification is required before discovery, plans or messages become available.</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
+        {{ form.as_p }}
+        <button type="submit">Create account</button>
+      </form>
+      <p>Already registered? <a href="{% url 'sign_in' %}">Sign in</a></p>
+    </section>
+
+  {% elif mode == "sign_in" %}
+    <section class="card auth-card" aria-labelledby="sign-in-title">
+      <p class="eyebrow">Welcome back</p>
+      <h1 id="sign-in-title">Sign in</h1>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        {% if form.errors %}<p class="error-summary" role="alert">The sign-in details were not accepted. Check the labelled fields and try again.</p>{% endif %}
+        {{ form.as_p }}
+        <button type="submit">Sign in</button>
+      </form>
+      <p>Need an account? <a href="{% url 'sign_up' %}">Create one</a></p>
+    </section>
+
+  {% elif mode == "profile_edit" %}
+    <section class="card" aria-labelledby="edit-profile-title">
+      <a class="back-link" href="{% url 'account' %}">← Back to profile</a>
+      <h1 id="edit-profile-title">Edit profile</h1>
+      <p>Availability is optional and can be added later. Choose when it starts, or select “Add later / not set” to clear it.</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
+        {{ form.as_p }}
+        <button type="submit">Save changes</button>
+      </form>
+      <div class="state-panel">
+        <strong>Staff verification</strong>
+        <p>{% if profile.is_verified %}Verified for current product access.{% else %}Pending. This is a staff access gate, not proof of identity, age, character or safety.{% endif %}</p>
+      </div>
+    </section>
+
+  {% elif mode == "public_profile" %}
+    <article class="card profile-card" aria-labelledby="public-profile-title">
+      <a class="back-link" href="{% url 'discover' %}">← Back to Discover</a>
+      <p class="eyebrow">Verified profile</p>
+      <h1 id="public-profile-title">{{ profile.display_name }}</h1>
+
+      <dl class="account-facts">
+        <div><dt>Broad area</dt><dd>{{ broad_area_label }}</dd></div>
+        <div><dt>Free now</dt><dd>{% if is_available_now %}On{% else %}Off{% endif %}</dd></div>
+      </dl>
+
+      <section aria-labelledby="public-interests-title">
+        <h2 id="public-interests-title">Interests</h2>
+        <ul class="chips">
+          {% for interest in profile.interests.all %}
+            <li>{{ interest.name }}</li>
+          {% empty %}
+            <li class="muted">No interests listed</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section aria-labelledby="public-about-title">
+        <h2 id="public-about-title">About</h2>
+        <p>{{ profile.biography|default:"No biography added yet." }}</p>
+      </section>
+
+      <form method="post" action="{% url 'direct_conversation_start' profile.pk %}">
+        {% csrf_token %}
+        <button type="submit">Message {{ profile.display_name }}</button>
+      </form>
+      <p><a href="{% url 'report_create' profile.pk %}">Report this profile privately</a></p>
+      <details>
+        <summary>Block this profile</summary>
+        <p>Blocking removes both profiles from each other's discovery and stops direct messages. The other account is not notified.</p>
+        <form method="post" action="{% url 'profile_block_messages_and_discovery' profile.pk %}">
+          {% csrf_token %}
+          <button class="danger secondary" type="submit">Confirm block</button>
+        </form>
+      </details>
+    </article>
+
+  {% else %}
+    <section class="card profile-card" aria-labelledby="profile-title">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Private account</p>
+          <h1 id="profile-title">Profile</h1>
+        </div>
+        <a class="button secondary" href="{% url 'profile_edit' %}">Edit</a>
+      </div>
+
+      <dl class="account-facts">
+        <div><dt>Email</dt><dd>{{ summary.account.email }}</dd></div>
+        <div><dt>Display name</dt><dd>{{ summary.profile.display_name|default:"Not completed" }}</dd></div>
+        <div><dt>Broad area</dt><dd>{{ broad_area_label }}</dd></div>
+        <div><dt>Verification</dt><dd>{% if summary.profile.is_verified %}Verified{% else %}Pending staff verification{% endif %}</dd></div>
+        <div>
+          <dt>Availability</dt>
+          <dd>
+            {% if is_available_now %}
+              Free now · {{ summary.profile.get_availability_start_display }}
+            {% elif summary.profile.available_from %}
+              Starts {{ summary.profile.available_from|date:"j M Y, H:i" }}
+            {% else %}
+              Not set
+            {% endif %}
+          </dd>
+        </div>
+      </dl>
+
+      {% if not summary.profile.is_verified %}
+        <div class="state-panel" role="status">
+          <strong>Your profile is waiting for staff verification.</strong>
+          <p>Complete your display name and broad area first. Verification is a staff access gate, not proof of identity, age, character or safety.</p>
+        </div>
+      {% endif %}
+
+      <section aria-labelledby="interests-title">
+        <h2 id="interests-title">Interests</h2>
+        <ul class="chips">
+          {% for interest in summary.profile.interests.all %}
+            <li>{{ interest.name }}</li>
+          {% empty %}
+            <li class="muted">No interests selected</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section aria-labelledby="about-title">
+        <h2 id="about-title">About</h2>
+        <p>{{ summary.profile.biography|default:"No biography added yet." }}</p>
+      </section>
+
+      <section aria-labelledby="plans-title">
+        <h2 id="plans-title">My plans</h2>
+        <ul class="plain-list">
+          {% for plan in summary.plans %}
+            <li><span>{{ plan.title }}</span><span class="state-label">{{ plan.get_status_display }}</span></li>
+          {% empty %}
+            <li class="muted">No plans yet.</li>
+          {% endfor %}
+        </ul>
+      </section>
+
+      <section class="state-panel" aria-labelledby="premium-title">
+        <p class="eyebrow">30 days free · then £4.99 yearly</p>
+        <h2 id="premium-title">Premium</h2>
+        <p>No payment details are required before the one-time trial. A paid subscription renews yearly unless you cancel it through Stripe.</p>
+        <p>
+          <strong>Current status:</strong>
+          {% if summary.subscription.has_premium_access and summary.subscription.status == "trialing" %}
+            Trial active
+          {% elif summary.subscription.has_premium_access %}
+            Premium
+          {% elif not summary.subscription.has_stripe_history %}
+            Free
+          {% elif summary.subscription.status == "past_due" or summary.subscription.status == "unpaid" or summary.subscription.status == "incomplete" or summary.subscription.status == "incomplete_expired" or summary.subscription.status == "paused" %}
+            Payment due
+          {% elif summary.subscription.status == "cancelled" or summary.subscription.status == "canceled" %}
+            Free — subscription cancelled
+          {% else %}
+            Waiting for Stripe payment confirmation
+          {% endif %}
+        </p>
+        {% if summary.subscription.access_until %}
+          <p><strong>Access until:</strong> {{ summary.subscription.access_until|date:"j F Y, H:i" }}</p>
+        {% endif %}
+        <p>Premium adds configured nearby broad areas and up to five interest filters. It never bypasses verification, blocking or reporting.</p>
+
+        {% if summary.subscription.customer_portal_available %}
+          <form method="post" action="{% url 'premium_subscription_portal' %}">
+            {% csrf_token %}
+            <button type="submit">
+              {% if summary.subscription.has_premium_access %}Manage subscription{% else %}Pay £4.99 or manage subscription{% endif %}
+            </button>
+          </form>
+        {% elif summary.subscription.checkout_available %}
+          <form method="post" action="{% url 'premium_subscription_checkout' %}">
+            {% csrf_token %}
+            <button type="submit">
+              {% if summary.subscription.trial_available %}Start 30-day trial{% else %}Pay £4.99 for one year{% endif %}
+            </button>
+          </form>
+        {% endif %}
+      </section>
+
+      <form method="post" action="{% url 'sign_out' %}">
+        {% csrf_token %}
+        <button class="danger secondary" type="submit">Sign out</button>
+      </form>
+    </section>
+  {% endif %}
+{% endblock %}

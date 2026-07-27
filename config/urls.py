@@ -1,8 +1,9 @@
-"""Mount only Django Admin until the mapped application routes are implemented."""
+"""Mount Django Admin and the implemented Kindlelise application routes."""
 
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("", include("kindlelise.urls")),
 ]
