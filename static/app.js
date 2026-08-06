@@ -1,3 +1,25 @@
+const colourThemes = ["black", "blue", "pink", "green"];
+
+function readSavedColourTheme() {
+  try {
+    const savedTheme = window.localStorage.getItem("kindlelise-colour-theme");
+    return colourThemes.includes(savedTheme) ? savedTheme : "black";
+  } catch (error) {
+    return "black";
+  }
+}
+
+function applyColourTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try {
+    window.localStorage.setItem("kindlelise-colour-theme", theme);
+  } catch (error) {
+    // The selected theme still applies when browser storage is unavailable.
+  }
+}
+
+applyColourTheme(readSavedColourTheme());
+
 // Preserve the original draft and return a suggestion without ever submitting a message.
 async function requestMessageDraftEditSuggestion(conversationId, draft, editingGoal) {
   const csrfInput = document.querySelector("[name='csrfmiddlewaretoken']");
@@ -81,6 +103,37 @@ async function requestPlanMetadata(fetchUrl, publicUrl, csrfToken) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  const themeButton = document.querySelector("[data-theme-toggle]");
+  if (themeButton) {
+    const updateThemeButtonLabel = () => {
+      const currentTheme = document.documentElement.dataset.theme || "black";
+      themeButton.setAttribute(
+        "aria-label",
+        `Colour theme: ${currentTheme}. Change colour theme`,
+      );
+    };
+    updateThemeButtonLabel();
+    themeButton.addEventListener("click", () => {
+      const currentTheme = document.documentElement.dataset.theme || "black";
+      const currentIndex = colourThemes.indexOf(currentTheme);
+      applyColourTheme(colourThemes[(currentIndex + 1) % colourThemes.length]);
+      updateThemeButtonLabel();
+    });
+  }
+
+  const notificationContainer = document.querySelector(".messages");
+  notificationContainer?.querySelectorAll(".message").forEach((message) => {
+    window.setTimeout(() => {
+      message.classList.add("is-dismissing");
+      window.setTimeout(() => {
+        message.remove();
+        if (!notificationContainer.children.length) {
+          notificationContainer.remove();
+        }
+      }, 200);
+    }, 5000);
+  });
+
   const connectionStatus = document.querySelector("#connection-status");
   if (connectionStatus) {
     const showConnectionState = () => {

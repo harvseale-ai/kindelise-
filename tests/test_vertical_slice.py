@@ -5187,7 +5187,7 @@ def test_ollama_http_requires_csrf_preserves_draft_then_uses_manual_send(
     assert b"Improve clarity" in detail_response.content
     assert detail_response.content.count(b'data-message-edit-goal=') == 2
     assert b'<script src="/static/app.' in detail_response.content
-    assert b'.js" defer></script>' in detail_response.content
+    assert b'.js?v=20260806-popup-messages" defer></script>' in detail_response.content
     assert client.get(edit_url).status_code == 405
     assert client.post(
         edit_url,
@@ -5345,9 +5345,10 @@ def test_authenticated_interface_has_accessible_primary_navigation_and_errors():
     html = response.content.decode()
     assert 'href="#main-content">Skip to content</a>' in html
     assert '<nav class="primary-navigation" aria-label="Primary navigation">' in html
-    assert html.index(">Discover</a>") < html.index(">Plans</a>")
-    assert html.index(">Plans</a>") < html.index(">Messages</a>")
-    assert html.index(">Messages</a>") < html.index(">Profile</a>")
+    assert html.index('aria-label="Discover"') < html.index('aria-label="Plans"')
+    assert html.index('aria-label="Plans"') < html.index('aria-label="Messages"')
+    assert html.index('aria-label="Messages"') < html.index('aria-label="Profile"')
+    assert ">Discover</a>" not in html
     assert html.count('aria-current="page"') == 1
     assert 'id="connection-status"' in html
     assert 'role="status" hidden' in html

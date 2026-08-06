@@ -5,22 +5,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Kindlelise{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'app.css' %}">
+  <link rel="stylesheet" href="{% static 'app.css' %}?v=20260806-popup-messages">
 </head>
-<body>
+<body{% if request.resolver_match.url_name == "profile_edit" or request.resolver_match.url_name == "sign_up" or request.resolver_match.url_name == "sign_in" or request.resolver_match.url_name == "report_create" %} class="profile-edit-route"{% elif request.resolver_match.url_name == "plan_create" or request.resolver_match.url_name == "plan_edit" %} class="profile-edit-route plan-form-route"{% elif request.resolver_match.url_name == "account" or request.resolver_match.url_name == "profile" or request.resolver_match.url_name == "profile_detail" or request.resolver_match.url_name == "plan_detail" %} class="private-profile-route"{% elif request.resolver_match.url_name == "inbox" %} class="inbox-route"{% elif request.resolver_match.url_name == "conversation_detail" %} class="conversation-route"{% elif request.resolver_match.url_name == "plan_list" %} class="plans-route"{% elif request.resolver_match.url_name == "discover" %} class="discovery-route"{% endif %}>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="{% url 'home' %}">Kindlelise</a>
-    <span class="site-context">Supervised student MVP</span>
+    <span class="site-context">
+      <button class="site-theme-toggle" type="button" data-theme-toggle aria-label="Change colour theme" title="Change colour theme"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z"></path><path d="M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7"></path><path d="M7 17h.01"></path><path d="m11 8 2.3-2.3a2.4 2.4 0 0 1 3.404.004L18.6 7.6a2.4 2.4 0 0 1 .026 3.434L9.9 19.8"></path></svg></button>
+      <a href="{% url 'plan_create' %}" aria-label="Create plan"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"></path><path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"></path><path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"></path></svg></a>
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg>
+    </span>
   </header>
 
   {% if user.is_authenticated %}
     {% with route_name=request.resolver_match.url_name %}
       <nav class="primary-navigation" aria-label="Primary navigation">
-        <a href="{% url 'discover' %}"{% if route_name == "discover" or route_name == "profile_detail" %} aria-current="page"{% endif %}>Discover</a>
-        <a href="{% url 'plan_list' %}"{% if route_name == "plan_list" or route_name == "plan_create" or route_name == "plan_detail" or route_name == "plan_edit" %} aria-current="page"{% endif %}>Plans</a>
-        <a href="{% url 'inbox' %}"{% if route_name == "inbox" or route_name == "conversation_detail" %} aria-current="page"{% endif %}>Messages</a>
-        <a href="{% url 'account' %}"{% if route_name == "account" or route_name == "profile_edit" %} aria-current="page"{% endif %}>Profile</a>
+        <a href="{% url 'discover' %}" aria-label="Discover"{% if route_name == "discover" or route_name == "profile_detail" %} aria-current="page"{% endif %}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m16.24 7.76-1.8 5.4a2 2 0 0 1-1.27 1.27l-5.41 1.81 1.8-5.4a2 2 0 0 1 1.27-1.27Z"></path></svg></a>
+        <a href="{% url 'plan_list' %}" aria-label="Plans"{% if route_name == "plan_list" or route_name == "plan_create" or route_name == "plan_detail" or route_name == "plan_edit" %} aria-current="page"{% endif %}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path><path d="M8 18h.01"></path><path d="M12 18h.01"></path></svg></a>
+        <a href="{% url 'inbox' %}" aria-label="Messages"{% if route_name == "inbox" or route_name == "conversation_detail" %} aria-current="page"{% endif %}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></a>
+        <a href="{% url 'profile' %}" aria-label="Profile"{% if route_name == "account" or route_name == "profile" or route_name == "profile_edit" %} aria-current="page"{% endif %}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></a>
       </nav>
     {% endwith %}
   {% endif %}
@@ -41,9 +45,6 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="site-footer">
-    <p>Student MVP for supervised test accounts. No age or identity verification.</p>
-  </footer>
-  <script src="{% static 'app.js' %}" defer></script>
+  <script src="{% static 'app.js' %}?v=20260806-popup-messages" defer></script>
 </body>
 </html>
