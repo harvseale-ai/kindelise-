@@ -1,5 +1,8 @@
 # Kindlelise Student MVP Product Rules
 
+> **Archived:** historical supporting document. Current behaviour is governed by
+> `docs/VERTICAL_SLICE.md` and `docs/DECISIONS.md`.
+
 > **Status: supporting student-MVP rulebook.** `docs/VERTICAL_SLICE.md` is the
 > implementation authority. These rules explain its invariants in plain language
 > and cannot add a model, route, function, file or feature. If the documents

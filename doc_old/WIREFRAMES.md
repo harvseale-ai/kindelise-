@@ -1,5 +1,9 @@
 # Kindlelise Student MVP Mobile Wireframe Contract
 
+> **Archived:** historical supporting document. Current implementation and
+> completion evidence are governed by `docs/VERTICAL_SLICE.md` and
+> `docs/IMPLEMENTATION_PROGRESS.md`.
+
 ## 1. Purpose and authority
 
 This document defines the mobile page layout for the approved Kindlelise student

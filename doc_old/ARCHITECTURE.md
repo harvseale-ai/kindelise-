@@ -1,12 +1,15 @@
 # Kindlelise Architecture
 
+> **Archived:** historical supporting document. The active implementation
+> authority is [`docs/VERTICAL_SLICE.md`](../docs/VERTICAL_SLICE.md).
+
 Student MVP architecture aligned with the Kindlelise 36-File Vertical Slice.
 
 ## Status and authority
 
 This document explains how the Kindlelise student MVP fits together.
 
-[`docs/VERTICAL_SLICE.md`](VERTICAL_SLICE.md) is the authoritative implementation contract. This architecture must not add files, models, functions, routes or features that are absent from that contract. If the documents disagree, the vertical-slice document wins.
+[`docs/VERTICAL_SLICE.md`](../docs/VERTICAL_SLICE.md) is the authoritative implementation contract. This architecture must not add files, models, functions, routes or features that are absent from that contract. If the documents disagree, the vertical-slice document wins.
 
 The target is a working, readable and defendable student project—not a production-scale social network.
 

@@ -1047,7 +1047,7 @@ static/app.js
 
 ### Exit gate
 
-Complete the acceptance checklist in `docs/WIREFRAMES.md` at narrow mobile and
+Complete the archived acceptance checklist in `doc_old/WIREFRAMES.md` at narrow mobile and
 ordinary desktop widths, including empty and failure states rather than success
 screens only. Record the accessibility evidence above and the performance/query
 results from 4.10 in the phase closure record.

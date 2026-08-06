@@ -6,16 +6,14 @@ plans, direct messaging, blocking and private reporting.
 
 ## Current status
 
-Phase 0 provides the Django project skeleton, PostgreSQL-only configuration,
-environment contract and production static-file path. Domain models, application
-routes, templates and behavioural tests begin in later phases and are not yet
-implemented. The older production-scale scaffold remains under `_achive/` for
-reference only and is not an implementation source.
+The student MVP vertical slice is implemented locally. Exact completion state,
+test evidence and remaining runtime work are kept in the progress ledger. The
+older production-scale scaffold under `_achive/` and supporting documents under
+`doc_old/` are historical references only, not implementation sources.
 
-The authoritative scope is [docs/VERTICAL_SLICE.md](docs/VERTICAL_SLICE.md).
-[docs/DATA_MODEL.md](docs/DATA_MODEL.md) explains its ten Kindlelise models plus
-Django's built-in `User`; it does not expand that scope. The ordered build and
-runtime gates are in [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
+The authoritative scope is [docs/VERTICAL_SLICE.md](docs/VERTICAL_SLICE.md). The
+ordered build and runtime gates are in
+[docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md).
 Mutable phase State and Evidence are recorded separately in
 [docs/IMPLEMENTATION_PROGRESS.md](docs/IMPLEMENTATION_PROGRESS.md).
 Use [docs/MASTER_INSTRUCTION_PROMPT.md](docs/MASTER_INSTRUCTION_PROMPT.md) at the

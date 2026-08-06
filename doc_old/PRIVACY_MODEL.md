@@ -1,5 +1,8 @@
 # Kindlelise Student MVP Privacy Model
 
+> **Archived:** historical supporting document. Current behaviour is governed by
+> `docs/VERTICAL_SLICE.md` and `docs/DECISIONS.md`.
+
 > **Status: student-project privacy design, not legal approval or a claim of UK
 > GDPR compliance.** It describes the behaviour approved in
 > `docs/VERTICAL_SLICE.md`. That document wins if the two conflict. Processing

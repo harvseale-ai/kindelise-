@@ -1,5 +1,8 @@
 # Kindlelise Student MVP Requirements
 
+> **Archived:** historical supporting document. Current behaviour is governed by
+> `docs/VERTICAL_SLICE.md` and `docs/IMPLEMENTATION_PLAN.md`.
+
 > **Status: student-MVP requirements catalogue.** This document states observable
 > outcomes for the scope approved in `docs/VERTICAL_SLICE.md`. It does not expand
 > that scope. If the documents conflict, the vertical slice wins.

@@ -1,5 +1,8 @@
 # Kindlelise Student MVP Safety Model
 
+> **Archived:** historical supporting document. Current behaviour is governed by
+> `docs/VERTICAL_SLICE.md` and `docs/DECISIONS.md`.
+
 > **Status: student-project safety design, not a guarantee of physical safety, an
 > emergency service or a production safeguarding operation.** It describes only
 > controls approved in `docs/VERTICAL_SLICE.md`. That document wins if the two

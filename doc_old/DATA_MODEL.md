@@ -1,5 +1,8 @@
 # Kindlelise Data Model and ERD
 
+> **Archived:** historical supporting document. The active implementation
+> authority is [`docs/VERTICAL_SLICE.md`](../docs/VERTICAL_SLICE.md).
+
 Student MVP data model aligned with the Kindlelise 36-File Vertical Slice.
 
 ## 1. Purpose, status and authority
@@ -19,7 +22,7 @@ register or sign in
 
 Ollama Cloud may suggest an edit to one unsent message draft, but it creates no durable AI data.
 
-[`docs/VERTICAL_SLICE.md`](VERTICAL_SLICE.md) is the authoritative implementation contract. This document cannot add models, fields, states, constraints, functions or features that are absent from that contract. If the documents disagree, the vertical slice wins.
+[`docs/VERTICAL_SLICE.md`](../docs/VERTICAL_SLICE.md) is the authoritative implementation contract. This document cannot add models, fields, states, constraints, functions or features that are absent from that contract. If the documents disagree, the vertical slice wins.
 
 Implementation status: designed, not yet confirmed by generated migrations. Before views or templates are treated as stable, the models, constraints and indexes must be verified in a PostgreSQL migration.
 
