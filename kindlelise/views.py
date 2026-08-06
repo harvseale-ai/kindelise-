@@ -22,10 +22,16 @@ from kindlelise.forms import (
     MessageDraftForm,
     MessageEditRequestForm,
     PlanDetailsForm,
+    PlanMetadataRequestForm,
     PrivateReportForm,
     ProfileDetailsForm,
 )
 from kindlelise.ai_message_editor import get_edited_message_draft_suggestion
+from kindlelise.models import Plan
+from kindlelise.plan_metadata import (
+    fetch_plan_metadata,
+    thumbnail_from_metadata_token,
+)
 from kindlelise.policies import (
     can_access_discovery_plans_and_messages,
     can_join_approved_plan,
@@ -404,17 +410,59 @@ def plan_list_page(request):
     access_redirect = _plan_access_redirect(request)
     if access_redirect is not None:
         return access_redirect
+    selected_filter = request.GET.get("filter", "all")
+    plans = get_plans_for_plan_list(request.user)
+    if selected_filter == "available":
+        plans = plans.filter(status=Plan.Status.APPROVED)
+    elif selected_filter == "mine":
+        plans = plans.filter(owner=request.user)
+    elif selected_filter in {
+        Plan.Status.PENDING,
+        Plan.Status.REJECTED,
+        Plan.Status.CANCELLED,
+    }:
+        plans = plans.filter(status=selected_filter)
+    else:
+        selected_filter = "all"
+
     return render(
         request,
         "plan.html",
-        {"mode": "list", "plans": get_plans_for_plan_list(request.user)},
+        {
+            "mode": "list",
+            "plans": plans,
+            "selected_filter": selected_filter,
+        },
     )
+
+
+@require_POST
+@login_required
+def request_plan_metadata(request):
+    """Return bounded public-place suggestions after one explicit user action.
+
+    Inputs: a signed-in CSRF-validated POST containing one untrusted HTTPS URL.
+    Returns: editable place and thumbnail suggestions or one quiet JSON error.
+    Changes: performs bounded public HTTPS reads but stores no plan or image.
+    Refuses: ineligible accounts, invalid URLs and every unsafe/failing target.
+    Privacy: sends no account or profile data to the target public website.
+    """
+    access_redirect = _plan_access_redirect(request)
+    if access_redirect is not None:
+        return access_redirect
+    form = PlanMetadataRequestForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({"error": "Enter a normal HTTPS public-place URL."}, status=400)
+    metadata = fetch_plan_metadata(form.cleaned_data["public_url"], request.user.pk)
+    if metadata is None:
+        return JsonResponse({"error": "Details could not be fetched from that page."}, status=422)
+    return JsonResponse(metadata)
 
 
 @require_http_methods(["GET", "POST"])
 @login_required
 def create_plan_page(request):
-    """Validate and create one pending plan for manual staff review.
+    """Validate and create one pending public-place plan for staff review.
 
     Inputs: a signed-in GET or POST with untrusted bounded plan fields.
     Returns: the bound creation form or a redirect to the new plan detail.
@@ -428,14 +476,27 @@ def create_plan_page(request):
 
     form = PlanDetailsForm(request.POST if request.method == "POST" else None)
     if request.method == "POST" and form.is_valid():
+        plan_details = dict(form.cleaned_data)
+        metadata_token = request.POST.get("fetched_metadata", "")
+        if metadata_token:
+            thumbnail_image = thumbnail_from_metadata_token(
+                metadata_token,
+                request.user.pk,
+                form.cleaned_data["public_url"],
+            )
+            if thumbnail_image is None:
+                form.add_error("public_url", "Fetch details again before creating the plan.")
+            else:
+                plan_details["thumbnail_image"] = thumbnail_image
         try:
-            plan = create_plan_waiting_for_staff_review(
-                request.user,
-                form.cleaned_data,
+            plan = (
+                None
+                if form.errors
+                else create_plan_waiting_for_staff_review(request.user, plan_details)
             )
         except PermissionDenied:
             form.add_error(None, "The plan could not be submitted.")
-        else:
+        if plan is not None:
             messages.success(request, "Plan submitted for staff review.")
             return redirect("plan_detail", plan_id=plan.pk)
 
@@ -443,6 +504,24 @@ def create_plan_page(request):
         request,
         "plan.html",
         {"mode": "create", "form": form},
+    )
+
+
+@require_GET
+@login_required
+def plan_thumbnail_file(request, plan_id):
+    """Stream one stored plan thumbnail only when the plan itself is visible."""
+    summary = get_plan_page_if_viewer_is_allowed(request.user, plan_id)
+    if summary is None or not summary["plan"].thumbnail_image:
+        return HttpResponse("Plan image unavailable.", status=404)
+    try:
+        image_file = summary["plan"].thumbnail_image.open("rb")
+    except (FileNotFoundError, OSError):
+        return HttpResponse("Plan image unavailable.", status=404)
+    return FileResponse(
+        image_file,
+        content_type="image/jpeg",
+        filename="plan-thumbnail.jpg",
     )
 
 
@@ -519,15 +598,31 @@ def edit_plan_page(request, plan_id):
         instance=plan,
     )
     if request.method == "POST" and form.is_valid():
+        plan_changes = dict(form.cleaned_data)
+        metadata_token = request.POST.get("fetched_metadata", "")
+        if metadata_token:
+            thumbnail_image = thumbnail_from_metadata_token(
+                metadata_token,
+                request.user.pk,
+                form.cleaned_data["public_url"],
+            )
+            if thumbnail_image is None:
+                form.add_error("public_url", "Fetch details again before saving the plan.")
+            else:
+                plan_changes["thumbnail_image"] = thumbnail_image
         try:
-            updated_plan = update_owned_plan_before_first_join(
-                request.user,
-                plan,
-                form.cleaned_data,
+            updated_plan = (
+                None
+                if form.errors
+                else update_owned_plan_before_first_join(
+                    request.user,
+                    plan,
+                    plan_changes,
+                )
             )
         except PermissionDenied:
             form.add_error(None, "This plan can no longer be edited.")
-        else:
+        if updated_plan is not None:
             messages.success(request, "Plan updated.")
             return redirect("plan_detail", plan_id=updated_plan.pk)
 

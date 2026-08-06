@@ -55,6 +55,31 @@ function showMessageDraftEditSuggestion(originalDraft, suggestedDraft) {
   };
 }
 
+// Fetch public metadata only after the user asks, preserving every editable field.
+async function requestPlanMetadata(fetchUrl, publicUrl, csrfToken) {
+  const response = await fetch(fetchUrl, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+      "X-CSRFToken": csrfToken,
+    },
+    body: new URLSearchParams({ public_url: publicUrl }).toString(),
+  });
+  if (!response.ok) {
+    throw new Error("Plan details unavailable");
+  }
+  const responseValues = await response.json();
+  if (
+    typeof responseValues.public_place !== "string"
+    || typeof responseValues.metadata_token !== "string"
+    || typeof responseValues.thumbnail_preview !== "string"
+  ) {
+    throw new Error("Plan details unavailable");
+  }
+  return responseValues;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const connectionStatus = document.querySelector("#connection-status");
   if (connectionStatus) {
@@ -64,6 +89,110 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("online", showConnectionState);
     window.addEventListener("offline", showConnectionState);
     showConnectionState();
+  }
+
+  const filterForm = document.querySelector(".discovery-filter-form");
+  if (filterForm) {
+    const filterTriggers = filterForm.querySelectorAll("[data-filter-target]");
+    const filterPanels = filterForm.querySelectorAll(".discovery-filter-panel");
+    const closeFilterButtons = filterForm.querySelectorAll("[data-filter-close]");
+    const showFilterPanel = (panelId) => {
+      filterPanels.forEach((panel) => {
+        panel.classList.toggle("is-active", panel.id === panelId);
+      });
+      filterTriggers.forEach((trigger) => {
+        trigger.setAttribute(
+          "aria-expanded",
+          trigger.dataset.filterTarget === panelId ? "true" : "false",
+        );
+      });
+    };
+    filterTriggers.forEach((trigger) => {
+      trigger.addEventListener("click", () => {
+        const panelId = trigger.dataset.filterTarget;
+        showFilterPanel(
+          trigger.getAttribute("aria-expanded") === "true" ? null : panelId,
+        );
+      });
+    });
+    closeFilterButtons.forEach((button) => {
+      button.addEventListener("click", () => showFilterPanel(null));
+    });
+    filterForm.classList.add("filter-panels-ready");
+    const filterErrorPanel = filterForm.querySelector("[data-filter-errors]");
+    showFilterPanel(filterErrorPanel ? filterErrorPanel.id : null);
+  }
+
+  const metadataButton = document.querySelector("[data-plan-metadata-fetch]");
+  const publicUrlField = document.querySelector("#id_public_url");
+  const publicPlaceField = document.querySelector("#id_public_place");
+  const metadataStatus = document.querySelector("[data-plan-metadata-status]");
+  const metadataToken = document.querySelector("[data-plan-metadata-token]");
+  const metadataPreview = document.querySelector("[data-plan-metadata-preview]");
+  if (
+    metadataButton
+    && publicUrlField
+    && publicPlaceField
+    && metadataStatus
+    && metadataToken
+    && metadataPreview
+  ) {
+    const clearFetchedMetadata = () => {
+      metadataToken.value = "";
+      metadataPreview.hidden = true;
+      metadataPreview.removeAttribute("src");
+      metadataStatus.textContent = "Add the URL, then fetch its public place and image.";
+    };
+    publicUrlField.addEventListener("input", clearFetchedMetadata);
+    metadataButton.addEventListener("click", async () => {
+      const publicUrl = publicUrlField.value.trim();
+      const csrfInput = metadataButton.closest("form")?.querySelector("[name='csrfmiddlewaretoken']");
+      if (!publicUrl) {
+        metadataStatus.textContent = "Enter the public HTTPS URL first.";
+        publicUrlField.focus();
+        return;
+      }
+      if (!csrfInput) {
+        metadataStatus.textContent = "Details could not be fetched. You can enter the place manually.";
+        return;
+      }
+      metadataButton.disabled = true;
+      metadataStatus.setAttribute("aria-busy", "true");
+      metadataStatus.textContent = "Fetching public place and image…";
+      metadataToken.value = "";
+      try {
+        const metadata = await requestPlanMetadata(
+          metadataButton.dataset.fetchUrl,
+          publicUrl,
+          csrfInput.value,
+        );
+        if (metadata.public_place) {
+          publicPlaceField.value = metadata.public_place;
+        }
+        metadataToken.value = metadata.metadata_token;
+        if (metadata.thumbnail_preview.startsWith("data:image/jpeg;base64,")) {
+          metadataPreview.src = metadata.thumbnail_preview;
+          metadataPreview.hidden = false;
+        } else {
+          metadataPreview.hidden = true;
+          metadataPreview.removeAttribute("src");
+        }
+        if (metadata.public_place && metadata.thumbnail_preview) {
+          metadataStatus.textContent = "Public place and image found. You can edit the place.";
+        } else if (metadata.public_place) {
+          metadataStatus.textContent = "Public place found. No usable image was available.";
+        } else {
+          metadataStatus.textContent = "Image found. Enter the public place manually.";
+        }
+      } catch (error) {
+        metadataPreview.hidden = true;
+        metadataPreview.removeAttribute("src");
+        metadataStatus.textContent = "Details could not be fetched. You can enter the place manually.";
+      } finally {
+        metadataStatus.removeAttribute("aria-busy");
+        metadataButton.disabled = false;
+      }
+    });
   }
 
   const draftField = document.querySelector("#id_body");

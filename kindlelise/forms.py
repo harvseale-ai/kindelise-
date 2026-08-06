@@ -13,6 +13,52 @@ from django.utils.dateparse import parse_datetime
 from PIL import Image, ImageOps
 
 from kindlelise.models import Interest, Plan, Profile, Report
+from kindlelise.plan_metadata import normalise_public_https_url
+
+
+class PlanStartDateTimeWidget(forms.MultiWidget):
+    """Render a calendar followed by a 15-minute start-time dropdown."""
+
+    def __init__(self, attrs=None):
+        time_choices = [("", "Select a time")]
+        time_choices.extend(
+            (
+                f"{hour:02d}:{minute:02d}",
+                f"{hour:02d}:{minute:02d}",
+            )
+            for hour in range(24)
+            for minute in range(0, 60, 15)
+        )
+        widgets = (
+            forms.DateInput(
+                attrs={
+                    "type": "date",
+                    "onclick": "if (this.showPicker) this.showPicker()",
+                },
+                format="%Y-%m-%d",
+            ),
+            forms.Select(choices=time_choices),
+        )
+        super().__init__(widgets, attrs)
+
+    def decompress(self, value):
+        """Return local date and dropdown values for an existing datetime."""
+        if not value:
+            return (None, None)
+        if timezone.is_aware(value):
+            value = timezone.localtime(value)
+        return (value.date(), value.strftime("%H:%M"))
+
+    def value_from_datadict(self, data, files, name):
+        """Also accept the previous combined datetime value during transition."""
+        values = super().value_from_datadict(data, files, name)
+        if any(value not in (None, "") for value in values):
+            return values
+        combined_value = data.get(name)
+        parsed_value = parse_datetime(combined_value) if combined_value else None
+        if parsed_value is None:
+            return values
+        return (parsed_value.date().isoformat(), parsed_value.strftime("%H:%M"))
 
 
 class AccountSignUpForm(UserCreationForm):
@@ -202,6 +248,12 @@ class PlanDetailsForm(forms.ModelForm):
     """Validate bounded future plan details and a normal HTTPS evidence URL."""
 
     public_url = forms.URLField(max_length=500, assume_scheme="http")
+    starts_at = forms.SplitDateTimeField(
+        input_date_formats=("%Y-%m-%d",),
+        input_time_formats=("%H:%M",),
+        help_text="Choose a future date and start time.",
+        widget=PlanStartDateTimeWidget(),
+    )
     capacity = forms.IntegerField(min_value=1)
 
     class Meta:
@@ -209,18 +261,18 @@ class PlanDetailsForm(forms.ModelForm):
         fields = (
             "title",
             "description",
-            "public_place",
             "public_url",
+            "public_place",
             "starts_at",
             "capacity",
         )
 
     def clean_public_url(self):
         """Accept HTTPS evidence syntax without fetching or approving the URL."""
-        public_url = self.cleaned_data["public_url"]
-        if not public_url.lower().startswith("https://"):
-            raise forms.ValidationError("Enter an HTTPS URL.")
-        return public_url
+        try:
+            return normalise_public_https_url(self.cleaned_data["public_url"])
+        except ValueError as error:
+            raise forms.ValidationError(str(error)) from error
 
     def clean_starts_at(self):
         """Reject a meeting time that is no longer in the future."""
@@ -228,6 +280,19 @@ class PlanDetailsForm(forms.ModelForm):
         if starts_at <= timezone.now():
             raise forms.ValidationError("Choose a future start time.")
         return starts_at
+
+
+class PlanMetadataRequestForm(forms.Form):
+    """Validate the sole URL accepted by the explicit metadata fetch action."""
+
+    public_url = forms.URLField(max_length=500, assume_scheme="http")
+
+    def clean_public_url(self):
+        """Apply the same URL syntax boundary as the eventual plan submission."""
+        try:
+            return normalise_public_https_url(self.cleaned_data["public_url"])
+        except ValueError as error:
+            raise forms.ValidationError(str(error)) from error
 
 
 class MessageDraftForm(forms.Form):

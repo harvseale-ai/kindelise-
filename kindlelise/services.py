@@ -123,6 +123,9 @@ def create_plan_waiting_for_staff_review(owner, plan_details):
         "capacity",
     )
     values = {field: plan_details[field] for field in editable_fields}
+    thumbnail_image = plan_details.get("thumbnail_image")
+    if thumbnail_image:
+        values["thumbnail_image"] = thumbnail_image
     return Plan.objects.create(
         owner=owner,
         status=Plan.Status.PENDING,
@@ -168,6 +171,11 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
     review_fields = {"public_place", "public_url", "starts_at"}
     review_reset_required = current_plan.status == Plan.Status.REJECTED
     changed_fields = []
+    old_thumbnail_name = current_plan.thumbnail_image.name
+    new_thumbnail = plan_changes.get("thumbnail_image")
+    if new_thumbnail:
+        current_plan.thumbnail_image = new_thumbnail
+        changed_fields.append("thumbnail_image")
     for field_name in editable_fields:
         if field_name not in plan_changes:
             continue
@@ -175,8 +183,8 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
         submitted_value = plan_changes[field_name]
         values_differ = current_value != submitted_value
         if field_name == "starts_at":
-            # Django's ordinary form display omits database microseconds; that
-            # formatting loss is not a user-visible change requiring rereview.
+            # The picker omits database microseconds; that formatting loss is
+            # not a user-visible change.
             values_differ = current_value.replace(microsecond=0) != (
                 submitted_value.replace(microsecond=0)
             )
@@ -198,6 +206,11 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
         changed_fields.extend(["status", "approved_at", "approved_by"])
     if changed_fields:
         current_plan.save(update_fields=dict.fromkeys(changed_fields))
+        if old_thumbnail_name and "thumbnail_image" in changed_fields:
+            thumbnail_storage = current_plan.thumbnail_image.storage
+            transaction.on_commit(
+                lambda storage=thumbnail_storage, name=old_thumbnail_name: storage.delete(name)
+            )
     return current_plan
 
 

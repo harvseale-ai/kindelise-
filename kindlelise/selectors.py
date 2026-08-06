@@ -198,6 +198,12 @@ def get_plans_for_plan_list(user):
     current_time = timezone.now()
     return (
         Plan.objects.select_related("owner")
+        .annotate(
+            joined_count=Count(
+                "participations",
+                filter=Q(participations__status=Participation.Status.JOINED),
+            )
+        )
         .filter(
             Q(status=Plan.Status.APPROVED, starts_at__gt=current_time)
             | Q(

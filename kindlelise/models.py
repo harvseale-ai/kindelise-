@@ -132,6 +132,11 @@ class Plan(models.Model):
     description = models.TextField(max_length=1_000)
     public_place = models.CharField(max_length=200)
     public_url = models.URLField(max_length=500)
+    thumbnail_image = models.ImageField(
+        upload_to=plan_thumbnail_upload_path,
+        blank=True,
+        default="",
+    )
     starts_at = models.DateTimeField()
     capacity = models.PositiveIntegerField()
     status = models.CharField(

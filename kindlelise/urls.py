@@ -20,6 +20,16 @@ urlpatterns = [
     ),
     path("plans/", views.plan_list_page, name="plan_list"),
     path("plans/create/", views.create_plan_page, name="plan_create"),
+    path(
+        "plans/fetch-details/",
+        views.request_plan_metadata,
+        name="plan_metadata_fetch",
+    ),
+    path(
+        "plans/<int:plan_id>/image/",
+        views.plan_thumbnail_file,
+        name="plan_thumbnail",
+    ),
     path("plans/<int:plan_id>/", views.plan_detail_page, name="plan_detail"),
     path("plans/<int:plan_id>/edit/", views.edit_plan_page, name="plan_edit"),
     path("plans/<int:plan_id>/join/", views.join_plan, name="plan_join"),

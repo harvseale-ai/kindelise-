@@ -1,6 +1,8 @@
 """Prove the implemented Kindlelise vertical-slice behaviour."""
 
+import base64
 import json
+import socket
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from io import BytesIO
@@ -37,6 +39,7 @@ from kindlelise.admin import (
     verify_selected_profiles_for_discovery_plans_and_messages,
 )
 import kindlelise.ai_message_editor as ai_message_editor
+import kindlelise.plan_metadata as plan_metadata
 from kindlelise.ai_message_editor import get_edited_message_draft_suggestion
 from kindlelise.forms import (
     AccountSignUpForm,
@@ -1954,6 +1957,211 @@ def test_plan_http_creation_forces_pending_and_preserves_invalid_form():
     assert invalid_response.status_code == 200
     assert b"Enter an HTTPS URL" in invalid_response.content
     assert not Plan.objects.filter(title="Invalid HTTP plan").exists()
+
+
+def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
+    monkeypatch,
+    settings,
+    tmp_path,
+):
+    settings.MEDIA_ROOT = tmp_path
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    image_output = BytesIO()
+    Image.new("RGBA", (48, 32), color=(31, 97, 68, 180)).save(
+        image_output,
+        format="PNG",
+    )
+    page_html = b"""
+        <html><head>
+          <script type="application/ld+json">
+            {"@type":"Event","location":{"@type":"Place","name":"City Museum","image":"https://images.example.test/museum.png"}}
+          </script>
+          <meta property="og:site_name" content="Must not become the place">
+        </head></html>
+    """
+
+    def return_public_resources(url, allowed_content_types, maximum_bytes):
+        if url == "https://venue.example.test/visit":
+            assert "text/html" in allowed_content_types
+            return url, "text/html", page_html
+        assert url == "https://images.example.test/museum.png"
+        assert "image/png" in allowed_content_types
+        return url, "image/png", image_output.getvalue()
+
+    monkeypatch.setattr(
+        plan_metadata,
+        "_fetch_https_bytes",
+        return_public_resources,
+    )
+    client = Client(enforce_csrf_checks=True)
+    client.force_login(owner)
+    create_url = reverse("plan_create")
+    fetch_url = reverse("plan_metadata_fetch")
+    create_page = client.get(create_url)
+    assert create_page.status_code == 200
+    assert b"Fetch details" in create_page.content
+    assert client.get(fetch_url).status_code == 405
+    assert client.post(
+        fetch_url,
+        {"public_url": "https://venue.example.test/visit"},
+    ).status_code == 403
+
+    csrf_token = client.cookies["csrftoken"].value
+    fetch_response = client.post(
+        fetch_url,
+        {
+            "csrfmiddlewaretoken": csrf_token,
+            "public_url": "https://venue.example.test/visit",
+        },
+    )
+    assert fetch_response.status_code == 200
+    fetched = fetch_response.json()
+    assert fetched["public_place"] == "City Museum"
+    assert fetched["thumbnail_found"] is True
+    assert fetched["thumbnail_preview"].startswith("data:image/jpeg;base64,")
+    assert fetched["metadata_token"]
+
+    future = timezone.now() + timezone.timedelta(days=1)
+    create_response = client.post(
+        create_url,
+        {
+            "csrfmiddlewaretoken": csrf_token,
+            "title": "Museum thumbnail plan",
+            "description": "Meet at the staffed public entrance.",
+            "public_url": "https://venue.example.test/visit",
+            "public_place": fetched["public_place"],
+            "starts_at": future.strftime("%Y-%m-%d %H:%M:%S"),
+            "capacity": "3",
+            "fetched_metadata": fetched["metadata_token"],
+        },
+    )
+    plan = Plan.objects.get(title="Museum thumbnail plan")
+    assert create_response.status_code == 302
+    assert plan.thumbnail_image.name.startswith("plan-thumbnails/")
+    thumbnail_path = tmp_path / plan.thumbnail_image.name
+    assert thumbnail_path.exists()
+    with Image.open(thumbnail_path) as stored_image:
+        assert stored_image.format == "JPEG"
+        assert not stored_image.getexif()
+
+    list_response = client.get(reverse("plan_list"))
+    assert list_response.status_code == 200
+    assert b"plan-card--with-image" in list_response.content
+    assert reverse("plan_thumbnail", args=[plan.pk]).encode() in list_response.content
+
+    def return_place_with_unavailable_image(url, allowed_content_types, maximum_bytes):
+        if "text/html" in allowed_content_types:
+            return url, "text/html", page_html
+        raise plan_metadata.PlanMetadataUnavailable
+
+    monkeypatch.setattr(
+        plan_metadata,
+        "_fetch_https_bytes",
+        return_place_with_unavailable_image,
+    )
+    partial_response = client.post(
+        fetch_url,
+        {
+            "csrfmiddlewaretoken": csrf_token,
+            "public_url": "https://venue.example.test/visit",
+        },
+    )
+    assert partial_response.status_code == 200
+    assert partial_response.json()["public_place"] == "City Museum"
+    assert partial_response.json()["thumbnail_found"] is False
+    assert partial_response.json()["metadata_token"] == ""
+
+    edit_url = reverse("plan_edit", args=[plan.pk])
+    assert b"Fetch details" in client.get(edit_url).content
+    first_thumbnail_name = plan.thumbnail_image.name
+    edit_response = client.post(
+        edit_url,
+        {
+            "csrfmiddlewaretoken": csrf_token,
+            "title": plan.title,
+            "description": plan.description,
+            "public_url": plan.public_url,
+            "public_place": plan.public_place,
+            "starts_at": future.strftime("%Y-%m-%d %H:%M:%S"),
+            "capacity": str(plan.capacity),
+            "fetched_metadata": fetched["metadata_token"],
+        },
+    )
+    plan.refresh_from_db()
+    assert edit_response.status_code == 302
+    assert plan.thumbnail_image.name != first_thumbnail_name
+
+    image_response = client.get(reverse("plan_thumbnail", args=[plan.pk]))
+    assert image_response.status_code == 200
+    assert image_response["Content-Type"] == "image/jpeg"
+    image_response.close()
+    assert Client().get(reverse("plan_thumbnail", args=[plan.pk])).status_code == 302
+
+
+def test_plan_fetch_details_rejects_unsafe_targets_and_mismatched_tokens(
+    monkeypatch,
+):
+    fallback_place, fallback_image = plan_metadata._extract_metadata(
+        b'<meta property="og:site_name" content="BBC News"><meta property="og:image" content="/news.jpg">',
+        "https://www.bbc.co.uk/article",
+    )
+    assert fallback_place == "BBC News"
+    assert fallback_image == "https://www.bbc.co.uk/news.jpg"
+
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    provider_calls = []
+
+    def record_provider_call(public_url, user_id):
+        provider_calls.append((public_url, user_id))
+        return None
+
+    monkeypatch.setattr("kindlelise.views.fetch_plan_metadata", record_provider_call)
+    client = Client()
+    client.force_login(owner)
+    invalid_response = client.post(
+        reverse("plan_metadata_fetch"),
+        {"public_url": "http://127.0.0.1/private"},
+    )
+    assert invalid_response.status_code == 400
+    assert provider_calls == []
+
+    monkeypatch.setattr(
+        plan_metadata.socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: [
+            (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("127.0.0.1", 443))
+        ],
+    )
+    with pytest.raises(plan_metadata.PlanMetadataUnavailable):
+        plan_metadata._global_addresses_for_url("https://internal.example.test/")
+
+    token = plan_metadata.signing.dumps(
+        {
+            "user_id": owner.pk,
+            "public_url": "https://venue.example.test/one",
+            "thumbnail": base64.b64encode(b"not-used-as-a-mismatched-image").decode("ascii"),
+        },
+        salt=plan_metadata.METADATA_TOKEN_SALT,
+        compress=True,
+    )
+    future = timezone.now() + timezone.timedelta(days=1)
+    create_response = client.post(
+        reverse("plan_create"),
+        {
+            "title": "Mismatched thumbnail plan",
+            "description": "The token belongs to a different URL.",
+            "public_url": "https://venue.example.test/two",
+            "public_place": "City Museum",
+            "starts_at": future.strftime("%Y-%m-%d %H:%M:%S"),
+            "capacity": "2",
+            "fetched_metadata": token,
+        },
+    )
+    assert create_response.status_code == 200
+    assert b"Fetch details again before creating the plan" in create_response.content
+    assert not Plan.objects.filter(title="Mismatched thumbnail plan").exists()
 
 
 def test_plan_http_detail_exposes_count_and_own_state_without_participants():
