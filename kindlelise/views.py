@@ -52,7 +52,7 @@ from kindlelise.services import (
     cancel_owned_plan_and_hide_it_from_discovery,
     block_user_from_discovery_and_messages,
     create_account_and_profile,
-    create_plan_waiting_for_staff_review,
+    create_available_plan,
     find_or_start_direct_conversation,
     join_approved_plan_and_lock_meeting_details,
     leave_plan_and_keep_participation_history,
@@ -468,13 +468,13 @@ def request_plan_metadata(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 def create_plan_page(request):
-    """Validate and create one pending public-place plan for staff review.
+    """Validate and create one immediately available public-place plan.
 
     Inputs: a signed-in GET or POST with untrusted bounded plan fields.
     Returns: the bound creation form or a redirect to the new plan detail.
     Changes: calls the mapped atomic creation service once after validation.
     Refuses: ineligible accounts and invalid form values without a plan write.
-    Privacy: never accepts owner, approval, status or lock authority from input.
+    Privacy: never accepts owner, status, approval or lock authority from input.
     """
     access_redirect = _plan_access_redirect(request)
     if access_redirect is not None:
@@ -495,15 +495,11 @@ def create_plan_page(request):
             else:
                 plan_details["thumbnail_image"] = thumbnail_image
         try:
-            plan = (
-                None
-                if form.errors
-                else create_plan_waiting_for_staff_review(request.user, plan_details)
-            )
+            plan = None if form.errors else create_available_plan(request.user, plan_details)
         except PermissionDenied:
-            form.add_error(None, "The plan could not be submitted.")
+            form.add_error(None, "The plan could not be created.")
         if plan is not None:
-            messages.success(request, "Plan submitted for staff review.")
+            messages.success(request, "Plan created.")
             return redirect("plan_detail", plan_id=plan.pk)
 
     return render(

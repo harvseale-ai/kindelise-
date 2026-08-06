@@ -64,7 +64,7 @@ from kindlelise.models import (
 )
 from kindlelise.policies import (
     can_access_discovery_plans_and_messages,
-    can_create_plan_for_staff_review,
+    can_create_plan,
     can_join_approved_plan,
     can_report_another_user,
     can_show_profile_in_discovery_grid,
@@ -87,7 +87,7 @@ from kindlelise.services import (
     block_user_from_discovery_and_messages,
     cancel_owned_plan_and_hide_it_from_discovery,
     create_account_and_profile,
-    create_plan_waiting_for_staff_review,
+    create_available_plan,
     find_or_start_direct_conversation,
     join_approved_plan_and_lock_meeting_details,
     leave_plan_and_keep_participation_history,
@@ -1970,7 +1970,7 @@ def test_plan_http_list_gates_access_and_preserves_owner_only_states():
     assert unverified_response.url == reverse("account")
 
 
-def test_plan_http_creation_forces_pending_and_preserves_invalid_form():
+def test_plan_http_creation_is_immediately_available_and_preserves_invalid_form():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
     injected_owner = create_test_user()
@@ -1980,11 +1980,16 @@ def test_plan_http_creation_forces_pending_and_preserves_invalid_form():
 
     get_response = client.get(reverse("plan_create"))
     assert get_response.status_code == 200
+    assert b'type="date"' in get_response.content
+    assert b'name="starts_at_0"' in get_response.content
+    assert b'this.showPicker()' in get_response.content
+    assert b'<select name="starts_at_1"' in get_response.content
+    assert b'<option value="09:00">09:00</option>' in get_response.content
     assert tuple(get_response.context["form"].fields) == (
         "title",
         "description",
-        "public_place",
         "public_url",
+        "public_place",
         "starts_at",
         "capacity",
     )
@@ -2008,9 +2013,9 @@ def test_plan_http_creation_forces_pending_and_preserves_invalid_form():
     assert create_response.status_code == 302
     assert create_response.url == reverse("plan_detail", args=[plan.pk])
     assert plan.owner == owner
-    assert plan.status == Plan.Status.PENDING
-    assert plan.approved_at is None
-    assert plan.approved_by is None
+    assert plan.status == Plan.Status.APPROVED
+    assert plan.approved_at is not None
+    assert plan.approved_by == owner
     assert plan.meeting_details_locked_at is None
 
     invalid_response = client.post(
@@ -2271,14 +2276,14 @@ def test_plan_http_detail_exposes_count_and_own_state_without_participants():
     assert b"hidden_joined_user" not in response.content
     assert b"hidden_left_user" not in response.content
     assert b"participant" not in response.content.lower()
-    assert b"does not preserve the reviewed webpage" in response.content
+    assert b"does not verify the venue" in response.content
     assert own_response.status_code == 200
     assert hidden_response.status_code == missing_response.status_code == 404
     assert hidden_response.content == missing_response.content == b"Plan unavailable."
     assert client.post(reverse("plan_detail", args=[plan.pk])).status_code == 405
 
 
-def test_plan_http_owner_edit_resets_review_and_hidden_edits_share_404():
+def test_plan_http_owner_edit_stays_available_and_hidden_edits_share_404():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
     other_user = create_test_user()
@@ -2334,9 +2339,8 @@ def test_plan_http_owner_edit_resets_review_and_hidden_edits_share_404():
     )
     approved_plan.refresh_from_db()
     assert reset_response.status_code == 302
-    assert approved_plan.status == Plan.Status.PENDING
-    assert approved_plan.approved_at is None
-    assert approved_plan.approved_by is None
+    assert approved_plan.status == Plan.Status.APPROVED
+    assert approved_plan.approved_by == original_reviewer
 
     rejected_response = client.post(
         reverse("plan_edit", args=[rejected_plan.pk]),
@@ -2353,7 +2357,8 @@ def test_plan_http_owner_edit_resets_review_and_hidden_edits_share_404():
     )
     rejected_plan.refresh_from_db()
     assert rejected_response.status_code == 302
-    assert rejected_plan.status == Plan.Status.PENDING
+    assert rejected_plan.status == Plan.Status.APPROVED
+    assert rejected_plan.approved_by == owner
 
     other_client = Client()
     other_client.force_login(other_user)
@@ -2485,7 +2490,7 @@ def test_plan_service_rechecks_current_verification_despite_cached_profile():
 
     assert not can_access_discovery_plans_and_messages(owner)
     with pytest.raises(PermissionDenied):
-        create_plan_waiting_for_staff_review(owner, form.cleaned_data)
+        create_available_plan(owner, form.cleaned_data)
     assert not Plan.objects.filter(title="Refused cached-profile plan").exists()
 
 
@@ -2518,8 +2523,8 @@ def test_plan_form_accepts_future_https_details_and_rejects_invalid_bounds():
     assert tuple(valid_form.fields) == (
         "title",
         "description",
-        "public_place",
         "public_url",
+        "public_place",
         "starts_at",
         "capacity",
     )
@@ -2536,7 +2541,7 @@ def test_plan_form_accepts_future_https_details_and_rejects_invalid_bounds():
     } <= set(invalid_form.errors)
 
 
-def test_plan_creation_requires_verification_and_forces_pending_review():
+def test_plan_creation_requires_verification_and_is_immediately_available():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
     other_user = create_test_user()
@@ -2564,20 +2569,20 @@ def test_plan_creation_requires_verification_and_forces_pending_review():
             "meeting_details_locked_at": timezone.now(),
         }
     )
-    plan = create_plan_waiting_for_staff_review(owner, plan_details)
+    plan = create_available_plan(owner, plan_details)
 
-    assert can_create_plan_for_staff_review(owner)
+    assert can_create_plan(owner)
     assert plan.owner == owner
-    assert plan.status == Plan.Status.PENDING
-    assert plan.approved_at is None
-    assert plan.approved_by is None
+    assert plan.status == Plan.Status.APPROVED
+    assert plan.approved_at is not None
+    assert plan.approved_by == owner
     assert plan.meeting_details_locked_at is None
 
     unverified_user = create_test_user()
     Profile.objects.create(user=unverified_user)
     with pytest.raises(PermissionDenied):
-        create_plan_waiting_for_staff_review(unverified_user, form.cleaned_data)
-    assert not can_create_plan_for_staff_review(unverified_user)
+        create_available_plan(unverified_user, form.cleaned_data)
+    assert not can_create_plan(unverified_user)
 
 
 @pytest.mark.parametrize(
@@ -2588,7 +2593,7 @@ def test_plan_creation_requires_verification_and_forces_pending_review():
         ("starts_at", timezone.now() + timezone.timedelta(days=2)),
     ),
 )
-def test_plan_edit_resets_only_review_relevant_approval_and_resubmits_rejection(
+def test_plan_edit_keeps_available_state_and_activates_revised_legacy_rejection(
     review_field,
     review_value,
 ):
@@ -2610,14 +2615,14 @@ def test_plan_edit_resets_only_review_relevant_approval_and_resubmits_rejection(
     assert renamed_plan.approved_at == approved_at
     assert renamed_plan.approved_by == approved_by
 
-    resubmitted_plan = update_owned_plan_before_first_join(
+    updated_plan = update_owned_plan_before_first_join(
         owner,
         renamed_plan,
         {review_field: review_value},
     )
-    assert resubmitted_plan.status == Plan.Status.PENDING
-    assert resubmitted_plan.approved_at is None
-    assert resubmitted_plan.approved_by is None
+    assert updated_plan.status == Plan.Status.APPROVED
+    assert updated_plan.approved_at == approved_at
+    assert updated_plan.approved_by == approved_by
 
     rejected_plan = create_test_plan(owner=owner, status=Plan.Status.REJECTED)
     rejected_plan = update_owned_plan_before_first_join(
@@ -2625,7 +2630,9 @@ def test_plan_edit_resets_only_review_relevant_approval_and_resubmits_rejection(
         rejected_plan,
         {"description": "Revised after rejection."},
     )
-    assert rejected_plan.status == Plan.Status.PENDING
+    assert rejected_plan.status == Plan.Status.APPROVED
+    assert rejected_plan.approved_at is not None
+    assert rejected_plan.approved_by == owner
 
 
 def test_plan_edit_refuses_non_owner_locked_and_cancelled_states():

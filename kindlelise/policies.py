@@ -118,11 +118,11 @@ def can_show_profile_in_discovery_grid(viewer, profile):
     return bool(set(profile_areas).intersection(allowed_areas))
 
 
-def can_create_plan_for_staff_review(user):
-    """Return true only when the account may submit a plan for staff review.
+def can_create_plan(user):
+    """Return true only when the account may create a public-place plan.
 
     Inputs: a possible authenticated Django account.
-    Returns: whether a pending plan may be created for that account.
+    Returns: whether a plan may be created for that account.
     Changes: none.
     Refuses: anonymous, inactive, missing-profile and unverified states.
     Privacy: returns only a decision and no profile details.

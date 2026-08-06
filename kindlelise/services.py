@@ -25,7 +25,7 @@ from kindlelise.models import (
 )
 from kindlelise.policies import (
     can_access_discovery_plans_and_messages,
-    can_create_plan_for_staff_review,
+    can_create_plan,
     can_join_approved_plan,
     can_report_another_user,
     can_start_or_continue_direct_messages,
@@ -104,16 +104,16 @@ def update_signed_in_user_profile(user, profile_changes):
 
 
 @transaction.atomic
-def create_plan_waiting_for_staff_review(owner, plan_details):
-    """Create a pending plan owned by an account eligible for staff review.
+def create_available_plan(owner, plan_details):
+    """Create an immediately available plan owned by an eligible account.
 
     Inputs: the server-known owner and validated PlanDetailsForm values.
-    Returns: the newly created pending Plan.
-    Changes: creates one plan with no approval or first-join lock state.
+    Returns: the newly created available Plan.
+    Changes: creates one approved plan with no first-join lock state.
     Refuses: every account that lacks current plan access.
-    Privacy: ignores browser-supplied owner, status and staff-review fields.
+    Privacy: ignores browser-supplied owner, status and approval fields.
     """
-    if not can_create_plan_for_staff_review(owner):
+    if not can_create_plan(owner):
         raise PermissionDenied("Current verification is required")
 
     editable_fields = (
@@ -130,9 +130,9 @@ def create_plan_waiting_for_staff_review(owner, plan_details):
         values["thumbnail_image"] = thumbnail_image
     return Plan.objects.create(
         owner=owner,
-        status=Plan.Status.PENDING,
-        approved_at=None,
-        approved_by=None,
+        status=Plan.Status.APPROVED,
+        approved_at=timezone.now(),
+        approved_by=owner,
         meeting_details_locked_at=None,
         **values,
     )
@@ -144,11 +144,11 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
 
     Inputs: the server-known owner/plan and validated PlanDetailsForm values.
     Returns: the freshly locked and updated Plan.
-    Changes: edits plan details and resets review state when the contract requires.
+    Changes: edits plan details and activates a revised legacy rejected plan.
     Refuses: ineligible/non-owners and every locked or cancelled plan.
-    Privacy: ignores browser-supplied ownership, status, review and lock fields.
+    Privacy: ignores browser-supplied ownership, status, approval and lock fields.
     """
-    if not can_create_plan_for_staff_review(owner) or plan is None or plan.pk is None:
+    if not can_create_plan(owner) or plan is None or plan.pk is None:
         raise PermissionDenied("Plan editing is not permitted")
 
     try:
@@ -170,8 +170,7 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
         "starts_at",
         "capacity",
     )
-    review_fields = {"public_place", "public_url", "starts_at"}
-    review_reset_required = current_plan.status == Plan.Status.REJECTED
+    activate_revised_plan = current_plan.status == Plan.Status.REJECTED
     changed_fields = []
     old_thumbnail_name = current_plan.thumbnail_image.name
     new_thumbnail = plan_changes.get("thumbnail_image")
@@ -192,19 +191,13 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
             )
             if not values_differ:
                 submitted_value = current_value
-        if (
-            current_plan.status == Plan.Status.APPROVED
-            and field_name in review_fields
-            and values_differ
-        ):
-            review_reset_required = True
         setattr(current_plan, field_name, submitted_value)
         changed_fields.append(field_name)
 
-    if review_reset_required:
-        current_plan.status = Plan.Status.PENDING
-        current_plan.approved_at = None
-        current_plan.approved_by = None
+    if activate_revised_plan:
+        current_plan.status = Plan.Status.APPROVED
+        current_plan.approved_at = timezone.now()
+        current_plan.approved_by = owner
         changed_fields.extend(["status", "approved_at", "approved_by"])
     if changed_fields:
         current_plan.save(update_fields=dict.fromkeys(changed_fields))
@@ -300,7 +293,7 @@ def cancel_owned_plan_and_hide_it_from_discovery(owner, plan):
     Refuses: ineligible/non-owners, missing plans and already-cancelled plans.
     Privacy: changes no participation and exposes no participant identity.
     """
-    if not can_create_plan_for_staff_review(owner) or plan is None or plan.pk is None:
+    if not can_create_plan(owner) or plan is None or plan.pk is None:
         raise PermissionDenied("Plan cancellation is not permitted")
     try:
         current_plan = Plan.objects.select_for_update().get(pk=plan.pk)
