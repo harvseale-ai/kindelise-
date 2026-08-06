@@ -13,8 +13,7 @@ register or sign in
 → complete a profile
 → receive manual staff verification
 → appear in a broad-area discovery grid
-→ create a plan
-→ receive manual staff approval for the plan
+→ create an immediately available plan
 → join or leave a plan
 → exchange direct messages
 → block or privately report another account
@@ -34,7 +33,8 @@ an implementation source for this vertical slice.
 The implementation should be defended in these terms:
 
 > Kindlelise deliberately replaces production-scale location, meeting-evidence
-> and workflow systems with broad areas and manual staff approval. Stripe and
+> and workflow systems with broad areas, manual profile verification and bounded
+> public-place metadata assistance. Stripe and
 > Ollama Cloud are narrow integrations. The implemented journey is small enough
 > to test fully and explain line by line, while production hardening is recorded
 > as future work.
@@ -96,6 +96,14 @@ age verification and must not be presented as ready for unrestricted public use.
   account identifier without a custom authentication backend or migration.
 - One profile per account.
 - A display name, short biography, broad named area and controlled interests.
+- One optional owner-uploaded profile image. The form accepts only JPEG, PNG or
+  WebP files up to 5 MB and 4,096 pixels on either side, normalises the image and
+  removes embedded metadata before storage. The image is presentation only: it
+  is not identity, age, character or safety evidence. An authenticated,
+  access-controlled application route serves it; no direct media route exists.
+  Local filesystem storage is sufficient only for this supervised assessment.
+  Durable production object storage, moderation and retention automation remain
+  outside this slice.
 - Optional `available_from` for a small user-set availability-start indication.
   Profile completion and staff verification never require it. The profile form
   offers a form-only `Free now` switch plus `Today`, `Tomorrow`, `This week` and
@@ -119,9 +127,10 @@ age verification and must not be presented as ready for unrestricted public use.
 - An optional `Free now` switch filtering to profiles whose `available_from`
   exists and is no later than the current time.
 - Mutual block exclusion before a profile enters the result set.
-- Free accounts: current broad area and at most two interest filters.
-- Premium accounts: current area plus configured nearby named areas and at most
-  five interest filters.
+- Free accounts: any combination of their saved broad areas and at most two
+  interest filters.
+- Premium accounts: any combination of saved and configured nearby
+  named areas, plus at most five interest filters.
 - Premium never overrides verification, blocking or visibility rules.
 
 The student assessment uses this deliberately generic configuration:
@@ -149,16 +158,16 @@ the stable-key and explicit-nearby-map rules remain unchanged.
 
 ### Plans
 
-- A verified user creates a plan with a title, description, established public
-  place, public evidence URL, start time and capacity.
-- Staff manually opens and checks the URL outside the application.
+- A verified user creates an immediately available plan with a title,
+  description, established public place, public information URL, start time and
+  capacity.
+- An explicit `Fetch details` action may suggest an editable public place and one
+  protected normalised thumbnail from the public HTTPS page.
 - The URL must identify an independently established public place or organised
   activity. A dropped map pin, residential address, payment link or personal
   social post cannot be approved as the primary meeting evidence.
-- Staff approves or rejects the plan in ordinary Django Admin.
-- Approval records only the staff decision, reviewer and time. Kindlelise does not
-  preserve the reviewed page, prove that the venue is safe or guarantee that the
-  external page will not later change.
+- Kindlelise does not preserve the fetched page, prove that the venue is safe or
+  guarantee that the external page will not later change.
 - Only approved future plans appear in the public plan list and accept joins.
 - The first successful join makes the entire plan read-only except cancellation.
 - Participants can leave; owners can cancel.
@@ -259,8 +268,8 @@ be filled. Unused files may stay absent until their mapped responsibility is
 implemented. Supporting governance and assessment documents are outside this
 implementation-file count. Django-generated schema migrations and the reviewed
 initial-interest data migration are separate mechanical exceptions; they do not
-authorise new product responsibilities. The current map uses 33 of the permitted
-36 implementation-file slots; the remaining three are deliberately unallocated.
+authorise new product responsibilities. The current map uses 34 of the permitted
+36 implementation-file slots; the remaining two are deliberately unallocated.
 
 ```text
 01  .gitignore
@@ -280,22 +289,23 @@ authorise new product responsibilities. The current map uses 33 of the permitted
 15  kindlelise/forms.py
 16  kindlelise/policies.py
 17  kindlelise/services.py
-18  kindlelise/selectors.py
-19  kindlelise/views.py
-20  kindlelise/urls.py
-21  kindlelise/ai_message_editor.py
-22  kindlelise/migrations/__init__.py
-23  templates/base.html
-24  templates/discover.html
-25  templates/account.html
-26  templates/plan.html
-27  templates/inbox.html
-28  templates/conversation.html
-29  templates/report.html
-30  static/app.css
-31  static/app.js
-32  tests/conftest.py
-33  tests/test_vertical_slice.py
+18  kindlelise/plan_metadata.py
+19  kindlelise/selectors.py
+20  kindlelise/views.py
+21  kindlelise/urls.py
+22  kindlelise/ai_message_editor.py
+23  kindlelise/migrations/__init__.py
+24  templates/base.html
+25  templates/discover.html
+26  templates/account.html
+27  templates/plan.html
+28  templates/inbox.html
+29  templates/conversation.html
+30  templates/report.html
+31  static/app.css
+32  static/app.js
+33  tests/conftest.py
+34  tests/test_vertical_slice.py
 ```
 
 Dependency direction:
@@ -319,7 +329,7 @@ The MVP uses ten Kindlelise models plus Django's existing `User` model:
 | --- | --- |
 | `Profile` | Public identity, broad area, verification, availability and interests for one Django user. |
 | `Interest` | Staff-seeded controlled discovery vocabulary. |
-| `Plan` | One staff-approved public-place activity with lockable meeting details. |
+| `Plan` | One available public-place activity with an optional protected thumbnail and lockable meeting details. |
 | `Participation` | One user's current or ended participation in one plan. |
 | `Conversation` | The unique unordered relationship between two users. |
 | `Message` | One plain-text message sent inside a conversation. |
@@ -339,9 +349,9 @@ behaviour.
 
 | Entity | Essential fields |
 | --- | --- |
-| `Profile` | `user`, `display_name`, `biography`, `broad_area`, `interests`, `available_from`, `is_verified`, `verified_at`, `verified_by` |
+| `Profile` | `user`, optional `profile_image`, `display_name`, `title_statement`, `biography`, `broad_area`, `broad_areas`, `interests`, `available_from`, `is_verified`, `verified_at`, `verified_by` |
 | `Interest` | `name` |
-| `Plan` | `owner`, `title`, `description`, `public_place`, `public_url`, `starts_at`, `capacity`, `status`, `approved_at`, `approved_by`, `meeting_details_locked_at`, `created_at` |
+| `Plan` | `owner`, `title`, `description`, `public_place`, `public_url`, optional `thumbnail_image`, `starts_at`, `capacity`, `status`, `approved_at`, `approved_by`, `meeting_details_locked_at`, `created_at` |
 | `Participation` | `plan`, `user`, `status[joined\|left]`, `joined_at`, `left_at` |
 | `Conversation` | `first_user`, `second_user`, `updated_at` |
 | `Message` | `conversation`, `sender`, `body`, `sent_at` |
@@ -373,6 +383,7 @@ Models and forms reuse these limits; views do not invent different limits:
 | Authentication email | Valid email address, canonical lowercase, at most 150 characters because Django's unique `username` field stores the same value |
 | Profile display name | 80 characters |
 | Profile biography | 500 characters |
+| Profile image | Optional JPEG, PNG or WebP; 5 MB and 4,096 pixels per side maximum; embedded metadata removed |
 | Broad-area key | 20 characters and present in `KINDLELISE_AREAS` |
 | Interest name | 50 characters and seeded/staff-controlled |
 | Plan title | 120 characters |
@@ -448,10 +459,8 @@ Application invariants must enforce:
 - A user who left may rejoin only while the plan remains approved, future,
   uncancelled and below capacity. Rejoining updates the existing row with
   `joined_at` set to the latest successful join time and `left_at` set to `null`.
-- Changing an approved plan's public URL, public place or start time before the
-  first join resets it to pending staff review.
-- A rejected unlocked plan may be edited; saving it clears any approval fields and
-  resubmits it as pending review.
+- An unlocked approved plan stays approved when edited.
+- A rejected unlocked legacy plan may be edited; saving activates it.
 - A cancelled plan is terminal: it cannot be edited, approved or reactivated.
 - Leaving ends current participation without deleting its row.
 - Cancelling hides a plan, prevents future joins and clears the current approval
@@ -635,17 +644,21 @@ Form classes:
   and password confirmation using Django's password rules. It rejects an email
   already stored in Django's unique `username` field; the service stores the same
   canonical value in both `username` and `email`.
-- `ProfileDetailsForm` — Validates display name, biography, broad area, optional
-  form-only `Free now` switch, availability-start choice and selected interests.
+- `ProfileDetailsForm` — Validates and metadata-strips the optional bounded
+  profile image before display name, biography, broad area, optional form-only
+  `Free now` switch, availability-start choice and selected interests.
   It accepts only configured stable area keys, converts the switch or four fixed
   relative choices to one timezone-aware `available_from` value, permits a
   missing/cleared choice and never exposes verification fields.
-- `DiscoveryFiltersForm` — Validates selected broad area, interest filters and an
+- `DiscoveryFiltersForm` — Validates one or more selected authorised broad areas,
+  interest filters and an
   optional `Free now` filter, applying the caller's free or premium area and
   interest limits. Current availability is derived from `available_from`; the
   form does not create a second stored availability value.
 - `PlanDetailsForm` — Validates plan content and a normal HTTPS public URL; it does
   not fetch or approve the URL.
+- `PlanMetadataRequestForm` — Validates the normal public HTTPS URL accepted by
+  the explicit metadata-fetch action.
 - `MessageDraftForm` — Validates one bounded non-empty plain-text draft.
 - `MessageEditRequestForm` — Accepts only `fix_grammar` or `improve_clarity` for an
   unsent bounded draft.
@@ -663,8 +676,8 @@ Form classes:
 - `can_view_profile_page(viewer, profile)` — Return `True` only when both accounts
   may use the product and neither account has blocked the other; reveal no denial
   reason to the viewer.
-- `can_create_plan_for_staff_review(user)` — Return `True` only when the account is
-  active and verified and may therefore submit a pending plan for staff review.
+- `can_create_plan(user)` — Return `True` only when the account is active and
+  verified and may therefore create an available public-place plan.
 - `can_join_approved_plan(user, plan, at_time)` — Return `True` only for an active
   verified non-owner joining an approved future plan with spare capacity who is
   not already in `joined` state. No row and an existing `left` row are both
@@ -688,17 +701,17 @@ notify or call Stripe or Ollama.
   and its empty unverified profile in one transaction so neither record remains if
   creation of the other fails.
 - `update_signed_in_user_profile(user, profile_changes)` — Update only
-  the signed-in account's display name, biography, broad area, availability and
-  interests; never accept verification or subscription fields from the browser.
-- `create_plan_waiting_for_staff_review(owner, plan_details)` — Create a pending
-  plan owned by the verified account and force its status to pending regardless of
-  any status value supplied by the browser.
+  the signed-in account's optional profile image, display name, biography, broad
+  area, availability and interests; remove a replaced image after commit and
+  never accept verification or subscription fields from the browser.
+- `create_available_plan(owner, plan_details)` — Create an approved plan owned by
+  the verified account, record the owner as approver and ignore browser-supplied
+  status or approval values.
 - `update_owned_plan_before_first_join(owner, plan, plan_changes)` — Edit an
   owned pending, approved or rejected plan only before its first successful join;
   after that refuse every edit except the separately mapped cancellation workflow.
-  Return an approved plan to pending when its public place, URL or start time
-  changes, resubmit every saved rejected plan as pending and clear approval fields
-  whenever the resulting state is not approved. Refuse every cancelled plan edit.
+  Keep approved plans available, activate a saved legacy rejected plan and refuse
+  every cancelled plan edit.
 - `join_approved_plan_and_lock_meeting_details(user, plan)` — Lock the plan row
   with `select_for_update()`, recount joined participants, recheck every joining
   rule, then create or reactivate participation and set the first-join lock in one
@@ -758,13 +771,17 @@ not render templates or trust IDs supplied by a browser.
 ### `kindlelise/selectors.py`
 
 - `get_profiles_for_discovery_grid(viewer, selected_filters)` — Return the
-  verified profiles in the viewer's allowed broad areas that match the permitted
+  verified profiles in the viewer's selected allowed broad areas that match the permitted
   interest filters and, when `Free now` is requested, have an `available_from`
   time no later than now. Exclude either-direction blocks before returning any
   row.
 - `get_profile_page_if_viewer_is_allowed(viewer, profile_id)` — Return one
   profile only when `can_view_profile_page()` allows it; otherwise return no
   result without revealing whether the profile exists or why it was hidden.
+- `get_profile_image_if_viewer_is_allowed(viewer, profile_id)` — Return an image-
+  bearing profile to its active owner or to a viewer permitted by
+  `can_view_profile_page()`; otherwise use the same no-result outcome for missing
+  files, missing profiles and denied access.
 - `get_report_target_profile_if_reporter_is_allowed(reporter, profile_id)` —
   Return one target profile only when `can_report_another_user()` allows the
   authenticated reporter to report that different account. Do not apply
@@ -815,12 +832,14 @@ Stripe or Ollama.
   `get_profile_page_if_viewer_is_allowed()` and render message, block and report
   actions only for the returned profile; use the same not-found response for every
   denied or missing profile.
+- `profile_image_file(request, profile_id)` — Stream the stored profile image only
+  after `get_profile_image_if_viewer_is_allowed()` returns it, with one generic
+  not-found response for every missing or denied case.
 - `plan_list_page(request)` — Call `get_plans_for_plan_list()` and show approved
   future plans plus the signed-in account's own plan states without exposing other
   owners' pending plans.
-- `create_plan_page(request)` — Validate `PlanDetailsForm`, then call
-  `create_plan_waiting_for_staff_review()` so browser input can create only a
-  pending, unapproved plan.
+- `create_plan_page(request)` — Validate `PlanDetailsForm`, verify any signed
+  fetched-thumbnail token, then call `create_available_plan()`.
 - `plan_detail_page(request, plan_id)` — Call
   `get_plan_page_if_viewer_is_allowed()` and show only its returned plan and
   server-authorised actions.
@@ -898,8 +917,11 @@ Each named route maps to exactly one view:
 | `profile_edit` | `edit_profile_page` |
 | `discover` | `discovery_page` |
 | `profile_detail` | `profile_page` |
+| `profile_image` | `profile_image_file` |
 | `plan_list` | `plan_list_page` |
 | `plan_create` | `create_plan_page` |
+| `plan_metadata_fetch` | `request_plan_metadata` |
+| `plan_thumbnail` | `plan_thumbnail_file` |
 | `plan_detail` | `plan_detail_page` |
 | `plan_edit` | `edit_plan_page` |
 | `plan_join` | `join_plan` |
@@ -952,7 +974,7 @@ configuration. Never contain a working secret, customer ID or webhook payload.
 
 #### 03 — `README.md`
 
-Explain local setup, migrations, seeded interests, staff approval, test commands,
+Explain local setup, migrations, seeded interests, profile verification, test commands,
 fixed broad-area configuration, email authentication, Stripe CLI use, Ollama
 Cloud setup, supervised-test-account limits and the demonstration journey. It must
 describe the implemented system, not promise deferred production features.
@@ -963,8 +985,9 @@ Provide Django's standard management-command entry point only.
 
 #### 05 — `pyproject.toml`
 
-Pin the smallest required runtime and test dependencies: Django, database driver,
-Stripe SDK, WhiteNoise for production static-file serving, one small general HTTP
+Pin the smallest required runtime and test dependencies: Django, Pillow for
+bounded profile-image validation and metadata removal, database driver, Stripe
+SDK, WhiteNoise for production static-file serving, one small general HTTP
 dependency only if the standard library is not clear enough, Gunicorn and pytest
 tooling. Do not add architectural frameworks.
 
@@ -986,8 +1009,8 @@ excluded from logging.
 
 #### 08 — `config/urls.py`
 
-Mount Django Admin and authentication/application routes. No media-serving route
-exists because this slice has no uploaded-image field.
+Mount Django Admin and authentication/application routes. Do not mount a direct
+media-serving route; the application route authorises each profile-image read.
 
 #### 09 — `config/asgi.py`
 
@@ -1024,7 +1047,7 @@ multi-step workflows or any deferred entity.
 
 #### 15 — `kindlelise/forms.py`
 
-Own the seven mapped form classes. Forms validate and normalise untrusted browser
+Own the eight mapped form classes. Forms validate and normalise untrusted browser
 input but do not save cross-model workflows or expose staff-controlled fields.
 
 #### 16 — `kindlelise/policies.py`
@@ -1037,48 +1060,54 @@ default and independent of template visibility.
 Own the fourteen mapped state-changing workflows. Use short transactions for
 database work; no network call may run inside a database transaction.
 
-#### 18 — `kindlelise/selectors.py`
+#### 18 — `kindlelise/plan_metadata.py`
 
-Own the eight mapped read operations. Apply each selector's mapped authorisation
+Own bounded public HTTPS retrieval, metadata extraction, image normalisation and
+short-lived signed thumbnail tokens. Refuse private network targets and keep all
+provider reads outside database transactions.
+
+#### 19 — `kindlelise/selectors.py`
+
+Own the nine mapped read operations. Apply each selector's mapped authorisation
 before presentation. Discovery and messaging selectors enforce block exclusions;
 the report-target selector deliberately does not, because blocking cannot suppress
 private reporting.
 
-#### 19 — `kindlelise/views.py`
+#### 20 — `kindlelise/views.py`
 
-Own the twenty-five mapped HTTP adapters. Use login protection, POST for changes,
+Own the twenty-eight mapped HTTP adapters. Use login protection, POST for changes,
 CSRF protection, generic not-found responses where disclosure matters and Django
 messages for understandable feedback.
 
-#### 20 — `kindlelise/urls.py`
+#### 21 — `kindlelise/urls.py`
 
 Own the named route table only. Route names remain stable for templates and tests.
 
-#### 21 — `kindlelise/ai_message_editor.py`
+#### 22 — `kindlelise/ai_message_editor.py`
 
 Own the single Ollama Cloud draft-editing function and no other AI feature.
 
-#### 22 — `kindlelise/migrations/__init__.py`
+#### 23 — `kindlelise/migrations/__init__.py`
 
 Mark the migration package. Generated migrations reflect only approved model
 changes and are reviewed before use. One reviewed initial data migration seeds
 Coffee, Walking, Museums, Live music, Cinema, Food, Games and Study so a fresh
 installation has the controlled vocabulary without manual setup.
 
-### 23–29: templates
+### 24–30: templates
 
-#### 23 — `templates/base.html`
+#### 24 — `templates/base.html`
 
 Provide accessible page shell, navigation, flash messages, CSRF-aware POST forms
 and static assets. Never infer authorisation from which controls are hidden.
 
-#### 24 — `templates/discover.html`
+#### 25 — `templates/discover.html`
 
-Render the broad-area profile grid, allowed interest filters, optional
+Render the broad-area profile grid, multi-area and interest filters, optional
 available-now filter, empty state and free/premium limit explanation. Never show
 coordinates or hidden counts.
 
-#### 25 — `templates/account.html`
+#### 26 — `templates/account.html`
 
 Render own account/profile editing, verification state, availability, plans and
 premium controls. The same file may render a safe read-only public profile mode
@@ -1086,17 +1115,17 @@ to avoid adding another template. It also renders the small sign-up and sign-in
 modes so authentication does not require another template file. The premium
 comparison is an account-page panel or mode, not a separate public route.
 
-#### 26 — `templates/plan.html`
+#### 27 — `templates/plan.html`
 
 Render plan list, create/edit form and detail mode. Clearly show pending approval,
 the owner-only edit action before the first join, the first-join read-only state,
 join, eligible rejoin, leave, confirmed cancellation and report actions.
 
-#### 27 — `templates/inbox.html`
+#### 28 — `templates/inbox.html`
 
 Render the current user's permitted direct conversations and empty state.
 
-#### 28 — `templates/conversation.html`
+#### 29 — `templates/conversation.html`
 
 Render escaped messages, draft form, explicit AI editing controls, manual send,
 block and report buttons. An eligible received message may expose a small
@@ -1104,39 +1133,46 @@ block and report buttons. An eligible received message may expose a small
 message as server-validated context. JavaScript enhancement must not be required
 to send or report.
 
-#### 29 — `templates/report.html`
+#### 30 — `templates/report.html`
 
 Render a short private-report form, confidentiality explanation and confirmation.
 Do not show other reports or imply that submission proves wrongdoing.
 
-### 30–31: static assets
+### 31–32: static assets
 
-#### 30 — `static/app.css`
+#### 31 — `static/app.css`
 
 Provide one responsive, accessible visual system for grids, forms, messages,
 states and buttons. Copy layout principles from references, not brand assets or
 identical trade dress.
 
-#### 31 — `static/app.js`
+#### 32 — `static/app.js`
 
-Progressively enhance the AI draft suggestion and small confirmations. Preserve
-the original draft on error, never send automatically and avoid storing private
-text in browser storage.
+Progressively enhance AI draft suggestions, explicit plan metadata fetching,
+colour themes and transient notifications. Preserve the original draft on error,
+never send automatically and avoid storing private text in browser storage.
 
 Approved browser functions:
+
+- `readSavedColourTheme()` — Read only a recognised presentation theme from
+  local storage and otherwise return the black default.
+- `applyColourTheme(theme)` — Apply one recognised presentation theme without
+  changing product data.
 
 - `requestMessageDraftEditSuggestion(conversationId, draft, editingGoal)` — Send
   the conversation ID, current unsent draft and fixed goal to the conversation-
   bound Django view using CSRF.
 - `showMessageDraftEditSuggestion(originalDraft, suggestedDraft)` — Show both
   choices and replace the text box only after the user accepts the suggestion.
+- `requestPlanMetadata(fetchUrl, publicUrl, csrfToken)` — Request bounded public
+  place and thumbnail suggestions only after the user selects `Fetch details`.
 
 Each browser function receives a one-sentence comment explaining that it must
 preserve the original draft and must never submit the message automatically.
 
-### 32–33: tests
+### 33–34: tests
 
-#### 32 — `tests/conftest.py`
+#### 33 — `tests/conftest.py`
 
 Provide small factories/fixtures for users, verified profiles, interests, plans,
 conversations, Stripe events and a fake Ollama response. Fixtures must not bypass
@@ -1155,7 +1191,7 @@ Approved test setup helpers:
 - `replace_ollama_request_with_fake()` — Prevent a network call and return the
   exact success, timeout or failure requested by the test.
 
-#### 33 — `tests/test_vertical_slice.py`
+#### 34 — `tests/test_vertical_slice.py`
 
 Contain approximately 30–40 strong behavioural tests, grouped by journey:
 
@@ -1192,15 +1228,15 @@ Accounts and discovery
 - free and premium interest/area limits differ without weakening safety
 
 Plans
-- creation produces a pending plan
-- staff actions change only records in the expected review state
-- rejected unlocked plans may be edited and saving resubmits them as pending
+- eligible creation produces an immediately available plan
+- fetched metadata is bounded, explicit, editable and never treated as safety evidence
+- rejected unlocked legacy plans may be edited and saving activates them
 - cancelled plans cannot be edited, approved or reactivated
 - unapproved, past, full or cancelled plans cannot be joined
 - capacity counts participant places only and does not include the owner
 - two simultaneous joins cannot exceed capacity because the plan row is locked
 - the first join makes the entire plan read-only except cancellation
-- changing URL, public place or start time before joining resets approval
+- editing an unlocked available plan keeps it available
 - participation is unique; leave preserves its row
 - a valid rejoin updates the existing row, latest `joined_at` and null `left_at`
 - owner cancellation removes a plan from discovery
@@ -1221,6 +1257,15 @@ Messaging and reporting
 - a referenced message must belong to the two-account conversation and have been
   visible to the reporter
 - reported users and unrelated users cannot see reports
+
+Profile images
+- the image field appears before display name and remains optional
+- non-image, unsupported, oversized and over-dimension uploads are rejected
+- accepted images have embedded metadata removed before storage
+- only the active owner or a viewer currently allowed to open that profile can
+  read the image; anonymous, blocked, unverified and missing targets share safe
+  refusal behaviour
+- replacing an image removes the superseded stored file after commit
 
 Database constraints
 - verified and unverified profiles require the matching reviewer/time nullability
@@ -1290,7 +1335,7 @@ test should assert a production-scale design that is not implemented.
 This authoritative boundary: scope, ownership, public function map, constraints,
 tests and change process.
 
-#### `docs/WIREFRAMES.md`
+#### `doc_old/WIREFRAMES.md` (archived reference)
 
 Map the reference screenshots into original Kindlelise pages and states. It may
 describe navigation and visible controls but cannot create backend requirements
@@ -1330,7 +1375,7 @@ stale, incomplete or inconsistent.
 GET/POST sign-up → unverified profile → staff verification
 GET discover → broad-area profiles → GET profile
 POST conversation/start → GET conversation → POST message/send
-GET/POST plan/create → pending → staff approval → GET plan
+GET/POST plan/create → available plan → GET plan
 POST plan/join → make entire plan read-only → POST plan/leave or owner cancel
 POST profile/block
 GET/POST report/create

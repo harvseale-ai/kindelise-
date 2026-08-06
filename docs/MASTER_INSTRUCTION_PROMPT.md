@@ -4,10 +4,10 @@
 > vertical-slice revision below.
 >
 > **Synchronized vertical-slice revision:** SHA-256
-> `f9a61f9119614549585ea3c0315f20c809c807566101d88e3c8308ba4db67e5e`
+> `24fd78915f1c2446230d6831582fae604ec9dd4d139123c990b08061f267ab63`
 > of [`docs/VERTICAL_SLICE.md`](VERTICAL_SLICE.md).
 >
-> **Synchronized date:** 2026-07-27.
+> **Synchronized date:** 2026-08-06.
 >
 > **Authority:** this document is an aid, not a second specification. The vertical
 > slice remains the sole implementation authority. If this prompt is incomplete,
@@ -80,12 +80,10 @@ documentation edits.
 
 1. Read docs/VERTICAL_SLICE.md completely before changing implementation or an
    implementation contract. It is the sole implementation authority.
-2. Use docs/DECISIONS.md, docs/DATA_MODEL.md, docs/ARCHITECTURE.md,
-   docs/REQUIREMENTS.md, docs/WIREFRAMES.md, docs/IMPLEMENTATION_PLAN.md and
-   docs/IMPLEMENTATION_PROGRESS.md only as supporting contracts for their named
-   purposes. They cannot expand the vertical slice. If they conflict, align the
-   supporting document to the vertical slice unless an explicit boundary change
-   has been approved.
+2. Use docs/DECISIONS.md, docs/IMPLEMENTATION_PLAN.md and
+   docs/IMPLEMENTATION_PROGRESS.md only as active supporting contracts for their
+   named purposes. Documents under doc_old/ are historical references, not
+   prerequisites or active contracts. None can expand the vertical slice.
 3. This master prompt is a reusable summary, not an authority. If it conflicts
    with docs/VERTICAL_SLICE.md, follow the vertical slice. When EXPECTED OUTPUT
    authorises documentation edits, correct this prompt in the same pass;
@@ -113,7 +111,7 @@ FIXED PROJECT BOUNDARY
   by PostgreSQL. It has no age-verification system and must not be described as
   ready for unrestricted public use.
 - The assessed journey is registration/sign-in, profile completion, manual
-  staff verification, broad-area discovery, plan creation and staff approval,
+  staff verification, broad-area discovery, immediate eligible plan creation,
   join/leave, direct messages, blocking and private reporting.
 - Stripe is limited to one hosted Premium subscription: one no-card 30-day trial
   per local account, followed by GBP 4.99 recurring yearly, with hosted invoice
@@ -121,8 +119,15 @@ FIXED PROJECT BOUNDARY
   access projection.
 - Ollama Cloud is limited to grammar or clarity suggestions for one unsent
   message draft. The user reviews the suggestion and sends manually.
+- Profiles may include one optional owner-uploaded JPEG, PNG or WebP image. It is
+  metadata-stripped, bounded and served only through the authorised application
+  route; it is presentation, never verification evidence. Local filesystem
+  storage remains limited to the supervised assessment environment.
+- Profiles may save multiple configured broad areas. Plan forms may explicitly
+  fetch bounded public metadata and store one protected normalised thumbnail;
+  neither operation collects exact location or proves venue safety.
 - Thirty-six implementation files is a maximum, not a target. The authoritative
-  map currently allocates 33 and deliberately leaves three unallocated.
+  map currently allocates 34 and deliberately leaves two unallocated.
   Only supporting governance or assessment documents explicitly named as
   exceptions by docs/VERTICAL_SLICE.md or docs/DECISIONS.md are outside the
   implementation-file maximum. Describing a new file as governance,
@@ -134,15 +139,15 @@ FIXED PROJECT BOUNDARY
   Conversation, Message, Block, Report, PlatformSubscription and
   StripeWebhookReceipt.
 - The mapped inventory is four admin actions, one Django User-admin profile
-  verification control, four read-only model helpers, seven public browser
-  forms, eight policies, fourteen services, eight selectors, twenty-five views
-  and named routes, one Ollama function, two browser functions and seven test
+  verification control, four read-only model helpers, eight public browser
+  forms, eight policies, fourteen services, nine selectors, twenty-eight views
+  and named routes, one Ollama function, five browser functions and seven test
   setup helpers. Consult the vertical slice for their exact names and contracts;
   do not reconstruct them from memory.
 
 DO NOT INTRODUCE DEFERRED SCOPE
 
-Do not add exact location/geolocation, automated URL retrieval or venue approval,
+Do not add exact location/geolocation, automatic venue approval,
 plan evidence/version systems, circles or group messaging, presence/history
 models, attachments, WebSockets, typing/read state, moderation findings or
 sanctions, extra subscription tiers, invoices/custom cancellation, extra AI

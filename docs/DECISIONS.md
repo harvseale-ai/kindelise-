@@ -216,7 +216,7 @@ profile is never eligible for discovery, plans or messaging.
 
 ## ADR-005: Use manual plan URL approval and lock the whole plan after first join
 
-**Status:** Accepted  
+**Status:** Superseded by ADR-023; first-join locking remains accepted
 **Recorded:** 2026-07-18  
 **Clarified:** 2026-07-22
 
@@ -226,7 +226,7 @@ The product needs meetings anchored to an independently established public place
 or organised activity, but safe URL fetching, evidence preservation and formal
 anchor decisions are too large for the student MVP.
 
-### Decision
+### Historical decision
 
 A plan stores one title, description, public place, public HTTPS evidence URL,
 start time and capacity. Authorised staff manually open the URL outside the
@@ -469,7 +469,8 @@ or operational capabilities that are not implemented.
 
 ### Decision
 
-Use the data inventory and access boundaries in `docs/PRIVACY_MODEL.md`. Keep
+Use the historical data inventory and access boundaries in
+`doc_old/PRIVACY_MODEL.md` only as background. Keep
 message bodies, report descriptions, passwords, secrets, raw webhook payloads and
 AI drafts out of logs. Use generic not-found responses where explaining a denial
 would reveal hidden state.
@@ -509,7 +510,7 @@ features only where they are absent from the vertical slice.
 
 Use four destinations: Discover, Plans, Messages and Profile. The discovery grid
 contains verified profile cards only. The Premium comparison is an account-page
-mode. `docs/WIREFRAMES.md` may describe presentation but cannot create backend
+mode. `doc_old/WIREFRAMES.md` may describe presentation but cannot create backend
 requirements.
 
 ### Alternatives rejected
@@ -858,3 +859,130 @@ while durable verification remains consistent and attributable. This adds no
 model, migration, route, dependency or implementation file. Tests must prove
 placement, successful verification and withdrawal, incomplete-profile refusal,
 and omission of the control when Profile change permission is absent.
+
+## ADR-020: Add one optional protected profile image
+
+**Status:** Accepted
+**Recorded:** 2026-07-27
+
+### Context
+
+The approved profile had no image field. The user explicitly requested a small
+profile-image upload section above Display name on 2026-07-27. A direct media URL
+would bypass the existing profile visibility and mutual-block rules, while an
+unprocessed photograph could retain location or device metadata.
+
+### Decision
+
+Add one optional `Profile.profile_image` field and no separate media entity.
+`ProfileDetailsForm` owns upload validation and presents the field first. It
+accepts JPEG, PNG and WebP only, limited to 5 MB and 4,096 pixels on either side,
+normalises the image through Pillow and saves no embedded metadata. Storage uses
+a random name rather than the user's original filename.
+
+Only the active owner or a viewer currently allowed to open that public profile
+may read the image. A named authenticated application route calls a selector and
+streams the file; missing, denied and unavailable images share one generic
+not-found outcome. There is no direct media route. Replacing an image deletes the
+superseded file only after the database transaction commits. Staff
+admin does not provide an alternate image-upload path.
+
+The image is optional presentation and is never verification evidence. Local
+filesystem storage is accepted only for the supervised local assessment. Durable
+production object storage, moderation, image history and automated retention are
+deferred and must complete a later boundary change before public deployment.
+
+### Alternatives rejected
+
+- Serve `MEDIA_URL` directly, because it would bypass profile visibility and
+  blocking decisions.
+- Store image bytes in PostgreSQL, because it would enlarge ordinary profile
+  queries and create unnecessary data responsibilities.
+- Add a media model or processing service, because one bounded optional field is
+  the smallest design for the requested journey.
+- Preserve the original upload unchanged, because embedded metadata can disclose
+  private device or location information.
+
+### Consequences
+
+This adds one Profile field and migration, Pillow dependency, selector, view and
+named route. The profile form must use multipart encoding. Tests must prove field
+order, validation and metadata removal, owner/authorised reads, generic denied
+reads, and replacement cleanup.
+
+## ADR-021: Store and filter multiple authorised discovery areas
+
+**Status:** Accepted
+**Recorded:** 2026-07-27
+
+### Context
+
+Discovery already calculates the exact broad areas available to each account but
+the form accepts only one area per request. The user explicitly requested
+multiple broad-area selection on 2026-07-27, alongside the existing multiple
+interest filtering.
+
+### Decision
+
+Add `Profile.broad_areas` as a bounded list of configured stable keys while
+retaining `broad_area` as a backwards-compatible primary value. The profile form
+accepts one or more areas, stores the first as the primary value and stores the
+full selection in `broad_areas`. Discovery accepts one or more selected keys,
+refuses an empty, stale or unauthorised set and matches profiles whose saved areas
+overlap that set.
+
+Free accounts may search their saved areas and use at most two interest filters.
+Premium accounts may additionally search configured nearby areas and use at most
+five interest filters. Verification, blocking and all privacy exclusions remain
+unchanged.
+
+### Alternatives rejected
+
+- Replace the legacy `broad_area` immediately, because a compatibility value keeps
+  existing records and staff workflows understandable during the student MVP.
+- Trust arbitrary submitted area keys, because client input cannot expand the
+  areas calculated by policy.
+- Add exact location or distance, because neither is needed for broad-area
+  filtering and both remain outside the approved scope.
+
+### Consequences
+
+This adds one profile field and reviewed backfill migration, and updates the
+profile form, policy, selector, service and presentation labels. Tests must prove
+multi-area saving and filtering, free/premium limits, checkbox input and safe
+refusal of empty or unauthorised selections.
+
+## ADR-022: Fetch bounded public metadata only after an explicit action
+
+**Status:** Accepted
+**Recorded:** 2026-08-06
+
+### Decision
+
+The plan form may fetch a normal public HTTPS page only after the user selects
+`Fetch details`. The fetcher rejects local/private targets, bounds redirects,
+content types and response sizes, extracts an editable public-place suggestion,
+normalises an optional image to metadata-free JPEG and returns a short-lived
+signed token. The image is stored only when the validated plan form is submitted
+and is served through the same plan-visibility decision as the plan itself.
+
+The fetched page is a convenience input, not preserved evidence or venue safety
+approval. Users can edit the suggested place or continue manually when fetching
+fails.
+
+## ADR-023: Publish eligible plans immediately
+
+**Status:** Accepted
+**Recorded:** 2026-08-06
+
+### Decision
+
+An active, verified owner creates an approved plan immediately. The owner becomes
+the recorded approver for the database constraint; browser-supplied status and
+approval fields remain ignored. An unlocked approved plan stays approved when
+edited. Editing an unlocked legacy rejected plan activates it, while cancelled
+plans remain terminal and the first successful join still locks all meeting
+details except cancellation.
+
+This supersedes ADR-005's manual plan-review workflow but not its public-place,
+capacity, participation-history or first-join locking rules.
