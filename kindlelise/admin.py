@@ -28,7 +28,11 @@ def _profile_is_complete_for_verification(profile):
     return (
         profile is not None
         and bool(profile.display_name.strip())
-        and profile.broad_area in settings.KINDLELISE_AREAS
+        and bool(
+            set(profile.broad_areas or (profile.broad_area,)).intersection(
+                settings.KINDLELISE_AREAS
+            )
+        )
     )
 
 
@@ -307,6 +311,7 @@ class ProfileAdmin(admin.ModelAdmin):
         remove_verification_from_selected_profiles,
     )
     readonly_fields = ("is_verified", "verified_at", "verified_by")
+    exclude = ("profile_image",)
 
 
 @admin.register(Plan)

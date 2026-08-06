@@ -72,8 +72,10 @@ def update_signed_in_user_profile(user, profile_changes):
 
     scalar_fields = (
         "display_name",
+        "title_statement",
         "biography",
         "broad_area",
+        "broad_areas",
         "availability_start",
         "available_from",
     )

@@ -78,6 +78,16 @@ def _safe_local_redirect(request):
     return None
 
 
+def _profile_broad_area_label(profile):
+    """Return configured labels for one profile's selected broad areas."""
+    area_keys = profile.broad_areas or (profile.broad_area,)
+    return ", ".join(
+        settings.KINDLELISE_AREAS[area_key]
+        for area_key in area_keys
+        if area_key in settings.KINDLELISE_AREAS
+    ) or "Not completed"
+
+
 @require_http_methods(["GET"])
 def home_page(request):
     """Redirect the visitor to the page allowed by current account state.
@@ -203,10 +213,7 @@ def account_page(request):
         {
             "mode": "account",
             "summary": summary,
-            "broad_area_label": settings.KINDLELISE_AREAS.get(
-                summary["profile"].broad_area,
-                "Not completed",
-            ),
+            "broad_area_label": _profile_broad_area_label(summary["profile"]),
             "is_available_now": summary["profile"].is_available_now(timezone.now()),
         },
     )
@@ -311,7 +318,7 @@ def discovery_page(request):
         )
         return redirect("account")
 
-    form_data = request.GET if request.GET else {"broad_area": allowed_areas[0]}
+    form_data = request.GET if request.GET else {"broad_area": list(allowed_areas)}
     form = DiscoveryFiltersForm(
         form_data,
         allowed_areas=allowed_areas,
@@ -327,10 +334,7 @@ def discovery_page(request):
         profile_cards = [
             {
                 "profile": profile,
-                "broad_area_label": settings.KINDLELISE_AREAS.get(
-                    profile.broad_area,
-                    profile.broad_area,
-                ),
+                "broad_area_label": _profile_broad_area_label(profile),
                 "is_available_now": profile.is_available_now(current_time),
             }
             for profile in profiles
@@ -376,11 +380,13 @@ def profile_page(request, profile_id):
         {
             "mode": "public_profile",
             "profile": profile,
-            "broad_area_label": settings.KINDLELISE_AREAS.get(
-                profile.broad_area,
-                profile.broad_area,
-            ),
+            "broad_area_label": _profile_broad_area_label(profile),
             "is_available_now": profile.is_available_now(timezone.now()),
+            "plans": Plan.objects.filter(
+                owner=profile.user,
+                status=Plan.Status.APPROVED,
+                starts_at__gt=timezone.now(),
+            ).order_by("-created_at"),
         },
     )
 

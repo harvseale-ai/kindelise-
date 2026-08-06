@@ -358,8 +358,13 @@ def test_discovery_http_enforces_free_and_premium_area_and_interest_limits():
         display_name="Premium nearby profile",
         broad_area="north",
     )
+    current_area = create_verified_test_profile(
+        display_name="Premium current-area profile",
+        broad_area="central",
+    )
     interests = list(Interest.objects.order_by("pk")[:6])
     nearby.interests.add(interests[0])
+    current_area.interests.add(interests[1])
     client = Client()
     client.force_login(viewer)
 
@@ -387,7 +392,7 @@ def test_discovery_http_enforces_free_and_premium_area_and_interest_limits():
     premium_response = client.get(
         reverse("discover"),
         {
-            "broad_area": "north",
+            "broad_area": ["central", "north"],
             "interests": [str(interest.pk) for interest in interests[:5]],
         },
     )
@@ -400,6 +405,7 @@ def test_discovery_http_enforces_free_and_premium_area_and_interest_limits():
     )
     assert premium_response.status_code == 200
     assert nearby.display_name.encode() in premium_response.content
+    assert current_area.display_name.encode() in premium_response.content
     assert b"up to 5 interests" in premium_response.content
     assert b"Select no more than 5 interests" in premium_excess_response.content
 
@@ -450,6 +456,17 @@ def test_discovery_profile_http_is_safe_and_uses_one_generic_hidden_response():
     )
     coffee = Interest.objects.get(name="Coffee")
     target.interests.add(coffee)
+    visible_plan = create_test_plan(
+        owner=target_user,
+        title="Visible public profile plan",
+        status=Plan.Status.APPROVED,
+        starts_at=timezone.now() + timezone.timedelta(days=1),
+    )
+    create_test_plan(
+        owner=target_user,
+        title="Hidden cancelled profile plan",
+        status=Plan.Status.CANCELLED,
+    )
     PlatformSubscription.objects.create(
         user=target_user,
         stripe_customer_id="cus_private_profile_http",
@@ -478,6 +495,9 @@ def test_discovery_profile_http_is_safe_and_uses_one_generic_hidden_response():
     assert b"West" in response.content
     assert b"Coffee" in response.content
     assert b"Free now" in response.content
+    assert visible_plan.title.encode() in response.content
+    assert reverse("plan_detail", args=[visible_plan.pk]).encode() in response.content
+    assert b"Hidden cancelled profile plan" not in response.content
     assert b"&lt;script&gt;" in response.content
     assert b"<script>" not in response.content
     assert b"private_target_login" not in response.content
@@ -554,20 +574,24 @@ def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
         for label in (b"Today", b"Tomorrow", b"This week", b"As and when")
     )
     assert tuple(get_response.context["form"].fields) == (
+        "profile_image",
         "display_name",
+        "title_statement",
         "biography",
         "broad_area",
         "free_now",
         "availability_start",
         "interests",
     )
+    assert b'multipart/form-data' in get_response.content
 
     update_response = client.post(
         reverse("profile_edit"),
         {
             "display_name": "HTTP student",
+            "title_statement": "Always up for coffee and museums",
             "biography": "A browser-updated biography.",
-            "broad_area": "north",
+            "broad_area": ["north", "east"],
             "free_now": "on",
             "availability_start": "",
             "interests": [str(coffee.pk)],
@@ -582,7 +606,9 @@ def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
     assert update_response.status_code == 302
     assert update_response.url == reverse("account")
     assert profile.display_name == "HTTP student"
+    assert profile.title_statement == "Always up for coffee and museums"
     assert profile.broad_area == "north"
+    assert profile.broad_areas == ["north", "east"]
     assert profile.availability_start == Profile.AvailabilityStart.TODAY
     assert profile.available_from <= timezone.now()
     assert list(profile.interests.all()) == [coffee]
@@ -603,7 +629,32 @@ def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
     assert clear_response.status_code == 302
     assert profile.availability_start == ""
     assert profile.available_from is None
+    assert profile.broad_areas == ["central"]
     assert not profile.interests.exists()
+
+
+def test_saved_multiple_profile_areas_can_be_selected_together_in_discovery():
+    viewer = create_test_user()
+    create_verified_test_profile(
+        user=viewer,
+        broad_area="central",
+        broad_areas=["central", "east"],
+    )
+    eastern_profile = create_verified_test_profile(
+        display_name="Visible eastern profile",
+        broad_area="east",
+    )
+    client = Client()
+    client.force_login(viewer)
+
+    response = client.get(
+        reverse("discover"),
+        {"broad_area": ["central", "east"]},
+    )
+
+    assert response.status_code == 200
+    assert eastern_profile.display_name.encode() in response.content
+    assert response.content.count(b'name="broad_area"') == 2
 
 
 def test_sign_out_http_requires_post_and_valid_csrf_before_ending_session():
@@ -707,6 +758,7 @@ def test_profile_details_form_rejects_unknown_and_oversized_values():
     invalid_form = ProfileDetailsForm(
         data={
             "display_name": "   ",
+            "title_statement": "x" * 121,
             "biography": "x" * 501,
             "broad_area": "unconfigured-area",
             "availability_start": "not-an-option",
@@ -727,16 +779,21 @@ def test_profile_details_form_rejects_unknown_and_oversized_values():
     )
 
     assert tuple(invalid_form.fields) == (
+        "profile_image",
         "display_name",
+        "title_statement",
         "biography",
         "broad_area",
         "free_now",
         "availability_start",
         "interests",
     )
+    assert invalid_form.fields["interests"].widget.allow_multiple_selected
+    assert invalid_form.fields["interests"].widget.input_type == "checkbox"
     assert not invalid_form.is_valid()
     assert {
         "display_name",
+        "title_statement",
         "biography",
         "broad_area",
         "availability_start",
@@ -951,6 +1008,7 @@ def test_signed_in_user_profile_update_replaces_and_clears_permitted_values():
     first_form = ProfileDetailsForm(
         data={
             "display_name": "Student One",
+            "title_statement": "Coffee, galleries and city walks",
             "biography": "A short synthetic biography.",
             "broad_area": "north",
             "availability_start": "today",
@@ -975,6 +1033,7 @@ def test_signed_in_user_profile_update_replaces_and_clears_permitted_values():
 
     assert updated_profile.user == account
     assert updated_profile.display_name == "Student One"
+    assert updated_profile.title_statement == "Coffee, galleries and city walks"
     assert updated_profile.biography == "A short synthetic biography."
     assert updated_profile.broad_area == "north"
     assert updated_profile.availability_start == Profile.AvailabilityStart.TODAY
@@ -1615,28 +1674,37 @@ def test_discovery_filter_form_rejects_unknown_and_excessive_filters():
 
     free_form = DiscoveryFiltersForm(
         data={
-            "broad_area": "central",
+            "broad_area": ["central"],
             "interests": [str(interest.pk) for interest in interests[:2]],
             "available_now": "on",
         },
         allowed_areas=free_areas,
         interest_limit=free_limit,
     )
+    assert free_form.fields["broad_area"].widget.allow_multiple_selected
+    assert free_form.fields["broad_area"].widget.input_type == "checkbox"
+    assert free_form.fields["interests"].widget.allow_multiple_selected
+    assert free_form.fields["interests"].widget.input_type == "checkbox"
     free_nearby_form = DiscoveryFiltersForm(
-        data={"broad_area": "north", "interests": []},
+        data={"broad_area": ["north"], "interests": []},
         allowed_areas=free_areas,
         interest_limit=free_limit,
     )
     free_excess_form = DiscoveryFiltersForm(
         data={
-            "broad_area": "central",
+            "broad_area": ["central"],
             "interests": [str(interest.pk) for interest in interests[:3]],
         },
         allowed_areas=free_areas,
         interest_limit=free_limit,
     )
     unknown_interest_form = DiscoveryFiltersForm(
-        data={"broad_area": "central", "interests": ["999999"]},
+        data={"broad_area": ["central"], "interests": ["999999"]},
+        allowed_areas=free_areas,
+        interest_limit=free_limit,
+    )
+    empty_area_form = DiscoveryFiltersForm(
+        data={"broad_area": [], "interests": []},
         allowed_areas=free_areas,
         interest_limit=free_limit,
     )
@@ -1649,6 +1717,8 @@ def test_discovery_filter_form_rejects_unknown_and_excessive_filters():
     assert "interests" in free_excess_form.errors
     assert not unknown_interest_form.is_valid()
     assert "interests" in unknown_interest_form.errors
+    assert not empty_area_form.is_valid()
+    assert "broad_area" in empty_area_form.errors
 
     PlatformSubscription.objects.create(
         user=viewer,
@@ -1661,7 +1731,7 @@ def test_discovery_filter_form_rejects_unknown_and_excessive_filters():
     )
     premium_form = DiscoveryFiltersForm(
         data={
-            "broad_area": "north",
+            "broad_area": ["central", "north"],
             "interests": [str(interest.pk) for interest in interests[:5]],
         },
         allowed_areas=premium_areas,
@@ -1669,7 +1739,7 @@ def test_discovery_filter_form_rejects_unknown_and_excessive_filters():
     )
     premium_excess_form = DiscoveryFiltersForm(
         data={
-            "broad_area": "north",
+            "broad_area": ["north"],
             "interests": [str(interest.pk) for interest in interests],
         },
         allowed_areas=premium_areas,
@@ -1756,7 +1826,7 @@ def test_discovery_selector_excludes_hidden_profiles_before_presentation():
     )
     available_form = DiscoveryFiltersForm(
         data={
-            "broad_area": "central",
+            "broad_area": ["central"],
             "interests": [str(coffee.pk)],
             "available_now": "on",
         },

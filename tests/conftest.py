@@ -45,6 +45,7 @@ def create_verified_test_profile(user=None, verified_by=None, **changes):
         "verified_by": verified_by,
     }
     values.update(changes)
+    values.setdefault("broad_areas", [values["broad_area"]])
     if values.get("available_from") is not None:
         values.setdefault("availability_start", Profile.AvailabilityStart.TODAY)
     return Profile.objects.create(user=user, **values)

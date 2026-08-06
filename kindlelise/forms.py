@@ -87,6 +87,15 @@ class AccountSignUpForm(UserCreationForm):
         return email
 
 
+class FlexibleMultipleChoiceField(forms.MultipleChoiceField):
+    """Accept one legacy scalar choice or a normal multi-value submission."""
+
+    def clean(self, value):
+        if isinstance(value, str):
+            value = [value]
+        return super().clean(value)
+
+
 class ProfileDetailsForm(forms.ModelForm):
     """Validate only the signed-in user's editable profile details."""
 
@@ -99,7 +108,16 @@ class ProfileDetailsForm(forms.ModelForm):
         ),
     )
     display_name = forms.CharField(max_length=80, strip=True)
-    broad_area = forms.ChoiceField(choices=())
+    title_statement = forms.CharField(
+        max_length=120,
+        required=False,
+        strip=True,
+        label="Title statement",
+    )
+    broad_area = FlexibleMultipleChoiceField(
+        choices=(),
+        widget=forms.CheckboxSelectMultiple(),
+    )
     free_now = forms.BooleanField(
         required=False,
         label="Free now",
@@ -121,12 +139,21 @@ class ProfileDetailsForm(forms.ModelForm):
         fields = (
             "profile_image",
             "display_name",
+            "title_statement",
             "biography",
             "broad_area",
             "free_now",
             "availability_start",
             "interests",
         )
+        widgets = {
+            "biography": forms.Textarea(
+                attrs={"placeholder": "Tell people a little about yourself."}
+            ),
+            "interests": forms.CheckboxSelectMultiple(
+                attrs={"class": "interest-checkboxes"}
+            )
+        }
 
     def __init__(self, *args, **kwargs):
         """Load the current configured areas and controlled interests."""
@@ -135,7 +162,12 @@ class ProfileDetailsForm(forms.ModelForm):
             (area_key, area_label)
             for area_key, area_label in settings.KINDLELISE_AREAS.items()
         ]
+        if not self.is_bound:
+            self.initial["broad_area"] = self.instance.broad_areas or (
+                [self.instance.broad_area] if self.instance.broad_area else []
+            )
         self.fields["interests"].queryset = Interest.objects.order_by("name")
+        self.fields["interests"].help_text = "Select all that apply."
         if not self.is_bound and self.instance.pk:
             is_available = self.instance.is_available_now(timezone.now())
             self.initial["free_now"] = is_available
@@ -192,6 +224,10 @@ class ProfileDetailsForm(forms.ModelForm):
     def clean(self):
         """Convert the optional relative availability choice to one start time."""
         cleaned_data = super().clean()
+        broad_areas = cleaned_data.get("broad_area")
+        if broad_areas:
+            cleaned_data["broad_areas"] = tuple(broad_areas)
+            cleaned_data["broad_area"] = broad_areas[0]
         availability_start = cleaned_data.get("availability_start")
         if cleaned_data.get("free_now"):
             cleaned_data["availability_start"] = Profile.AvailabilityStart.TODAY
@@ -216,10 +252,19 @@ class ProfileDetailsForm(forms.ModelForm):
 class DiscoveryFiltersForm(forms.Form):
     """Validate discovery filters against server-calculated account limits."""
 
-    broad_area = forms.ChoiceField(choices=())
+    broad_area = forms.MultipleChoiceField(
+        choices=(),
+        label="Broad areas",
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "area-checkboxes"}
+        ),
+    )
     interests = forms.ModelMultipleChoiceField(
         queryset=Interest.objects.none(),
         required=False,
+        widget=forms.CheckboxSelectMultiple(
+            attrs={"class": "interest-checkboxes"}
+        ),
     )
     available_now = forms.BooleanField(required=False, label="Free now")
 

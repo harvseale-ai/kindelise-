@@ -85,8 +85,14 @@ def get_profiles_for_discovery_grid(viewer, selected_filters):
     allowed_areas, interest_limit = get_allowed_discovery_areas_and_interest_limit(
         viewer
     )
-    selected_area = selected_filters.get("broad_area")
-    if selected_area not in allowed_areas:
+    selected_areas = selected_filters.get("broad_area") or ()
+    if isinstance(selected_areas, str):
+        selected_areas = (selected_areas,)
+    try:
+        selected_area_keys = set(selected_areas)
+    except TypeError:
+        return Profile.objects.none()
+    if not selected_area_keys or not selected_area_keys.issubset(set(allowed_areas)):
         return Profile.objects.none()
 
     selected_interests = selected_filters.get("interests")
@@ -110,7 +116,8 @@ def get_profiles_for_discovery_grid(viewer, selected_filters):
         Profile.objects.select_related("user")
         .prefetch_related("interests")
         .filter(
-            broad_area=selected_area,
+            Q(broad_areas__overlap=list(selected_area_keys))
+            | Q(broad_area__in=selected_area_keys),
             is_verified=True,
             user__is_active=True,
         )

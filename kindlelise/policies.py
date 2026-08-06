@@ -43,11 +43,19 @@ def get_allowed_discovery_areas_and_interest_limit(user):
     if not can_access_discovery_plans_and_messages(user):
         return (), 0
 
-    current_area = Profile.objects.filter(user_id=user.pk).values_list(
+    profile_areas = Profile.objects.filter(user_id=user.pk).values(
         "broad_area",
-        flat=True,
+        "broad_areas",
     ).first()
-    if current_area not in settings.KINDLELISE_AREAS:
+    if profile_areas is None:
+        return (), 0
+    stored_areas = profile_areas["broad_areas"] or (profile_areas["broad_area"],)
+    current_areas = tuple(
+        dict.fromkeys(
+            area for area in stored_areas if area in settings.KINDLELISE_AREAS
+        )
+    )
+    if not current_areas:
         return (), 0
 
     subscription = PlatformSubscription.objects.filter(user_id=user.pk).first()
@@ -56,13 +64,15 @@ def get_allowed_discovery_areas_and_interest_limit(user):
     )
 
     if not has_premium_access:
-        return (current_area,), 2
+        return current_areas, 2
 
-    configured_nearby_areas = settings.KINDLELISE_NEARBY_AREAS.get(
-        current_area,
-        (),
-    )
-    areas = dict.fromkeys((current_area, *configured_nearby_areas))
+    areas = dict.fromkeys(current_areas)
+    for current_area in current_areas:
+        areas.update(
+            dict.fromkeys(
+                settings.KINDLELISE_NEARBY_AREAS.get(current_area, ())
+            )
+        )
     allowed_areas = tuple(
         area_key for area_key in areas if area_key in settings.KINDLELISE_AREAS
     )
@@ -104,7 +114,8 @@ def can_show_profile_in_discovery_grid(viewer, profile):
     allowed_areas, _interest_limit = get_allowed_discovery_areas_and_interest_limit(
         viewer
     )
-    return profile.broad_area in allowed_areas
+    profile_areas = profile.broad_areas or (profile.broad_area,)
+    return bool(set(profile_areas).intersection(allowed_areas))
 
 
 def can_create_plan_for_staff_review(user):

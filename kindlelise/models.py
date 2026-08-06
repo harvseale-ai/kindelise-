@@ -4,6 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
@@ -51,8 +52,14 @@ class Profile(models.Model):
         default="",
     )
     display_name = models.CharField(max_length=80, blank=True, default="")
+    title_statement = models.CharField(max_length=120, blank=True, default="")
     biography = models.TextField(max_length=500, blank=True, default="")
     broad_area = models.CharField(max_length=20, blank=True, default="")
+    broad_areas = ArrayField(
+        models.CharField(max_length=20),
+        blank=True,
+        default=list,
+    )
     interests = models.ManyToManyField(Interest, blank=True, related_name="profiles")
     availability_start = models.CharField(
         max_length=11,

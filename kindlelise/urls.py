@@ -10,6 +10,7 @@ urlpatterns = [
     path("sign-in/", views.sign_in_page, name="sign_in"),
     path("sign-out/", views.sign_out_user, name="sign_out"),
     path("account/", views.account_page, name="account"),
+    path("profile/", views.account_page, name="profile"),
     path("account/profile/edit/", views.edit_profile_page, name="profile_edit"),
     path("discover/", views.discovery_page, name="discover"),
     path("profiles/<int:profile_id>/", views.profile_page, name="profile_detail"),
