@@ -3034,7 +3034,7 @@ def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf(
     start_url = reverse("direct_conversation_start", args=[target_profile.pk])
     assert profile_response.status_code == 200
     assert start_url.encode() in profile_response.content
-    assert b"Message Message target" in profile_response.content
+    assert b"Send Message" in profile_response.content
     assert client.get(start_url).status_code == 405
 
     missing_csrf_response = client.post(start_url)

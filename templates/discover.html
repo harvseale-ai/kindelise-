@@ -3,48 +3,67 @@
 {% block title %}Discover profiles · Kindlelise{% endblock %}
 
 {% block content %}
-  <section class="card" aria-labelledby="discover-title">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Broad-area discovery</p>
-        <h1 id="discover-title">Discover profiles</h1>
-      </div>
-    </div>
-
-    <p>Browse verified profiles by broad named area and controlled interests. No exact location or distance is shown.</p>
-
-    <form method="get" aria-label="Discovery filters" novalidate>
+  <section class="discovery-controls" aria-labelledby="discover-title">
+    <h1 class="visually-hidden" id="discover-title">Discover profiles</h1>
+    <form class="discovery-filter-form" method="get" aria-label="Discovery filters" novalidate>
       {{ form.non_field_errors }}
-      <div class="form-row">
-        {{ form.broad_area.errors }}
-        {{ form.broad_area.label_tag }}
-        {{ form.broad_area }}
+      <div class="filter-pill-scroller" role="group" aria-label="Open a discovery filter">
+        <a class="filter-row-label" href="{% url 'discover' %}" aria-label="Clear all filters"><b aria-hidden="true">+</b> Filters</a>
+        <button class="filter-trigger" type="button" data-filter-target="broad-area-filter" aria-controls="broad-area-filter" aria-expanded="false">Broad areas</button>
+        <button class="filter-trigger" type="button" data-filter-target="interest-filter" aria-controls="interest-filter" aria-expanded="false">Interests</button>
+        <button class="filter-trigger" type="button" data-filter-target="availability-filter" aria-controls="availability-filter" aria-expanded="false">Free now</button>
       </div>
-      <div class="form-row">
-        {{ form.interests.errors }}
-        <label for="{{ form.interests.id_for_label }}">
-          Interests
+
+      <div class="discovery-filter-panel" id="broad-area-filter"{% if form.broad_area.errors %} data-filter-errors{% endif %}>
+        <fieldset class="area-fieldset">
+          {{ form.broad_area.errors }}
+          <legend>Broad areas</legend>
+          <span class="helptext">Select one or more areas available to your account.</span>
+          {{ form.broad_area }}
+        </fieldset>
+        <div class="action-row">
+          <button type="submit">Apply filters</button>
+          <a class="button secondary" href="{% url 'discover' %}">Clear filters</a>
+          <button class="secondary" type="button" data-filter-close>Close</button>
+        </div>
+      </div>
+
+      <div class="discovery-filter-panel" id="interest-filter"{% if form.interests.errors %} data-filter-errors{% endif %}>
+        <fieldset class="interest-fieldset">
+          {{ form.interests.errors }}
+          <legend>Interests</legend>
           <span class="helptext">Select up to {{ interest_limit }} interests on your {% if is_premium %}Premium{% else %}Free{% endif %} access.</span>
-        </label>
-        {{ form.interests }}
+          {{ form.interests }}
+        </fieldset>
+        <div class="action-row">
+          <button type="submit">Apply filters</button>
+          <a class="button secondary" href="{% url 'discover' %}">Clear filters</a>
+          <button class="secondary" type="button" data-filter-close>Close</button>
+        </div>
       </div>
-      <div class="form-row checkbox-row toggle-row">
-        {{ form.available_now.errors }}
-        {{ form.available_now }}
-        {{ form.available_now.label_tag }}
-      </div>
-      <div class="action-row">
-        <button type="submit">Apply filters</button>
-        <a class="button secondary" href="{% url 'discover' %}">Clear filters</a>
+
+      <div class="discovery-filter-panel" id="availability-filter"{% if form.available_now.errors %} data-filter-errors{% endif %}>
+        <fieldset class="availability-filter-fieldset">
+          <legend>Availability</legend>
+          <div class="checkbox-row toggle-row">
+            {{ form.available_now.errors }}
+            {{ form.available_now }}
+            {{ form.available_now.label_tag }}
+          </div>
+        </fieldset>
+        <div class="action-row">
+          <button type="submit">Apply filters</button>
+          <a class="button secondary" href="{% url 'discover' %}">Clear filters</a>
+          <button class="secondary" type="button" data-filter-close>Close</button>
+        </div>
       </div>
     </form>
   </section>
 
-  <section aria-labelledby="results-title">
-    <h2 id="results-title">Profiles</h2>
+  <section aria-label="Profiles">
     <ul class="plain-list discovery-grid">
       {% for card in profile_cards %}
-        <li class="card">
+        <li class="card discovery-profile-card{% if card.profile.profile_image %} discovery-profile-card--with-image{% endif %}"{% if card.profile.profile_image %} style="--discovery-profile-image: url('{% url 'profile_image' card.profile.pk %}')"{% endif %}>
           <div>
             <strong><a href="{% url 'profile_detail' card.profile.pk %}">{{ card.profile.display_name }}</a></strong>
             <p>{{ card.broad_area_label }} · Verified{% if card.is_available_now %} · Free now{% endif %}</p>

@@ -3,32 +3,46 @@
 {% block title %}{% if mode == "confirmation" %}Report received{% else %}Private report{% endif %} · Kindlelise{% endblock %}
 
 {% block content %}
-  <section class="card auth-card" aria-labelledby="report-title">
+  <section class="profile-edit-page brand-form-page" aria-labelledby="report-title">
     {% if mode == "confirmation" %}
-      <p class="eyebrow">Private submission</p>
-      <h1 id="report-title">Report received</h1>
-      <div class="state-panel" role="status">
+      <header class="profile-edit-header">
+        <h1 id="report-title">Report received</h1>
+      </header>
+      <div class="brand-form-intro"><p class="eyebrow">Private submission</p></div>
+      <div class="state-panel brand-form-state" role="status">
         <strong>Your report was submitted privately to authorised staff.</strong>
         <p>The reported account is not notified. Submission does not by itself prove wrongdoing or create a finding or sanction.</p>
       </div>
-      <p><a class="button" href="{% url 'account' %}">Return to Profile</a></p>
+      <p class="brand-form-footer"><a class="button" href="{% url 'account' %}">Return to Profile</a></p>
     {% else %}
-      <a class="back-link" href="{% url 'account' %}">← Back to Profile</a>
-      <p class="eyebrow">Authorised staff only</p>
-      <h1 id="report-title">Report {{ target_profile.display_name }} privately</h1>
-      <p>This report is private. It is information for authorised staff and does not by itself prove wrongdoing.</p>
-      <p>Describe only relevant facts. Do not include home addresses, financial details, unrelated people or unnecessary health or identity information.</p>
-      {% if context_label %}<p class="state-panel"><strong>Related item:</strong> {{ context_label }}</p>{% endif %}
-      <form method="post" novalidate>
+      <header class="profile-edit-header">
+        <a class="private-profile-back" href="{% url 'account' %}" aria-label="Back to profile"></a>
+        <h1 id="report-title">Report {{ target_profile.display_name }} privately</h1>
+      </header>
+      <div class="brand-form-intro">
+        <p class="eyebrow">Authorised staff only</p>
+        <p>This report is private. It is information for authorised staff and does not by itself prove wrongdoing.</p>
+        <p>Describe only relevant facts. Do not include home addresses, financial details, unrelated people or unnecessary health or identity information.</p>
+      </div>
+      {% if context_label %}<p class="state-panel brand-form-state"><strong>Related item:</strong> {{ context_label }}</p>{% endif %}
+      <form class="profile-edit-form plan-details-form" method="post" novalidate>
         {% csrf_token %}
         {% for field_name, field_value in hidden_values.items %}
           <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
         {% endfor %}
         {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
-        {{ form.as_p }}
+        {{ form.non_field_errors }}
+        {% for field in form %}
+          <section class="profile-edit-field plan-form-field plan-form-field--{{ field.name }}{% if field.name == 'description' %} biography-field{% endif %}" aria-labelledby="{{ field.id_for_label }}-label">
+            <h2 id="{{ field.id_for_label }}-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label></h2>
+            {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+            <div class="profile-field-panel">{{ field }}</div>
+            {{ field.errors }}
+          </section>
+        {% endfor %}
         <button type="submit">Submit private report</button>
       </form>
-      <p class="muted">Kindlelise is not an emergency service.</p>
+      <p class="muted brand-form-footer">Kindlelise is not an emergency service.</p>
     {% endif %}
   </section>
 {% endblock %}
