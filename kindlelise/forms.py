@@ -1,12 +1,16 @@
 """Validate the seven mapped kinds of untrusted browser input."""
 
 from datetime import datetime, time, timedelta
+from io import BytesIO
 
 from django import forms
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from PIL import Image, ImageOps
 
 from kindlelise.models import Interest, Plan, Profile, Report
 
@@ -40,6 +44,14 @@ class AccountSignUpForm(UserCreationForm):
 class ProfileDetailsForm(forms.ModelForm):
     """Validate only the signed-in user's editable profile details."""
 
+    profile_image = forms.ImageField(
+        required=False,
+        label="Profile image",
+        help_text="Optional. JPG, PNG or WebP, up to 5 MB.",
+        widget=forms.FileInput(
+            attrs={"accept": "image/jpeg,image/png,image/webp"}
+        ),
+    )
     display_name = forms.CharField(max_length=80, strip=True)
     broad_area = forms.ChoiceField(choices=())
     free_now = forms.BooleanField(
@@ -61,6 +73,7 @@ class ProfileDetailsForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = (
+            "profile_image",
             "display_name",
             "biography",
             "broad_area",
@@ -82,6 +95,53 @@ class ProfileDetailsForm(forms.ModelForm):
             self.initial["free_now"] = is_available
             if is_available:
                 self.initial["availability_start"] = ""
+
+    def clean_profile_image(self):
+        """Return one bounded image re-encoded without embedded metadata."""
+        uploaded_image = self.cleaned_data.get("profile_image")
+        if not uploaded_image or not hasattr(uploaded_image, "size"):
+            return uploaded_image
+        maximum_bytes = 5 * 1024 * 1024
+        if uploaded_image.size > maximum_bytes:
+            raise forms.ValidationError("Choose an image no larger than 5 MB.")
+
+        approved_formats = {
+            "JPEG": ("jpg", "image/jpeg"),
+            "PNG": ("png", "image/png"),
+            "WEBP": ("webp", "image/webp"),
+        }
+        uploaded_image.seek(0)
+        try:
+            with Image.open(uploaded_image) as source_image:
+                image_format = source_image.format
+                if image_format not in approved_formats:
+                    raise forms.ValidationError("Choose a JPG, PNG or WebP image.")
+                if max(source_image.size) > 4_096:
+                    raise forms.ValidationError(
+                        "Choose an image no larger than 4,096 pixels per side."
+                    )
+                source_image.load()
+                normalised_image = ImageOps.exif_transpose(source_image)
+                if image_format == "JPEG":
+                    normalised_image = normalised_image.convert("RGB")
+                output = BytesIO()
+                normalised_image.save(output, format=image_format)
+        except forms.ValidationError:
+            raise
+        except (OSError, ValueError) as error:
+            raise forms.ValidationError(
+                "Choose a valid JPG, PNG or WebP image."
+            ) from error
+
+        image_bytes = output.getvalue()
+        if len(image_bytes) > maximum_bytes:
+            raise forms.ValidationError("Choose an image no larger than 5 MB.")
+        suffix, content_type = approved_formats[image_format]
+        return SimpleUploadedFile(
+            f"profile.{suffix}",
+            image_bytes,
+            content_type=content_type,
+        )
 
     def clean(self):
         """Convert the optional relative availability choice to one start time."""

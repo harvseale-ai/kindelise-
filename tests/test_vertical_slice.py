@@ -3,6 +3,7 @@
 import json
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
+from io import BytesIO
 from threading import Barrier
 from types import SimpleNamespace
 
@@ -12,6 +13,7 @@ from django.contrib import admin as django_admin
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.models import AnonymousUser, Permission
 from django.core.exceptions import PermissionDenied
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import (
     IntegrityError,
     close_old_connections,
@@ -25,6 +27,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import conditional_escape
+from PIL import Image
 
 from kindlelise.admin import (
     KindleliseUserAdmin,
@@ -70,6 +73,7 @@ from kindlelise.selectors import (
     get_messages_if_user_can_open_conversation,
     get_plan_page_if_viewer_is_allowed,
     get_plans_for_plan_list,
+    get_profile_image_if_viewer_is_allowed,
     get_profile_page_if_viewer_is_allowed,
     get_profiles_for_discovery_grid,
     get_report_target_profile_if_reporter_is_allowed,
@@ -740,6 +744,139 @@ def test_profile_details_form_rejects_unknown_and_oversized_values():
     assert "is_verified" not in invalid_form.fields
     assert not oversized_name_form.is_valid()
     assert "display_name" in oversized_name_form.errors
+
+
+def _test_profile_image_upload(
+    *,
+    image_format="JPEG",
+    size=(24, 24),
+    metadata=False,
+    trailing_bytes=0,
+):
+    """Build one synthetic in-memory image without using private user content."""
+    output = BytesIO()
+    image = Image.new("RGB", size, color=(31, 97, 68))
+    exif = Image.Exif()
+    if metadata:
+        exif[0x010E] = "synthetic private metadata"
+    image.save(output, format=image_format, exif=exif)
+    extension = {"JPEG": "jpg", "PNG": "png", "GIF": "gif"}[image_format]
+    content_type = {
+        "JPEG": "image/jpeg",
+        "PNG": "image/png",
+        "GIF": "image/gif",
+    }[image_format]
+    return SimpleUploadedFile(
+        f"student-photo.{extension}",
+        output.getvalue() + (b"x" * trailing_bytes),
+        content_type=content_type,
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_profile_image_upload_is_normalised_protected_and_replaced(settings, tmp_path):
+    settings.MEDIA_ROOT = tmp_path
+    owner = create_test_user()
+    profile = Profile.objects.create(user=owner)
+    client = Client()
+    client.force_login(owner)
+    form_values = {
+        "display_name": "Image owner",
+        "biography": "",
+        "broad_area": "central",
+        "availability_start": "",
+        "interests": [],
+    }
+
+    first_response = client.post(
+        reverse("profile_edit"),
+        {**form_values, "profile_image": _test_profile_image_upload(metadata=True)},
+    )
+    profile.refresh_from_db()
+    first_image_path = tmp_path / profile.profile_image.name
+
+    assert first_response.status_code == 302
+    assert first_image_path.exists()
+    assert "student-photo" not in profile.profile_image.name
+    with Image.open(first_image_path) as stored_image:
+        assert not stored_image.getexif()
+
+    owner_image_response = client.get(reverse("profile_image", args=[profile.pk]))
+    assert owner_image_response.status_code == 200
+    assert owner_image_response["Content-Type"] == "image/jpeg"
+    owner_image_response.close()
+    assert Client().get(reverse("profile_image", args=[profile.pk])).status_code == 302
+
+    hidden_viewer = create_test_user()
+    client.force_login(hidden_viewer)
+    assert client.get(reverse("profile_image", args=[profile.pk])).status_code == 404
+    assert get_profile_image_if_viewer_is_allowed(hidden_viewer, profile.pk) is None
+
+    reviewer = create_test_user(is_staff=True)
+    profile.is_verified = True
+    profile.verified_at = timezone.now()
+    profile.verified_by = reviewer
+    profile.save(update_fields=["is_verified", "verified_at", "verified_by"])
+    create_verified_test_profile(user=hidden_viewer, verified_by=reviewer)
+    authorised_response = client.get(reverse("profile_image", args=[profile.pk]))
+    assert authorised_response.status_code == 200
+    authorised_response.close()
+    Block.objects.create(blocker=hidden_viewer, blocked_user=owner)
+    assert client.get(reverse("profile_image", args=[profile.pk])).status_code == 404
+
+    client.force_login(owner)
+    replacement_response = client.post(
+        reverse("profile_edit"),
+        {**form_values, "profile_image": _test_profile_image_upload(image_format="PNG")},
+    )
+    profile.refresh_from_db()
+
+    assert replacement_response.status_code == 302
+    assert profile.profile_image.name.endswith(".png")
+    assert (tmp_path / profile.profile_image.name).exists()
+    assert not first_image_path.exists()
+
+
+def test_profile_image_form_rejects_unsupported_size_and_dimensions():
+    profile = Profile.objects.create(user=create_test_user())
+    values = {
+        "display_name": "Image validation",
+        "biography": "",
+        "broad_area": "central",
+        "availability_start": "",
+        "interests": [],
+    }
+    unsupported_form = ProfileDetailsForm(
+        data=values,
+        files={"profile_image": _test_profile_image_upload(image_format="GIF")},
+        instance=profile,
+    )
+    oversized_form = ProfileDetailsForm(
+        data=values,
+        files={
+            "profile_image": _test_profile_image_upload(
+                trailing_bytes=(5 * 1024 * 1024)
+            )
+        },
+        instance=profile,
+    )
+    over_dimension_form = ProfileDetailsForm(
+        data=values,
+        files={
+            "profile_image": _test_profile_image_upload(
+                image_format="PNG",
+                size=(4_097, 1),
+            )
+        },
+        instance=profile,
+    )
+
+    assert not unsupported_form.is_valid()
+    assert not oversized_form.is_valid()
+    assert not over_dimension_form.is_valid()
+    assert "profile_image" in unsupported_form.errors
+    assert "profile_image" in oversized_form.errors
+    assert "profile_image" in over_dimension_form.errors
 
 
 @pytest.mark.parametrize("choice", ["today", "this_week", "as_and_when"])

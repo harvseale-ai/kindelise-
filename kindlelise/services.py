@@ -66,7 +66,7 @@ def update_signed_in_user_profile(user, profile_changes):
         raise PermissionDenied("A signed-in active account is required")
 
     try:
-        profile = Profile.objects.get(user=user)
+        profile = Profile.objects.select_for_update().get(user=user)
     except Profile.DoesNotExist as error:
         raise PermissionDenied("A profile is required") from error
 
@@ -78,6 +78,12 @@ def update_signed_in_user_profile(user, profile_changes):
         "available_from",
     )
     changed_fields = []
+
+    old_image_name = profile.profile_image.name
+    new_image = profile_changes.get("profile_image")
+    if new_image and getattr(new_image, "name", "") != old_image_name:
+        profile.profile_image = new_image
+        changed_fields.append("profile_image")
     for field_name in scalar_fields:
         if field_name in profile_changes:
             setattr(profile, field_name, profile_changes[field_name])
@@ -85,6 +91,11 @@ def update_signed_in_user_profile(user, profile_changes):
 
     if changed_fields:
         profile.save(update_fields=changed_fields)
+        if old_image_name and "profile_image" in changed_fields:
+            image_storage = profile.profile_image.storage
+            transaction.on_commit(
+                lambda storage=image_storage, name=old_image_name: storage.delete(name)
+            )
     if "interests" in profile_changes:
         profile.interests.set(profile_changes["interests"])
     return profile

@@ -1,9 +1,24 @@
 """Store the ten durable Kindlelise entities and their database truth."""
 
+from pathlib import Path
+from uuid import uuid4
+
 from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
 from django.utils import timezone
+
+
+def profile_image_upload_path(_profile, filename):
+    """Return a non-identifying random path with the validated image suffix."""
+    suffix = Path(filename).suffix.lower()
+    return f"profile-images/{uuid4().hex}{suffix}"
+
+
+def plan_thumbnail_upload_path(_plan, filename):
+    """Return a non-identifying random path for one normalized plan thumbnail."""
+    suffix = Path(filename).suffix.lower()
+    return f"plan-thumbnails/{uuid4().hex}{suffix}"
 
 
 class Interest(models.Model):
@@ -29,6 +44,11 @@ class Profile(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="profile",
+    )
+    profile_image = models.ImageField(
+        upload_to=profile_image_upload_path,
+        blank=True,
+        default="",
     )
     display_name = models.CharField(max_length=80, blank=True, default="")
     biography = models.TextField(max_length=500, blank=True, default="")

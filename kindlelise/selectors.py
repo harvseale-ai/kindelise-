@@ -1,4 +1,4 @@
-"""Own the eight mapped authorised Kindlelise read operations."""
+"""Own the nine mapped authorised Kindlelise read operations."""
 
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -142,6 +142,27 @@ def get_profile_page_if_viewer_is_allowed(viewer, profile_id):
         .filter(pk=profile_id)
         .first()
     )
+    if not can_view_profile_page(viewer, profile):
+        return None
+    return profile
+
+
+def get_profile_image_if_viewer_is_allowed(viewer, profile_id):
+    """Return one stored image only to its active owner or an allowed viewer.
+
+    Inputs: the server-known viewer and an untrusted route profile ID.
+    Returns: the image-bearing Profile, or none for missing and denied cases.
+    Changes: none.
+    Refuses: anonymous/inactive viewers and hidden, blocked or missing targets.
+    Privacy: uses one no-result outcome and never exposes a storage path.
+    """
+    if not getattr(viewer, "is_authenticated", False) or not viewer.is_active:
+        return None
+    profile = Profile.objects.select_related("user").filter(pk=profile_id).first()
+    if profile is None or not profile.profile_image:
+        return None
+    if profile.user_id == viewer.pk:
+        return profile
     if not can_view_profile_page(viewer, profile):
         return None
     return profile

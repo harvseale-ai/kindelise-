@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -35,6 +35,7 @@ from kindlelise.selectors import (
     get_plan_page_if_viewer_is_allowed,
     get_plans_for_plan_list,
     get_messages_if_user_can_open_conversation,
+    get_profile_image_if_viewer_is_allowed,
     get_profile_page_if_viewer_is_allowed,
     get_profiles_for_discovery_grid,
     get_report_target_profile_if_reporter_is_allowed,
@@ -223,6 +224,7 @@ def edit_profile_page(request):
     profile = summary["profile"]
     form = ProfileDetailsForm(
         request.POST if request.method == "POST" else None,
+        request.FILES if request.method == "POST" else None,
         instance=profile,
     )
     if request.method == "POST" and form.is_valid():
@@ -238,6 +240,40 @@ def edit_profile_page(request):
         request,
         "account.html",
         {"mode": "profile_edit", "form": form, "profile": profile},
+    )
+
+
+@require_GET
+@login_required
+def profile_image_file(request, profile_id):
+    """Stream one profile image only after current profile authorisation.
+
+    Inputs: a signed-in GET request and an untrusted profile route identifier.
+    Returns: the stored image or one generic not-found response.
+    Changes: none.
+    Refuses: missing files and anonymous, inactive or disallowed viewers.
+    Privacy: exposes neither the storage path nor the reason for refusal.
+    """
+    profile = get_profile_image_if_viewer_is_allowed(request.user, profile_id)
+    if profile is None:
+        return HttpResponse("Profile image unavailable.", status=404)
+    content_types = {
+        ".jpg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+    }
+    suffix = profile.profile_image.name.rsplit(".", 1)[-1].lower()
+    content_type = content_types.get(f".{suffix}")
+    if content_type is None:
+        return HttpResponse("Profile image unavailable.", status=404)
+    try:
+        image_file = profile.profile_image.open("rb")
+    except (FileNotFoundError, OSError):
+        return HttpResponse("Profile image unavailable.", status=404)
+    return FileResponse(
+        image_file,
+        content_type=content_type,
+        filename=f"profile-image.{suffix}",
     )
 
 
