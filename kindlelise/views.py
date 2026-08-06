@@ -762,8 +762,16 @@ def inbox_page(request):
     if access_redirect is not None:
         return access_redirect
 
+    interest_names = ("Coffee", "Museums", "Cinema", "Walking", "Drinks", "Night out")
+    selected_interest = request.GET.get("interest", "")
+    if selected_interest not in interest_names:
+        selected_interest = ""
+
     conversation_rows = []
-    for conversation in get_unblocked_conversations_for_inbox(request.user):
+    for conversation in get_unblocked_conversations_for_inbox(
+        request.user,
+        selected_interest,
+    ):
         other_user = (
             conversation.second_user
             if conversation.first_user_id == request.user.pk
@@ -775,7 +783,13 @@ def inbox_page(request):
     return render(
         request,
         "inbox.html",
-        {"conversation_rows": conversation_rows},
+        {
+            "conversation_rows": conversation_rows,
+            "interest_filters": (
+                (name, name == selected_interest) for name in interest_names
+            ),
+            "selected_interest": selected_interest,
+        },
     )
 
 

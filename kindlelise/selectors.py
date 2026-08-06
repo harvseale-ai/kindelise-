@@ -266,10 +266,10 @@ def get_plan_page_if_viewer_is_allowed(viewer, plan_id):
     }
 
 
-def get_unblocked_conversations_for_inbox(user):
+def get_unblocked_conversations_for_inbox(user, interest_name=""):
     """Return the account's permitted conversations in recent-activity order.
 
-    Inputs: the server-known signed-in account.
+    Inputs: the server-known signed-in account and an optional controlled interest.
     Returns: an ordered Conversation queryset containing only permitted pairs.
     Changes: none.
     Refuses: every ineligible account with an empty queryset.
@@ -280,7 +280,7 @@ def get_unblocked_conversations_for_inbox(user):
 
     blocked_by_user = Block.objects.filter(blocker=user).values("blocked_user_id")
     users_blocking_user = Block.objects.filter(blocked_user=user).values("blocker_id")
-    return (
+    conversations = (
         Conversation.objects.select_related(
             "first_user",
             "first_user__profile",
@@ -300,8 +300,19 @@ def get_unblocked_conversations_for_inbox(user):
             | Q(first_user_id__in=users_blocking_user)
             | Q(second_user_id__in=users_blocking_user)
         )
-        .order_by("-updated_at", "-pk")
     )
+    if interest_name:
+        conversations = conversations.filter(
+            Q(
+                first_user_id=user.pk,
+                second_user__profile__interests__name=interest_name,
+            )
+            | Q(
+                second_user_id=user.pk,
+                first_user__profile__interests__name=interest_name,
+            )
+        )
+    return conversations.order_by("-updated_at", "-pk")
 
 
 def get_messages_if_user_can_open_conversation(user, conversation_id):

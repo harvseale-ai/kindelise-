@@ -3085,7 +3085,10 @@ def test_inbox_http_orders_only_permitted_pairs_without_message_previews():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
     older_user = create_test_user()
-    create_verified_test_profile(user=older_user, display_name="Older inbox name")
+    older_profile = create_verified_test_profile(
+        user=older_user,
+        display_name="Older inbox name",
+    )
     newer_user = create_test_user()
     create_verified_test_profile(user=newer_user, display_name="Newer inbox name")
     hidden_user = create_test_user()
@@ -3123,6 +3126,10 @@ def test_inbox_http_orders_only_permitted_pairs_without_message_previews():
     assert b"Hidden inbox name" not in response.content
     assert b"Private blocked inbox text" not in response.content
     assert b"Unrelated one" not in response.content
+    older_profile.interests.add(Interest.objects.get(name="Coffee"))
+    filtered_response = client.get(reverse("inbox"), {"interest": "Coffee"})
+    assert b"Older inbox name" in filtered_response.content
+    assert b"Newer inbox name" not in filtered_response.content
     assert client.post(reverse("inbox")).status_code == 405
 
     anonymous_response = Client().get(reverse("inbox"))

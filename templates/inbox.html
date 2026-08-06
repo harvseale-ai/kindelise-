@@ -3,31 +3,52 @@
 {% block title %}Messages · Kindlelise{% endblock %}
 
 {% block content %}
-  <section class="card" aria-labelledby="inbox-title">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">Direct conversations</p>
-        <h1 id="inbox-title">Messages</h1>
-      </div>
-      <a class="button secondary" href="{% url 'discover' %}">Discover</a>
-    </div>
-    <p>Messages refresh when you open a conversation. Only permitted direct conversations appear here.</p>
+  <section class="inbox-page" aria-labelledby="inbox-title">
+    <header class="plans-page-header">
+      <h1 id="inbox-title">Messages</h1>
+      <a class="button secondary plans-create-button" href="{% url 'discover' %}">Discover</a>
+    </header>
 
-    <ul class="plain-list" aria-label="Recent direct conversations">
+    <div class="inbox-intro">
+      <ul class="chips inbox-interest-strip" aria-label="Filter conversations by interest">
+        {% for label, is_selected in interest_filters %}
+          <li{% if is_selected %} class="is-active"{% endif %}>
+            <a href="{% url 'inbox' %}{% if not is_selected %}?interest={{ label|urlencode }}{% endif %}"{% if is_selected %} aria-current="true" aria-label="Clear {{ label }} filter"{% endif %}>{{ label }}</a>
+          </li>
+        {% endfor %}
+      </ul>
+      <p>Messages refresh when you open a conversation. Only permitted direct conversations appear here.</p>
+    </div>
+
+    {% now "Y-m-d" as today %}
+    <ul class="inbox-conversation-list" aria-label="Recent direct conversations">
       {% for row in conversation_rows %}
         <li>
-          <div>
-            <strong><a href="{% url 'conversation_detail' row.conversation.pk %}">{{ row.other_profile.display_name }}</a></strong>
-            <div class="state-label">Direct conversation</div>
-          </div>
-          <time datetime="{{ row.conversation.updated_at|date:'c' }}">{{ row.conversation.updated_at }}</time>
+          <a class="inbox-conversation-row" href="{% url 'conversation_detail' row.conversation.pk %}">
+            {% if row.other_profile.profile_image %}
+              <img class="profile-image inbox-avatar" src="{% url 'profile_image' row.other_profile.pk %}" alt="">
+            {% else %}
+              <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
+            {% endif %}
+            <span class="inbox-conversation-copy">
+              <strong>{{ row.other_profile.display_name }}</strong>
+              <span class="state-label">Direct conversation</span>
+            </span>
+            <time datetime="{{ row.conversation.updated_at|date:'c' }}">{% if row.conversation.updated_at|date:"Y-m-d" == today %}{{ row.conversation.updated_at|date:"H:i" }}{% else %}{{ row.conversation.updated_at|date:"j M" }}{% endif %}</time>
+          </a>
         </li>
       {% empty %}
         <li class="empty-state">
           <div>
-            <strong>No direct conversations yet.</strong>
-            <p class="state-label">Open a verified profile to start a direct conversation.</p>
-            <a class="button secondary" href="{% url 'discover' %}">Return to Discover</a>
+            {% if selected_interest %}
+              <strong>No conversations match {{ selected_interest }}.</strong>
+              <p class="state-label">Choose another interest or clear the current filter.</p>
+              <a class="button secondary" href="{% url 'inbox' %}">Show all conversations</a>
+            {% else %}
+              <strong>No direct conversations yet.</strong>
+              <p class="state-label">Open a verified profile to start a direct conversation.</p>
+              <a class="button secondary" href="{% url 'discover' %}">Return to Discover</a>
+            {% endif %}
           </div>
         </li>
       {% endfor %}
