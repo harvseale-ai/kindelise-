@@ -1,0 +1,8 @@
+# Production dependencies; keep synchronized with pyproject.toml.
+certifi==2026.7.22
+Django==5.2.16
+gunicorn==26.0.0
+Pillow==12.3.0
+psycopg[binary]==3.3.4
+stripe==15.3.0
+whitenoise==6.12.0
