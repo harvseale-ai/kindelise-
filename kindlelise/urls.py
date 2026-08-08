@@ -6,6 +6,7 @@ from kindlelise import views
 
 urlpatterns = [
     path("", views.home_page, name="home"),
+    path("guide/", views.app_guide_page, name="guide"),
     path("sign-up/", views.sign_up_page, name="sign_up"),
     path("sign-in/", views.sign_in_page, name="sign_in"),
     path("sign-out/", views.sign_out_user, name="sign_out"),

@@ -105,6 +105,12 @@ def home_page(request):
     return redirect("account")
 
 
+@require_GET
+def app_guide_page(request):
+    """Show the compact public guide to the implemented Kindlelise journey."""
+    return render(request, "guide.html")
+
+
 @require_http_methods(["GET", "POST"])
 def sign_up_page(request):
     """Create one account/profile pair from a valid registration form.

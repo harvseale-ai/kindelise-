@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}How to use Kindlelise{% endblock %}
+
+{% block content %}
+  <article class="private-profile-page guide-page" aria-labelledby="guide-title">
+    <header class="private-profile-header">
+      <a class="back-link" href="{% url 'home' %}">← Back</a>
+    </header>
+
+    <div class="private-profile-content">
+      <header class="private-profile-identity">
+        <h1 id="guide-title">How to use Kindlelise</h1>
+        <p class="private-profile-title-statement">A quick guide to meeting people around shared interests and public plans.</p>
+      </header>
+
+      <section class="private-profile-section" aria-labelledby="guide-profile-title">
+        <h2 id="guide-profile-title">Profile</h2>
+        <p class="private-profile-about">Add a display name, broad areas, interests and availability. Staff verification is required before discovery, plans and messages become available.</p>
+      </section>
+
+      <section class="private-profile-section" aria-labelledby="guide-discover-title">
+        <h2 id="guide-discover-title">Discover</h2>
+        <p class="private-profile-about">Use broad-area, interest and Free now filters to find eligible profiles. Exact locations and distances are never shown.</p>
+      </section>
+
+      <section class="private-profile-section" aria-labelledby="guide-plans-title">
+        <h2 id="guide-plans-title">Plans</h2>
+        <p class="private-profile-about">Create a plan for an established public place, add its public information URL, time and capacity, then open approved plans to join or leave.</p>
+      </section>
+
+      <section class="private-profile-section" aria-labelledby="guide-messages-title">
+        <h2 id="guide-messages-title">Messages</h2>
+        <p class="private-profile-about">Open an eligible profile and choose Send message. Direct conversations are private to the two participants.</p>
+      </section>
+
+      <section class="private-profile-section" aria-labelledby="guide-safety-title">
+        <h2 id="guide-safety-title">Safety and privacy</h2>
+        <p class="private-profile-about">Meet only in public places, check plan details before attending, and use the profile actions to block or report privately when needed. Verification is an access gate, not a guarantee of identity or safety.</p>
+      </section>
+
+      <section class="private-profile-section" aria-labelledby="guide-premium-title">
+        <h2 id="guide-premium-title">Premium</h2>
+        <p class="private-profile-about">Premium expands discovery to nearby broad areas and up to five interest filters. Payment and subscription management use Stripe’s hosted pages.</p>
+      </section>
+    </div>
+  </article>
+{% endblock %}

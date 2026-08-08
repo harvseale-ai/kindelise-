@@ -111,6 +111,22 @@ from tests.conftest import (
 pytestmark = pytest.mark.django_db
 
 
+def test_public_guide_links_from_the_top_bar_and_summarises_each_page():
+    response = Client().get(reverse("guide"))
+
+    assert response.status_code == 200
+    assert f'href="{reverse("guide")}"'.encode() in response.content
+    for section in (
+        b"Profile",
+        b"Discover",
+        b"Plans",
+        b"Messages",
+        b"Safety and privacy",
+        b"Premium",
+    ):
+        assert section in response.content
+
+
 def test_interest_migration_creates_exact_controlled_vocabulary():
     assert set(Interest.objects.values_list("name", flat=True)) == {
         "Coffee",
