@@ -275,7 +275,7 @@ The rationale and rejected alternatives are recorded in
 
 ### Core Data Structures
 
-Kindlelise defines ten application models plus Django's existing `User` model.
+Kindlelise defines eleven application models plus Django's existing `User` model.
 
 | Model | Important fields | Responsibility |
 | --- | --- | --- |
@@ -285,6 +285,7 @@ Kindlelise defines ten application models plus Django's existing `User` model.
 | `Participation` | plan, user, joined/left state and timestamps | Current and historical membership without attendee-directory exposure. |
 | `Conversation` | ordered first/second user and activity time | The unique unordered account-pair relationship. |
 | `Message` | conversation, sender, body and sent time | One bounded plain-text message. |
+| `Notification` | recipient, message/plan-join context, created time and read time | One private alert for an incoming message or activity on an owned plan. |
 | `Block` | blocker and blocked user | One directional record treated as mutual exclusion by policy. |
 | `Report` | reporter, target, category, description, optional context and status | One private, non-adjudicative staff report. |
 | `PlatformSubscription` | user, Stripe IDs/status, access end and event ordering | Minimal webhook-owned Premium projection. |
@@ -293,7 +294,8 @@ Kindlelise defines ten application models plus Django's existing `User` model.
 Important database rules include one profile/subscription per user, positive plan
 capacity, consistent verification and approval fields, one participation per
 user/plan, one ordered conversation per pair, no self-block/report, at most one
-report context and unique Stripe identifiers/events.
+report context, notification context matching its type and unique Stripe
+identifiers/events.
 
 ### Account And Discovery Flow
 
@@ -395,6 +397,8 @@ authorised conversation + unsent draft
 - Protected plan thumbnails and detailed plan pages.
 - Atomic join, leave, rejoin, cancellation and first-join locking.
 - One direct plain-text conversation per eligible account pair.
+- A private top-bar badge and notification centre for incoming messages and
+  joins on plans owned by the signed-in account.
 - Ollama grammar/clarity suggestions that never send automatically.
 - Immediate blocking and private contextual reporting.
 - Stripe-hosted annual Premium Checkout and customer portal.
@@ -439,6 +443,7 @@ authorised conversation + unsent draft
 | Plan image | `/plans/<id>/image/` | Protected GET using the same plan visibility boundary. |
 | Messages | `/messages/`, `/conversations/<id>/` | Verified, unblocked, member-scoped GET. |
 | Message actions | profile conversation start, message send, suggestion endpoint | POST and CSRF only; no browser-supplied sender. |
+| Notifications | `/notifications/`, `/notifications/read/` | Authenticated private GET; marking all alerts read is POST and CSRF only. |
 | Safety | profile block and report routes | Block is POST-only; report uses GET/POST and server-resolved target/context. |
 | Premium | account checkout and portal | Authenticated POST, then validated Stripe-hosted redirect. |
 | Stripe | `/stripe/webhook/` | POST-only raw-body signature verification; no browser session required. |

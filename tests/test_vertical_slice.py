@@ -55,6 +55,7 @@ from kindlelise.models import (
     Conversation,
     Interest,
     Message,
+    Notification,
     Participation,
     Plan,
     PlatformSubscription,
@@ -156,6 +157,7 @@ def test_migration_uses_postgresql_and_exact_model_inventory():
         "Participation",
         "Conversation",
         "Message",
+        "Notification",
         "Block",
         "Report",
         "PlatformSubscription",
@@ -3097,6 +3099,48 @@ def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf(
     assert Conversation.objects.count() == 1
 
 
+def test_notification_badge_counts_messages_and_plan_joins_then_marks_them_read():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner, display_name="Plan owner")
+    participant = create_test_user()
+    create_verified_test_profile(user=participant, display_name="Plan participant")
+    plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Notification plan",
+    )
+    conversation = create_test_conversation(owner, participant)
+
+    message = send_direct_message(participant, conversation, "New message")
+    participation = join_approved_plan_and_lock_meeting_details(participant, plan)
+
+    assert set(
+        Notification.objects.filter(recipient=owner).values_list("kind", flat=True)
+    ) == {Notification.Kind.MESSAGE, Notification.Kind.PLAN_JOIN}
+    assert Notification.objects.get(message=message).recipient == owner
+    assert Notification.objects.get(participation=participation).recipient == owner
+    assert not Notification.objects.filter(recipient=participant).exists()
+
+    client = Client()
+    client.force_login(owner)
+    response = client.get(reverse("notifications"))
+
+    assert response.status_code == 200
+    assert b'class="site-notification-count"' in response.content
+    assert b">2</span>" in response.content
+    assert b"Message from Plan participant" in response.content
+    assert b"Plan participant joined Notification plan" in response.content
+
+    assert client.get(reverse("notifications_read")).status_code == 405
+    read_response = client.post(reverse("notifications_read"))
+    assert read_response.status_code == 302
+    assert read_response.url == reverse("notifications")
+    assert not Notification.objects.filter(recipient=owner, read_at__isnull=True).exists()
+    assert b'class="site-notification-count"' not in client.get(
+        reverse("notifications")
+    ).content
+
+
 def test_inbox_http_orders_only_permitted_pairs_without_message_previews():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -5524,6 +5568,7 @@ def test_mapped_non_unique_indexes_exist():
             "conv_second_updated_idx",
         },
         Message._meta.db_table: {"message_convo_sent_idx"},
+        Notification._meta.db_table: {"notification_unread_idx"},
         Report._meta.db_table: {"report_status_received_idx"},
     }
 
@@ -5549,6 +5594,9 @@ def test_foreign_key_deletion_contracts_are_explicit():
     assert Conversation._meta.get_field("second_user").remote_field.on_delete is models.PROTECT
     assert Message._meta.get_field("conversation").remote_field.on_delete is models.PROTECT
     assert Message._meta.get_field("sender").remote_field.on_delete is models.PROTECT
+    assert Notification._meta.get_field("recipient").remote_field.on_delete is models.PROTECT
+    assert Notification._meta.get_field("message").remote_field.on_delete is models.PROTECT
+    assert Notification._meta.get_field("participation").remote_field.on_delete is models.PROTECT
     assert Block._meta.get_field("blocker").remote_field.on_delete is models.CASCADE
     assert Block._meta.get_field("blocked_user").remote_field.on_delete is models.CASCADE
     assert Report._meta.get_field("reporter").remote_field.on_delete is models.PROTECT

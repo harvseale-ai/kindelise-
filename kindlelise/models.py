@@ -1,4 +1,4 @@
-"""Store the ten durable Kindlelise entities and their database truth."""
+"""Store the eleven durable Kindlelise entities and their database truth."""
 
 from pathlib import Path
 from uuid import uuid4
@@ -332,6 +332,62 @@ class Message(models.Model):
             models.Index(
                 fields=["conversation", "sent_at"],
                 name="message_convo_sent_idx",
+            )
+        ]
+
+
+class Notification(models.Model):
+    """Store one unread/read alert for an incoming message or plan join."""
+
+    class Kind(models.TextChoices):
+        MESSAGE = "message", "Message"
+        PLAN_JOIN = "plan_join", "Plan join"
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="notifications",
+    )
+    kind = models.CharField(max_length=9, choices=Kind.choices)
+    message = models.ForeignKey(
+        Message,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
+    participation = models.ForeignKey(
+        Participation,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        kind="message",
+                        message__isnull=False,
+                        participation__isnull=True,
+                    )
+                    | Q(
+                        kind="plan_join",
+                        message__isnull=True,
+                        participation__isnull=False,
+                    )
+                ),
+                name="notification_context_matches_kind",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["recipient", "read_at", "created_at"],
+                name="notification_unread_idx",
             )
         ]
 

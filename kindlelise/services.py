@@ -1,4 +1,4 @@
-"""Own the fourteen mapped state-changing Kindlelise workflows."""
+"""Own the fifteen mapped state-changing Kindlelise workflows."""
 
 from collections.abc import Mapping
 from datetime import datetime
@@ -17,6 +17,7 @@ from kindlelise.models import (
     Block,
     Conversation,
     Message,
+    Notification,
     Participation,
     Plan,
     PlatformSubscription,
@@ -252,6 +253,12 @@ def join_approved_plan_and_lock_meeting_details(user, plan):
     if current_plan.meeting_details_locked_at is None:
         current_plan.meeting_details_locked_at = joined_at
         current_plan.save(update_fields=["meeting_details_locked_at"])
+    Notification.objects.create(
+        recipient=current_plan.owner,
+        kind=Notification.Kind.PLAN_JOIN,
+        participation=participation,
+        created_at=joined_at,
+    )
     return participation
 
 
@@ -380,7 +387,22 @@ def send_direct_message(sender, conversation, message_text):
     )
     current_conversation.updated_at = sent_at
     current_conversation.save(update_fields=["updated_at"])
+    Notification.objects.create(
+        recipient=recipient,
+        kind=Notification.Kind.MESSAGE,
+        message=message,
+        created_at=sent_at,
+    )
     return message
+
+
+def mark_all_notifications_read(user):
+    """Mark only the signed-in recipient's unread alerts as read."""
+    if not getattr(user, "is_authenticated", False) or not user.is_active:
+        raise PermissionDenied("A signed-in active account is required")
+    return Notification.objects.filter(recipient=user, read_at__isnull=True).update(
+        read_at=timezone.now()
+    )
 
 
 @transaction.atomic

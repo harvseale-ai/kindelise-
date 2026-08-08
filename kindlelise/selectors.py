@@ -1,4 +1,4 @@
-"""Own the nine mapped authorised Kindlelise read operations."""
+"""Own the eleven mapped authorised Kindlelise read operations."""
 
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -6,6 +6,7 @@ from django.utils import timezone
 from kindlelise.models import (
     Block,
     Conversation,
+    Notification,
     Participation,
     Plan,
     PlatformSubscription,
@@ -18,6 +19,29 @@ from kindlelise.policies import (
     can_view_profile_page,
     get_allowed_discovery_areas_and_interest_limit,
 )
+
+
+def get_unread_notification_count(user):
+    """Return only the signed-in account's unread message and plan-join count."""
+    if not getattr(user, "is_authenticated", False) or not user.is_active:
+        return 0
+    return Notification.objects.filter(recipient=user, read_at__isnull=True).count()
+
+
+def get_recent_notifications(user, limit=30):
+    """Return the signed-in account's recent alerts with only display-safe context."""
+    if not getattr(user, "is_authenticated", False) or not user.is_active:
+        return Notification.objects.none()
+    return (
+        Notification.objects.filter(recipient=user)
+        .select_related(
+            "message__conversation",
+            "message__sender__profile",
+            "participation__plan",
+            "participation__user__profile",
+        )
+        .order_by("-created_at", "-pk")[:limit]
+    )
 
 
 def get_signed_in_user_account_summary(user):

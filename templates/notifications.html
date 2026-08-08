@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+  <article class="private-profile-page" aria-labelledby="notifications-title">
+    <header class="private-profile-header">
+      <a class="back-link" href="{% url 'home' %}">← Back</a>
+    </header>
+
+    <div class="private-profile-content">
+      <header class="private-profile-identity">
+        <div class="private-profile-identity-heading">
+          <h1 id="notifications-title">Notifications</h1>
+          {% if unread_notification_count %}
+            <form method="post" action="{% url 'notifications_read' %}">
+              {% csrf_token %}
+              <button class="secondary" type="submit">Mark all read</button>
+            </form>
+          {% endif %}
+        </div>
+        <p class="private-profile-title-statement">Messages and activity on plans you created.</p>
+      </header>
+
+      <section class="private-profile-section" aria-labelledby="notification-list-title">
+        <h2 id="notification-list-title">Recent activity</h2>
+        <ul class="private-profile-plans private-profile-plan-links">
+          {% for notification in notifications %}
+            <li>
+              {% if notification.kind == notification.Kind.MESSAGE %}
+                <a href="{% url 'conversation_detail' notification.message.conversation.pk %}">
+                  <span>Message from {{ notification.message.sender.profile.display_name }}</span>
+                  <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
+                </a>
+              {% else %}
+                <a href="{% url 'plan_detail' notification.participation.plan.pk %}">
+                  <span>{{ notification.participation.user.profile.display_name }} joined {{ notification.participation.plan.title }}</span>
+                  <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
+                </a>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li class="private-profile-plan-empty"><span>No notifications yet.</span></li>
+          {% endfor %}
+        </ul>
+      </section>
+    </div>
+  </article>
+{% endblock %}

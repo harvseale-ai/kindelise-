@@ -44,6 +44,7 @@ from kindlelise.selectors import (
     get_profile_image_if_viewer_is_allowed,
     get_profile_page_if_viewer_is_allowed,
     get_profiles_for_discovery_grid,
+    get_recent_notifications,
     get_report_target_profile_if_reporter_is_allowed,
     get_signed_in_user_account_summary,
     get_unblocked_conversations_for_inbox,
@@ -56,6 +57,7 @@ from kindlelise.services import (
     find_or_start_direct_conversation,
     join_approved_plan_and_lock_meeting_details,
     leave_plan_and_keep_participation_history,
+    mark_all_notifications_read,
     open_stripe_customer_portal,
     send_direct_message,
     start_stripe_subscription_checkout,
@@ -109,6 +111,25 @@ def home_page(request):
 def app_guide_page(request):
     """Show the compact public guide to the implemented Kindlelise journey."""
     return render(request, "guide.html")
+
+
+@require_GET
+@login_required
+def notifications_page(request):
+    """Show only the signed-in account's recent message and plan-join alerts."""
+    return render(
+        request,
+        "notifications.html",
+        {"notifications": get_recent_notifications(request.user)},
+    )
+
+
+@require_POST
+@login_required
+def mark_notifications_read(request):
+    """Mark the signed-in account's alerts read and return to its notification page."""
+    mark_all_notifications_read(request.user)
+    return redirect("notifications")
 
 
 @require_http_methods(["GET", "POST"])
