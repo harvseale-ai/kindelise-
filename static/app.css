@@ -1772,9 +1772,9 @@ body:has(#edit-profile-title) .site-footer {
 .conversation-bubble {
   max-width: min(78%, 32rem);
   padding: .75rem .9rem .6rem;
-  border: 1px solid #303038;
+  border: 1px solid transparent;
   border-radius: 1rem 1rem 1rem .25rem;
-  background: #1b1b20;
+  background: transparent;
   color: #efeff2;
 }
 .is-own .conversation-bubble {
