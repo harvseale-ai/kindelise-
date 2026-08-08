@@ -267,21 +267,26 @@ def profile_image_file(request, profile_id):
     Refuses: missing files and anonymous, inactive or disallowed viewers.
     Privacy: exposes neither the storage path nor the reason for refusal.
     """
+    from PIL import Image, UnidentifiedImageError
+
     profile = get_profile_image_if_viewer_is_allowed(request.user, profile_id)
     if profile is None:
         return HttpResponse("Profile image unavailable.", status=404)
-    content_types = {
-        ".jpg": "image/jpeg",
-        ".png": "image/png",
-        ".webp": "image/webp",
-    }
-    suffix = profile.profile_image.name.rsplit(".", 1)[-1].lower()
-    content_type = content_types.get(f".{suffix}")
-    if content_type is None:
-        return HttpResponse("Profile image unavailable.", status=404)
     try:
         image_file = profile.profile_image.open("rb")
-    except (FileNotFoundError, OSError):
+        with Image.open(image_file) as stored_image:
+            image_format = stored_image.format
+        image_file.seek(0)
+    except (FileNotFoundError, OSError, UnidentifiedImageError):
+        return HttpResponse("Profile image unavailable.", status=404)
+    content_types = {
+        "JPEG": ("jpg", "image/jpeg"),
+        "PNG": ("png", "image/png"),
+        "WEBP": ("webp", "image/webp"),
+    }
+    suffix, content_type = content_types.get(image_format, (None, None))
+    if content_type is None:
+        image_file.close()
         return HttpResponse("Profile image unavailable.", status=404)
     return FileResponse(
         image_file,
