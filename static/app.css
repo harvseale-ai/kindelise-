@@ -1919,7 +1919,6 @@ body:has(#edit-profile-title) .site-footer {
   --profile-muted: #9696a1;
   --profile-green: #aaaab4;
   overflow: hidden;
-  border: 1px solid var(--profile-line);
   border-radius: 1rem;
   background: #000;
   color: #f3f3f5;
@@ -2431,7 +2430,6 @@ body:has(#edit-profile-title) .site-footer {
   --plans-muted: #777782;
   --plans-green: #c7c7cf;
   overflow: hidden;
-  border: 1px solid var(--plans-line);
   border-radius: 1rem;
   background: #000;
 }
