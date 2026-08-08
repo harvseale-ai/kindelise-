@@ -1,0 +1,10 @@
+{% extends "admin/change_form.html" %}
+
+{% block submit_buttons_bottom %}
+  {{ block.super }}
+  {% if original and not original.is_verified %}
+    <div class="submit-row">
+      <input type="submit" name="_verify_profile" value="Yes — verify profile">
+    </div>
+  {% endif %}
+{% endblock %}

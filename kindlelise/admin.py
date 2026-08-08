@@ -2,12 +2,13 @@
 
 from django import forms
 from django.conf import settings
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.forms import UserChangeForm
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 
 from kindlelise.models import (
@@ -306,12 +307,30 @@ def reject_selected_plans(model_admin, request, plans):
 class ProfileAdmin(admin.ModelAdmin):
     """Expose profiles while keeping verification changes in mapped actions."""
 
+    change_form_template = "admin/kindlelise/profile/change_form.html"
     actions = (
         verify_selected_profiles_for_discovery_plans_and_messages,
         remove_verification_from_selected_profiles,
     )
     readonly_fields = ("is_verified", "verified_at", "verified_by")
     exclude = ("profile_image",)
+
+    def response_change(self, request, obj):
+        """Handle the explicit one-profile verification button."""
+        if "_verify_profile" not in request.POST:
+            return super().response_change(request, obj)
+        _require_authorized_staff(self, request)
+        with transaction.atomic():
+            profile = Profile.objects.select_for_update().get(pk=obj.pk)
+            if not _profile_is_complete_for_verification(profile):
+                self.message_user(
+                    request,
+                    "Complete the profile display name and broad area first.",
+                    level=messages.ERROR,
+                )
+            elif _set_profile_verification(profile, request.user, True):
+                self.message_user(request, "Profile verified.", level=messages.SUCCESS)
+        return HttpResponseRedirect(".")
 
 
 @admin.register(Plan)
