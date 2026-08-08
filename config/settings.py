@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "cloudinary_storage",
+    "cloudinary",
     "kindlelise.apps.KindleliseConfig",
 ]
 
@@ -136,8 +138,13 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL = "media/"
+media_storage_backend = (
+    "cloudinary_storage.storage.MediaCloudinaryStorage"
+    if os.environ.get("CLOUDINARY_URL")
+    else "django.core.files.storage.FileSystemStorage"
+)
 STORAGES = {
-    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "default": {"BACKEND": media_storage_backend},
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"
     },
