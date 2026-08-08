@@ -446,10 +446,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .muted, .state-label { color: var(--muted); }
 .state-label { font-size: .875rem; }
 .empty-state { display: block !important; text-align: center; padding-block: 2rem !important; }
-.discovery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 15rem)); justify-content: center; gap: .75rem; }
+.discovery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
 .discovery-grid > li { display: block; padding: 1rem; border: 1px solid var(--border); }
 .discovery-grid > .empty-state { grid-column: 1 / -1; }
-.discovery-grid:has(> .empty-state) { grid-template-columns: 1fr; }
 .discovery-route {
   background: #000;
   color: #f3f3f5;
