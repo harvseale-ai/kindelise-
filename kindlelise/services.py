@@ -1,7 +1,8 @@
 """Own the fourteen mapped state-changing Kindlelise workflows."""
 
 from collections.abc import Mapping
-from datetime import datetime, timezone as datetime_timezone
+from datetime import datetime
+from datetime import timezone as datetime_timezone
 from urllib.parse import urlsplit
 
 import stripe
@@ -544,13 +545,6 @@ def start_stripe_subscription_checkout(user, success_url, cancel_url):
     }:
         raise PermissionDenied("Use the existing Stripe subscription")
 
-    has_stripe_history = bool(
-        subscription
-        and (
-            subscription.stripe_customer_id
-            or subscription.stripe_subscription_id
-        )
-    )
     subscription_data = {
         "metadata": {"kindlelise_user_id": str(user.pk)},
     }
@@ -559,24 +553,12 @@ def start_stripe_subscription_checkout(user, success_url, cancel_url):
         "mode": "subscription",
         "line_items": [{"price": settings.STRIPE_PRICE_ID, "quantity": 1}],
         "client_reference_id": str(user.pk),
-        "payment_method_collection": "if_required",
         "subscription_data": subscription_data,
         "success_url": success_url,
         "cancel_url": cancel_url,
     }
     if subscription is not None and subscription.stripe_customer_id:
         checkout_values["customer"] = subscription.stripe_customer_id
-    if not has_stripe_history:
-        subscription_data.update(
-            {
-                "trial_period_days": 30,
-                "trial_settings": {
-                    "end_behavior": {
-                        "missing_payment_method": "create_invoice",
-                    }
-                },
-            }
-        )
 
     checkout_session = stripe.checkout.Session.create(**checkout_values)
     return _require_stripe_hosted_url(
@@ -787,6 +769,7 @@ def update_premium_access_from_verified_stripe_event(stripe_event):
     event_type = stripe_event.get("type")
     if event_id is None or event_type not in {
         "checkout.session.completed",
+        "customer.subscription.created",
         "customer.subscription.updated",
         "invoice.paid",
         "customer.subscription.deleted",
@@ -904,7 +887,10 @@ def update_premium_access_from_verified_stripe_event(stripe_event):
             changed_fields.extend(
                 ["stripe_status", "access_until", "latest_provider_event_at"]
             )
-        elif event_type == "customer.subscription.updated":
+        elif event_type in {
+            "customer.subscription.created",
+            "customer.subscription.updated",
+        }:
             stripe_status = stripe_object.get("status")
             if not isinstance(stripe_status, str) or len(stripe_status) > 80:
                 raise ValueError("Stripe subscription status is invalid")

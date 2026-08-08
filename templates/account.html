@@ -11,7 +11,6 @@
         <h1 id="sign-up-title">Create an account</h1>
       </header>
       <div class="brand-form-intro">
-        <p class="eyebrow">Supervised test accounts</p>
         <p>Use your email address and a password. Staff verification is required before discovery, plans or messages become available.</p>
       </div>
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
@@ -396,7 +395,7 @@
           <div>
             <h2 id="premium-title">Premium</h2>
             <p>Explore nearby broad areas and use up to five interest filters.</p>
-            <p>30 days free, then £4.99 yearly.<span class="visually-hidden"> No payment details are required before the one-time trial. A paid subscription renews yearly unless you cancel it through Stripe.</span></p>
+            <p>£4.99 yearly.<span class="visually-hidden"> Payment is collected securely by Stripe and the subscription renews yearly unless you cancel it through Stripe.</span></p>
             <p class="private-premium-status visually-hidden">
               {% if summary.subscription.has_premium_access and summary.subscription.status == "trialing" %}
                 Trial active
@@ -422,7 +421,7 @@
           {% elif summary.subscription.checkout_available %}
             <form method="post" action="{% url 'premium_subscription_checkout' %}">
               {% csrf_token %}
-              <button type="submit" aria-label="{% if summary.subscription.trial_available %}Start 30-day trial{% else %}Pay £4.99 for one year{% endif %}">Explore</button>
+              <button type="submit" aria-label="Pay £4.99 for one year">Explore</button>
             </form>
           {% endif %}
         </section>
