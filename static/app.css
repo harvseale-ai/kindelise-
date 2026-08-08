@@ -508,17 +508,26 @@ legend { padding-inline: .35rem; font-weight: 750; }
   background: linear-gradient(transparent, rgba(0, 0, 0, .92));
 }
 .discovery-profile-card > div {
+  width: 100%;
   min-width: 0;
 }
 .discovery-profile-card strong,
 .discovery-profile-card strong a {
+  display: block;
+  overflow: hidden;
   color: #f3f3f5;
   text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .discovery-profile-card p {
+  display: -webkit-box;
+  overflow: hidden;
   margin: .25rem 0 .6rem;
   color: #aaaab4;
   font-size: .8rem;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .discovery-profile-card .chips {
   gap: .3rem;
@@ -529,6 +538,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
   background: rgba(25, 25, 30, .88);
   color: #c7c7cf;
   font-size: .68rem;
+}
+.discovery-profile-card .chips li:nth-child(n + 3) {
+  display: none;
 }
 
 /* Profile edit visual pass: CSS-only, scoped to /account/profile/edit/. */
