@@ -63,7 +63,7 @@
   <section aria-label="Profiles">
     <ul class="plain-list discovery-grid">
       {% for card in profile_cards %}
-        <li class="card discovery-profile-card{% if card.profile.profile_image %} discovery-profile-card--with-image{% endif %}"{% if card.profile.profile_image %} style="background-image: url('{% url 'profile_image' card.profile.pk %}?v={{ card.profile.profile_image.name|urlencode }}')"{% endif %}>
+        <li class="card discovery-profile-card{% if card.profile.profile_image %} discovery-profile-card--with-image{% endif %}"{% if card.profile.profile_image %} style="background: #19191e center / cover no-repeat url('{% url 'profile_image' card.profile.pk %}?v={{ card.profile.profile_image.name|urlencode }}')"{% endif %}>
           <div>
             <strong><a href="{% url 'profile_detail' card.profile.pk %}">{{ card.profile.display_name }}</a></strong>
             <p>{{ card.broad_area_label }} · Verified{% if card.is_available_now %} · Free now{% endif %}</p>
