@@ -1,4 +1,12 @@
-"""Prove the implemented Kindlelise vertical-slice behaviour."""
+"""Prove the implemented Kindelise vertical-slice behaviour."""
+
+# KEYWORD: test — an automatic check that proves one expected behaviour still works.
+# KEYWORD: assert — compares the actual result with the result the check expects.
+# KEYWORD: monkeypatch — temporarily replaces a setting or outside call for one check, then restores it.
+# KEYWORD: HTTP — the request-and-response rules used when these checks visit a page.
+# KEYWORD: CSRF — the private form check that prevents another website submitting as the signed-in visitor.
+# KEYWORD: PostgreSQL — the database used by the live site to keep saved information and its rules.
+
 
 import base64
 import json
@@ -10,6 +18,7 @@ from threading import Barrier
 from types import SimpleNamespace
 
 import pytest
+import stripe
 from django.apps import apps
 from django.contrib import admin as django_admin
 from django.contrib.auth import authenticate, get_user_model
@@ -31,6 +40,8 @@ from django.utils import timezone
 from django.utils.html import conditional_escape
 from PIL import Image
 
+import kindlelise.ai_message_editor as ai_message_editor
+import kindlelise.plan_metadata as plan_metadata
 from kindlelise.admin import (
     KindleliseUserAdmin,
     approve_selected_plans_after_manual_url_check,
@@ -38,8 +49,6 @@ from kindlelise.admin import (
     remove_verification_from_selected_profiles,
     verify_selected_profiles_for_discovery_plans_and_messages,
 )
-import kindlelise.ai_message_editor as ai_message_editor
-import kindlelise.plan_metadata as plan_metadata
 from kindlelise.ai_message_editor import get_edited_message_draft_suggestion
 from kindlelise.forms import (
     AccountSignUpForm,
@@ -96,8 +105,8 @@ from kindlelise.services import (
     send_direct_message,
     start_stripe_subscription_checkout,
     submit_private_report_about_user,
-    update_premium_access_from_verified_stripe_event,
     update_owned_plan_before_first_join,
+    update_premium_access_from_verified_stripe_event,
     update_signed_in_user_profile,
 )
 from tests.conftest import (
@@ -112,6 +121,7 @@ from tests.conftest import (
 pytestmark = pytest.mark.django_db
 
 
+# WHY: Checks that public guide links from the top bar and summarises each page so a future change cannot quietly break it.
 def test_public_guide_links_from_the_top_bar_and_summarises_each_page():
     response = Client().get(reverse("guide"))
 
@@ -128,6 +138,7 @@ def test_public_guide_links_from_the_top_bar_and_summarises_each_page():
         assert section in response.content
 
 
+# WHY: Checks that interest migration creates exact controlled vocabulary so a future change cannot quietly break it.
 def test_interest_migration_creates_exact_controlled_vocabulary():
     assert set(Interest.objects.values_list("name", flat=True)) == {
         "Coffee",
@@ -144,6 +155,7 @@ def test_interest_migration_creates_exact_controlled_vocabulary():
         Interest.objects.create(name="Coffee")
 
 
+# WHY: Checks that migration uses postgresql and exact model inventory so a future change cannot quietly break it.
 def test_migration_uses_postgresql_and_exact_model_inventory():
     assert connection.vendor == "postgresql"
     registered_models = {
@@ -166,6 +178,7 @@ def test_migration_uses_postgresql_and_exact_model_inventory():
     assert Profile._meta.get_field("interests").remote_field.through._meta.auto_created
 
 
+# WHY: Checks that account sign up form creates unverified profile with email and hashed password so a future change cannot quietly break it.
 def test_account_sign_up_form_creates_unverified_profile_with_email_and_hashed_password():
     form = AccountSignUpForm(
         data={
@@ -194,6 +207,7 @@ def test_account_sign_up_form_creates_unverified_profile_with_email_and_hashed_p
     assert not profile.is_verified
 
 
+# WHY: Checks that registration http creates unverified profile without authenticating so a future change cannot quietly break it.
 def test_registration_http_creates_unverified_profile_without_authenticating():
     client = Client()
 
@@ -234,6 +248,7 @@ def test_registration_http_creates_unverified_profile_without_authenticating():
     ).exists()
 
 
+# WHY: Checks that sign in http uses generic failure and only safe local next so a future change cannot quietly break it.
 def test_sign_in_http_uses_generic_failure_and_only_safe_local_next():
     active_account = create_test_user(
         username="active@example.test",
@@ -296,6 +311,7 @@ def test_sign_in_http_uses_generic_failure_and_only_safe_local_next():
     assert external_response.url == reverse("home")
 
 
+# WHY: Checks that home http redirects by current authentication and verification state so a future change cannot quietly break it.
 def test_home_http_redirects_by_current_authentication_and_verification_state():
     anonymous_client = Client()
     assert anonymous_client.get(reverse("home")).url == reverse("sign_in")
@@ -315,6 +331,7 @@ def test_home_http_redirects_by_current_authentication_and_verification_state():
     assert verified_response.url == reverse("discover")
 
 
+# WHY: Checks that discovery http gates access and renders only authorized profiles so a future change cannot quietly break it.
 def test_discovery_http_gates_access_and_renders_only_authorized_profiles():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, broad_area="central")
@@ -369,6 +386,7 @@ def test_discovery_http_gates_access_and_renders_only_authorized_profiles():
     assert unverified_response.url == reverse("account")
 
 
+# WHY: Checks that discovery http enforces free and premium area and interest limits so a future change cannot quietly break it.
 def test_discovery_http_enforces_free_and_premium_area_and_interest_limits():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, broad_area="central")
@@ -428,6 +446,7 @@ def test_discovery_http_enforces_free_and_premium_area_and_interest_limits():
     assert b"Select no more than 5 interests" in premium_excess_response.content
 
 
+# WHY: Checks that discovery http free now shows only started availability so a future change cannot quietly break it.
 def test_discovery_http_free_now_shows_only_started_availability():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, broad_area="central")
@@ -460,6 +479,7 @@ def test_discovery_http_free_now_shows_only_started_availability():
     assert no_availability_profile.display_name.encode() not in response.content
 
 
+# WHY: Checks that discovery profile http is safe and uses one generic hidden response so a future change cannot quietly break it.
 def test_discovery_profile_http_is_safe_and_uses_one_generic_hidden_response():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, broad_area="central")
@@ -541,6 +561,7 @@ def test_discovery_profile_http_is_safe_and_uses_one_generic_hidden_response():
     assert client.post(reverse("profile_detail", args=[target.pk])).status_code == 405
 
 
+# WHY: Checks that account http is private and explains unverified state so a future change cannot quietly break it.
 def test_account_http_is_private_and_explains_unverified_state():
     account = create_test_user(username="private_account")
     Profile.objects.create(
@@ -572,6 +593,7 @@ def test_account_http_is_private_and_explains_unverified_state():
     assert b"Private account report marker" not in response.content
 
 
+# WHY: Checks that profile edit http changes only owner fields and clears availability so a future change cannot quietly break it.
 def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
     account = create_test_user()
     profile = Profile.objects.create(user=account)
@@ -651,6 +673,7 @@ def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
     assert not profile.interests.exists()
 
 
+# WHY: Checks that saved multiple profile areas can be selected together in discovery so a future change cannot quietly break it.
 def test_saved_multiple_profile_areas_can_be_selected_together_in_discovery():
     viewer = create_test_user()
     create_verified_test_profile(
@@ -675,6 +698,7 @@ def test_saved_multiple_profile_areas_can_be_selected_together_in_discovery():
     assert response.content.count(b'name="broad_area"') == 2
 
 
+# WHY: Checks that sign out http requires post and valid csrf before ending session so a future change cannot quietly break it.
 def test_sign_out_http_requires_post_and_valid_csrf_before_ending_session():
     account = create_test_user()
     Profile.objects.create(user=account)
@@ -699,6 +723,7 @@ def test_sign_out_http_requires_post_and_valid_csrf_before_ending_session():
     assert "_auth_user_id" not in client.session
 
 
+# WHY: Checks that duplicate or invalid account details are rejected without writes so a future change cannot quietly break it.
 def test_duplicate_or_invalid_account_details_are_rejected_without_writes():
     create_test_user(
         username="existing@example.test",
@@ -746,9 +771,11 @@ def test_duplicate_or_invalid_account_details_are_rejected_without_writes():
     assert Profile.objects.count() == 0
 
 
+# WHY: Checks that account and profile creation rolls back when profile write fails so a future change cannot quietly break it.
 def test_account_and_profile_creation_rolls_back_when_profile_write_fails(
     monkeypatch,
 ):
+    # WHY: Keeps the refuse profile creation steps in one named place so they can be understood, checked, and reused.
     def refuse_profile_creation(*args, **kwargs):
         raise RuntimeError("synthetic profile failure")
 
@@ -770,6 +797,7 @@ def test_account_and_profile_creation_rolls_back_when_profile_write_fails(
     ).exists()
 
 
+# WHY: Checks that profile details form rejects unknown and oversized values so a future change cannot quietly break it.
 def test_profile_details_form_rejects_unknown_and_oversized_values():
     profile = Profile.objects.create(user=create_test_user())
 
@@ -824,6 +852,7 @@ def test_profile_details_form_rejects_unknown_and_oversized_values():
     assert "display_name" in oversized_name_form.errors
 
 
+# WHY: Keeps the test profile image upload steps in one named place so they can be understood, checked, and reused.
 def _test_profile_image_upload(
     *,
     image_format="JPEG",
@@ -851,6 +880,7 @@ def _test_profile_image_upload(
     )
 
 
+# WHY: Checks that profile image upload is normalised protected and replaced so a future change cannot quietly break it.
 @pytest.mark.django_db(transaction=True)
 def test_profile_image_upload_is_normalised_protected_and_replaced(settings, tmp_path):
     settings.MEDIA_ROOT = tmp_path
@@ -915,6 +945,7 @@ def test_profile_image_upload_is_normalised_protected_and_replaced(settings, tmp
     assert not first_image_path.exists()
 
 
+# WHY: Checks that profile image form rejects unsupported size and dimensions so a future change cannot quietly break it.
 def test_profile_image_form_rejects_unsupported_size_and_dimensions():
     profile = Profile.objects.create(user=create_test_user())
     values = {
@@ -957,6 +988,7 @@ def test_profile_image_form_rejects_unsupported_size_and_dimensions():
     assert "profile_image" in over_dimension_form.errors
 
 
+# WHY: Checks that immediate availability choices start at submission time so a future change cannot quietly break it.
 @pytest.mark.parametrize("choice", ["today", "this_week", "as_and_when"])
 def test_immediate_availability_choices_start_at_submission_time(monkeypatch, choice):
     fixed_time = timezone.make_aware(datetime(2026, 7, 27, 15, 30))
@@ -976,6 +1008,7 @@ def test_immediate_availability_choices_start_at_submission_time(monkeypatch, ch
     assert form.cleaned_data["available_from"] == fixed_time
 
 
+# WHY: Checks that tomorrow availability starts at next local midnight so a future change cannot quietly break it.
 def test_tomorrow_availability_starts_at_next_local_midnight(monkeypatch):
     fixed_time = timezone.make_aware(datetime(2026, 7, 27, 15, 30))
     monkeypatch.setattr("kindlelise.forms.timezone.now", lambda: fixed_time)
@@ -996,6 +1029,7 @@ def test_tomorrow_availability_starts_at_next_local_midnight(monkeypatch):
     assert (local_start.hour, local_start.minute, local_start.second) == (0, 0, 0)
 
 
+# WHY: Checks that profile completion accepts availability added later so a future change cannot quietly break it.
 def test_profile_completion_accepts_availability_added_later():
     form = ProfileDetailsForm(
         data={
@@ -1012,6 +1046,7 @@ def test_profile_completion_accepts_availability_added_later():
     assert form.cleaned_data["available_from"] is None
 
 
+# WHY: Checks that signed in user profile update replaces and clears permitted values so a future change cannot quietly break it.
 def test_signed_in_user_profile_update_replaces_and_clears_permitted_values():
     account = create_test_user()
     previous_availability = timezone.now() + timezone.timedelta(minutes=30)
@@ -1084,6 +1119,7 @@ def test_signed_in_user_profile_update_replaces_and_clears_permitted_values():
     assert not updated_profile.interests.exists()
 
 
+# WHY: Checks that profile update refuses every account without active ownership so a future change cannot quietly break it.
 def test_profile_update_refuses_every_account_without_active_ownership():
     inactive_account = create_test_user(is_active=False)
     Profile.objects.create(user=inactive_account)
@@ -1107,6 +1143,7 @@ def test_profile_update_refuses_every_account_without_active_ownership():
     assert Profile.objects.get(user=inactive_account).display_name == ""
 
 
+# WHY: Checks that account profile access policy fails closed for ineligible states so a future change cannot quietly break it.
 def test_account_profile_access_policy_fails_closed_for_ineligible_states():
     missing_profile_account = create_test_user()
     unverified_account = create_test_user()
@@ -1123,6 +1160,7 @@ def test_account_profile_access_policy_fails_closed_for_ineligible_states():
     assert can_access_discovery_plans_and_messages(verified_account)
 
 
+# WHY: Checks that admin registers models with only mapped profile and plan actions so a future change cannot quietly break it.
 def test_admin_registers_models_with_only_mapped_profile_and_plan_actions():
     registered_models = set(django_admin.site._registry)
 
@@ -1160,6 +1198,53 @@ def test_admin_registers_models_with_only_mapped_profile_and_plan_actions():
     )
 
 
+# WHY: Checks that profile admin has one click verification button so a future change cannot quietly break it.
+def test_profile_admin_has_one_click_verification_button(monkeypatch):
+    staff = create_test_user(is_staff=True)
+    staff.user_permissions.add(
+        Permission.objects.get(
+            content_type__app_label="kindlelise",
+            codename="change_profile",
+        )
+    )
+    profile = Profile.objects.create(
+        user=create_test_user(username="button-verification@example.test"),
+        display_name="Button verification",
+        broad_area="central",
+    )
+    client = Client()
+    client.force_login(staff)
+    change_url = reverse("admin:kindlelise_profile_change", args=[profile.pk])
+
+    response = client.get(change_url)
+
+    assert response.status_code == 200
+    assert b' name="_verify_profile"' in response.content
+    assert b' value="Yes \xe2\x80\x94 verify profile"' in response.content
+
+    profile_admin = django_admin.site._registry[Profile]
+    staff_messages = []
+    monkeypatch.setattr(
+        profile_admin,
+        "message_user",
+        lambda request, message, **kwargs: staff_messages.append(message),
+    )
+
+    verification_response = profile_admin.response_change(
+        SimpleNamespace(user=staff, POST={"_verify_profile": "yes"}),
+        profile,
+    )
+    profile.refresh_from_db()
+
+    assert verification_response.status_code == 302
+    assert verification_response.url == "."
+    assert profile.is_verified
+    assert profile.verified_by == staff
+    assert profile.verified_at is not None
+    assert staff_messages == ["Profile verified."]
+
+
+# WHY: Checks that user admin permissions checkbox verifies and withdraws profile so a future change cannot quietly break it.
 def test_user_admin_permissions_checkbox_verifies_and_withdraws_profile():
     staff = create_test_user(is_staff=True, is_superuser=True)
     account = create_test_user(username="permissions@example.test")
@@ -1215,6 +1300,7 @@ def test_user_admin_permissions_checkbox_verifies_and_withdraws_profile():
     assert profile.verified_by is None
 
 
+# WHY: Checks that user admin permissions checkbox refuses incomplete profile so a future change cannot quietly break it.
 def test_user_admin_permissions_checkbox_refuses_incomplete_profile():
     staff = create_test_user(is_staff=True, is_superuser=True)
     account = create_test_user(username="incomplete@example.test")
@@ -1245,6 +1331,7 @@ def test_user_admin_permissions_checkbox_refuses_incomplete_profile():
     assert profile.verified_by is None
 
 
+# WHY: Checks that user admin hides profile checkbox without profile change permission so a future change cannot quietly break it.
 def test_user_admin_hides_profile_checkbox_without_profile_change_permission():
     staff = create_test_user(is_staff=True)
     staff.user_permissions.add(
@@ -1288,6 +1375,7 @@ def test_user_admin_hides_profile_checkbox_without_profile_change_permission():
     assert not profile.is_verified
 
 
+# WHY: Checks that staff verification action changes only complete configured profiles so a future change cannot quietly break it.
 def test_staff_verification_action_changes_only_complete_configured_profiles(
     monkeypatch,
 ):
@@ -1350,6 +1438,7 @@ def test_staff_verification_action_changes_only_complete_configured_profiles(
     assert staff_messages == ["Verified 1 profile(s); skipped 3."]
 
 
+# WHY: Checks that staff removal action clears verification and preserves records so a future change cannot quietly break it.
 def test_staff_removal_action_clears_verification_and_preserves_records(monkeypatch):
     staff = create_test_user(is_staff=True, is_superuser=True)
     verified = create_verified_test_profile()
@@ -1380,6 +1469,7 @@ def test_staff_removal_action_clears_verification_and_preserves_records(monkeypa
     assert staff_messages == ["Removed verification from 1 profile(s); skipped 1."]
 
 
+# WHY: Checks that staff plan approval changes only pending future unlocked valid plan so a future change cannot quietly break it.
 def test_staff_plan_approval_changes_only_pending_future_unlocked_valid_plan(
     monkeypatch,
 ):
@@ -1449,6 +1539,7 @@ def test_staff_plan_approval_changes_only_pending_future_unlocked_valid_plan(
     assert staff_messages == ["Approved 1 plan(s); skipped 7."]
 
 
+# WHY: Checks that staff plan rejection changes only pending unlocked plans so a future change cannot quietly break it.
 def test_staff_plan_rejection_changes_only_pending_unlocked_plans(monkeypatch):
     staff = create_test_user(is_staff=True, is_superuser=True)
     current_time = timezone.now()
@@ -1503,6 +1594,7 @@ def test_staff_plan_rejection_changes_only_pending_unlocked_plans(monkeypatch):
     assert staff_messages == ["Rejected 2 plan(s); skipped 4."]
 
 
+# WHY: Checks that non staff admin actions fail closed without mutation so a future change cannot quietly break it.
 def test_non_staff_admin_actions_fail_closed_without_mutation():
     non_staff = create_test_user()
     staff_without_permission = create_test_user(is_staff=True)
@@ -1553,6 +1645,7 @@ def test_non_staff_admin_actions_fail_closed_without_mutation():
     assert plan.status == Plan.Status.PENDING
 
 
+# WHY: Checks that account summary selector returns only owners safe records so a future change cannot quietly break it.
 def test_account_summary_selector_returns_only_owners_safe_records():
     account = create_test_user(
         username="summary@example.test",
@@ -1614,6 +1707,7 @@ def test_account_summary_selector_returns_only_owners_safe_records():
     assert get_signed_in_user_account_summary(create_test_user()) is None
 
 
+# WHY: Checks that discovery premium limit policy changes reach without weakening access so a future change cannot quietly break it.
 def test_discovery_premium_limit_policy_changes_reach_without_weakening_access():
     viewer = create_test_user()
     viewer_profile = create_verified_test_profile(
@@ -1684,6 +1778,7 @@ def test_discovery_premium_limit_policy_changes_reach_without_weakening_access()
     assert not can_view_profile_page(viewer, nearby_profile)
 
 
+# WHY: Checks that discovery filter form rejects unknown and excessive filters so a future change cannot quietly break it.
 def test_discovery_filter_form_rejects_unknown_and_excessive_filters():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, broad_area="central")
@@ -1769,6 +1864,7 @@ def test_discovery_filter_form_rejects_unknown_and_excessive_filters():
     assert "interests" in premium_excess_form.errors
 
 
+# WHY: Checks that discovery selector excludes hidden profiles before presentation so a future change cannot quietly break it.
 def test_discovery_selector_excludes_hidden_profiles_before_presentation():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, broad_area="central")
@@ -1874,6 +1970,7 @@ def test_discovery_selector_excludes_hidden_profiles_before_presentation():
     }
 
 
+# WHY: Checks that discovery profile selector returns same none for every denial so a future change cannot quietly break it.
 def test_discovery_profile_selector_returns_same_none_for_every_denial():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, broad_area="central")
@@ -1912,6 +2009,7 @@ def test_discovery_profile_selector_returns_same_none_for_every_denial():
     assert get_profile_page_if_viewer_is_allowed(viewer, allowed.pk) is None
 
 
+# WHY: Checks that plan http list gates access and preserves owner only states so a future change cannot quietly break it.
 def test_plan_http_list_gates_access_and_preserves_owner_only_states():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -1988,6 +2086,75 @@ def test_plan_http_list_gates_access_and_preserves_owner_only_states():
     assert unverified_response.url == reverse("account")
 
 
+# WHY: Checks that Done contains only approved past plans the viewer hosted or stayed joined to.
+def test_plan_http_done_filter_shows_relevant_completed_plans_only():
+    viewer = create_test_user()
+    create_verified_test_profile(user=viewer)
+    other_owner = create_test_user()
+    create_verified_test_profile(user=other_owner)
+    past = timezone.now() - timezone.timedelta(hours=1)
+    future = timezone.now() + timezone.timedelta(hours=1)
+    owned_done = create_test_plan(
+        owner=viewer,
+        status=Plan.Status.APPROVED,
+        title="Hosted completed plan",
+        starts_at=past,
+    )
+    joined_done = create_test_plan(
+        owner=other_owner,
+        status=Plan.Status.APPROVED,
+        title="Joined completed plan",
+        starts_at=past,
+    )
+    Participation.objects.create(plan=joined_done, user=viewer)
+    left_done = create_test_plan(
+        owner=other_owner,
+        status=Plan.Status.APPROVED,
+        title="Left completed plan",
+        starts_at=past,
+    )
+    Participation.objects.create(
+        plan=left_done,
+        user=viewer,
+        status=Participation.Status.LEFT,
+        left_at=timezone.now(),
+    )
+    unrelated_done = create_test_plan(
+        owner=other_owner,
+        status=Plan.Status.APPROVED,
+        title="Unrelated completed plan",
+        starts_at=past,
+    )
+    future_plan = create_test_plan(
+        owner=viewer,
+        status=Plan.Status.APPROVED,
+        title="Future hosted plan",
+        starts_at=future,
+    )
+    cancelled_plan = create_test_plan(
+        owner=viewer,
+        status=Plan.Status.CANCELLED,
+        title="Cancelled past plan",
+        starts_at=past,
+    )
+    client = Client()
+    client.force_login(viewer)
+
+    response = client.get(reverse("plan_list"), {"filter": "done"})
+
+    assert response.status_code == 200
+    assert response.context["selected_filter"] == "done"
+    assert b'?filter=done" aria-current="page">Done</a>' in response.content
+    assert b"filter=rejected" not in response.content
+    for visible_plan in (owned_done, joined_done):
+        assert visible_plan.title.encode() in response.content
+    for hidden_plan in (left_done, unrelated_done, future_plan, cancelled_plan):
+        assert hidden_plan.title.encode() not in response.content
+    assert client.get(reverse("plan_detail", args=[joined_done.pk])).status_code == 200
+    assert client.get(reverse("plan_detail", args=[unrelated_done.pk])).status_code == 404
+
+
+# WHY: Checks that plan http creation is immediately available and preserves invalid form so a future change cannot quietly break it.
 def test_plan_http_creation_is_immediately_available_and_preserves_invalid_form():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2052,6 +2219,7 @@ def test_plan_http_creation_is_immediately_available_and_preserves_invalid_form(
     assert not Plan.objects.filter(title="Invalid HTTP plan").exists()
 
 
+# WHY: Checks that plan fetch details stores and serves normalized card thumbnail so a future change cannot quietly break it.
 def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     monkeypatch,
     settings,
@@ -2074,6 +2242,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
         </head></html>
     """
 
+    # WHY: Keeps the return public resources steps in one named place so they can be understood, checked, and reused.
     def return_public_resources(url, allowed_content_types, maximum_bytes):
         if url == "https://venue.example.test/visit":
             assert "text/html" in allowed_content_types
@@ -2143,6 +2312,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     assert b"plan-card--with-image" in list_response.content
     assert reverse("plan_thumbnail", args=[plan.pk]).encode() in list_response.content
 
+    # WHY: Keeps the return place with unavailable image steps in one named place so they can be understood, checked, and reused.
     def return_place_with_unavailable_image(url, allowed_content_types, maximum_bytes):
         if "text/html" in allowed_content_types:
             return url, "text/html", page_html
@@ -2192,6 +2362,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     assert Client().get(reverse("plan_thumbnail", args=[plan.pk])).status_code == 302
 
 
+# WHY: Checks that plan fetch details rejects unsafe targets and mismatched tokens so a future change cannot quietly break it.
 def test_plan_fetch_details_rejects_unsafe_targets_and_mismatched_tokens(
     monkeypatch,
 ):
@@ -2206,11 +2377,14 @@ def test_plan_fetch_details_rejects_unsafe_targets_and_mismatched_tokens(
     create_verified_test_profile(user=owner)
     provider_calls = []
 
+    # WHY: Keeps the record provider call steps in one named place so they can be understood, checked, and reused.
     def record_provider_call(public_url, user_id):
         provider_calls.append((public_url, user_id))
         return None
 
-    monkeypatch.setattr("kindlelise.views.fetch_plan_metadata", record_provider_call)
+    monkeypatch.setattr(
+        "kindlelise.views.plans.fetch_plan_metadata", record_provider_call
+    )
     client = Client()
     client.force_login(owner)
     invalid_response = client.post(
@@ -2257,6 +2431,7 @@ def test_plan_fetch_details_rejects_unsafe_targets_and_mismatched_tokens(
     assert not Plan.objects.filter(title="Mismatched thumbnail plan").exists()
 
 
+# WHY: Checks that plan http detail exposes count and own state without participants so a future change cannot quietly break it.
 def test_plan_http_detail_exposes_count_and_own_state_without_participants():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -2301,6 +2476,7 @@ def test_plan_http_detail_exposes_count_and_own_state_without_participants():
     assert client.post(reverse("plan_detail", args=[plan.pk])).status_code == 405
 
 
+# WHY: Checks that plan http owner edit stays available and hidden edits share 404 so a future change cannot quietly break it.
 def test_plan_http_owner_edit_stays_available_and_hidden_edits_share_404():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2392,6 +2568,7 @@ def test_plan_http_owner_edit_stays_available_and_hidden_edits_share_404():
     }
 
 
+# WHY: Checks that plan http join leave rejoin and cancel preserve history and lock so a future change cannot quietly break it.
 def test_plan_http_join_leave_rejoin_and_cancel_preserve_history_and_lock():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2484,6 +2661,7 @@ def test_plan_http_join_leave_rejoin_and_cancel_preserve_history_and_lock():
     assert participant_client.get(reverse("plan_detail", args=[plan.pk])).status_code == 404
 
 
+# WHY: Checks that plan service rechecks current verification despite cached profile so a future change cannot quietly break it.
 def test_plan_service_rechecks_current_verification_despite_cached_profile():
     owner = create_test_user()
     profile = create_verified_test_profile(user=owner)
@@ -2512,6 +2690,7 @@ def test_plan_service_rechecks_current_verification_despite_cached_profile():
     assert not Plan.objects.filter(title="Refused cached-profile plan").exists()
 
 
+# WHY: Checks that plan form accepts future https details and rejects invalid bounds so a future change cannot quietly break it.
 def test_plan_form_accepts_future_https_details_and_rejects_invalid_bounds():
     future = timezone.now() + timezone.timedelta(days=1)
     valid_form = PlanDetailsForm(
@@ -2559,6 +2738,7 @@ def test_plan_form_accepts_future_https_details_and_rejects_invalid_bounds():
     } <= set(invalid_form.errors)
 
 
+# WHY: Checks that plan creation requires verification and is immediately available so a future change cannot quietly break it.
 def test_plan_creation_requires_verification_and_is_immediately_available():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2603,6 +2783,7 @@ def test_plan_creation_requires_verification_and_is_immediately_available():
     assert not can_create_plan(unverified_user)
 
 
+# WHY: Checks that plan edit keeps available state and activates revised legacy rejection so a future change cannot quietly break it.
 @pytest.mark.parametrize(
     ("review_field", "review_value"),
     (
@@ -2653,6 +2834,7 @@ def test_plan_edit_keeps_available_state_and_activates_revised_legacy_rejection(
     assert rejected_plan.approved_by == owner
 
 
+# WHY: Checks that plan edit refuses non owner locked and cancelled states so a future change cannot quietly break it.
 def test_plan_edit_refuses_non_owner_locked_and_cancelled_states():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2692,6 +2874,7 @@ def test_plan_edit_refuses_non_owner_locked_and_cancelled_states():
     assert cancelled_plan.title == "Test plan"
 
 
+# WHY: Checks that plan join policy refuses owner state capacity and current participation so a future change cannot quietly break it.
 def test_plan_join_policy_refuses_owner_state_capacity_and_current_participation():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2734,6 +2917,7 @@ def test_plan_join_policy_refuses_owner_state_capacity_and_current_participation
     assert not can_join_approved_plan(unverified, approved_plan, current_time)
 
 
+# WHY: Checks that plan join leave and rejoin preserve one participation and lock so a future change cannot quietly break it.
 def test_plan_join_leave_and_rejoin_preserve_one_participation_and_lock():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2771,6 +2955,7 @@ def test_plan_join_leave_and_rejoin_preserve_one_participation_and_lock():
     assert plan.participations.count() == 1
 
 
+# WHY: Checks that plan leave refuses ineligible or non participant without mutation so a future change cannot quietly break it.
 def test_plan_leave_refuses_ineligible_or_non_participant_without_mutation():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2821,6 +3006,7 @@ def test_plan_leave_refuses_ineligible_or_non_participant_without_mutation():
     assert plan.participations.count() == 2
 
 
+# WHY: Checks that plan cancellation is terminal and preserves participation history so a future change cannot quietly break it.
 def test_plan_cancellation_is_terminal_and_preserves_participation_history():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
@@ -2883,6 +3069,7 @@ def test_plan_cancellation_is_terminal_and_preserves_participation_history():
     assert unverified_owner_plan.status == Plan.Status.APPROVED
 
 
+# WHY: Checks that plan list selector preserves public and owner only visibility so a future change cannot quietly break it.
 def test_plan_list_selector_preserves_public_and_owner_only_visibility():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -2940,6 +3127,7 @@ def test_plan_list_selector_preserves_public_and_owner_only_visibility():
     assert not get_plans_for_plan_list(viewer).exists()
 
 
+# WHY: Checks that plan page selector returns count and own state without participant list so a future change cannot quietly break it.
 def test_plan_page_selector_returns_count_and_own_state_without_participant_list():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -2978,9 +3166,11 @@ def test_plan_page_selector_returns_count_and_own_state_without_participant_list
     assert get_plan_page_if_viewer_is_allowed(viewer, 999999) is None
 
 
+# WHY: Keeps the PlanCapacityJoinRaceTests information and its rules together so they stay consistent.
 class PlanCapacityJoinRaceTests(TransactionTestCase):
     """Prove PostgreSQL row locking prevents two final-capacity joins."""
 
+    # WHY: Keeps the setUp steps in one named place so they can be understood, checked, and reused.
     def setUp(self):
         self.owner = create_test_user()
         create_verified_test_profile(user=self.owner)
@@ -2993,9 +3183,11 @@ class PlanCapacityJoinRaceTests(TransactionTestCase):
         for participant in self.participants:
             create_verified_test_profile(user=participant)
 
+    # WHY: Checks that plan capacity join race allows only one participation so a future change cannot quietly break it.
     def test_plan_capacity_join_race_allows_only_one_participation(self):
         start_together = Barrier(2)
 
+        # WHY: Keeps the attempt join steps in one named place so they can be understood, checked, and reused.
         def attempt_join(user_id):
             close_old_connections()
             try:
@@ -3031,6 +3223,7 @@ class PlanCapacityJoinRaceTests(TransactionTestCase):
         self.assertIsNotNone(self.plan.meeting_details_locked_at)
 
 
+# WHY: Checks that direct conversation http starts from authorised profile once with csrf so a future change cannot quietly break it.
 def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer, display_name="Message starter")
@@ -3099,6 +3292,7 @@ def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf(
     assert Conversation.objects.count() == 1
 
 
+# WHY: Checks that notification badge counts messages and plan joins then marks them read so a future change cannot quietly break it.
 def test_notification_badge_counts_messages_and_plan_joins_then_marks_them_read():
     owner = create_test_user()
     create_verified_test_profile(user=owner, display_name="Plan owner")
@@ -3141,6 +3335,7 @@ def test_notification_badge_counts_messages_and_plan_joins_then_marks_them_read(
     ).content
 
 
+# WHY: Checks that inbox http orders only permitted pairs without message previews so a future change cannot quietly break it.
 def test_inbox_http_orders_only_permitted_pairs_without_message_previews():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -3204,6 +3399,7 @@ def test_inbox_http_orders_only_permitted_pairs_without_message_previews():
     assert unverified_response.url == reverse("account")
 
 
+# WHY: Checks that conversation http escapes ordered messages and shares one hidden 404 so a future change cannot quietly break it.
 def test_conversation_http_escapes_ordered_messages_and_shares_one_hidden_404():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -3263,6 +3459,7 @@ def test_conversation_http_escapes_ordered_messages_and_shares_one_hidden_404():
     assert first_message.body.encode() not in blocked_response.content
 
 
+# WHY: Checks that conversation send http rechecks csrf form sender and current access so a future change cannot quietly break it.
 def test_conversation_send_http_rechecks_csrf_form_sender_and_current_access(caplog):
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -3328,6 +3525,7 @@ def test_conversation_send_http_rechecks_csrf_form_sender_and_current_access(cap
     assert Message.objects.filter(conversation=conversation).count() == 1
 
 
+# WHY: Checks that message draft form accepts plain text and rejects empty or oversized text so a future change cannot quietly break it.
 def test_message_draft_form_accepts_plain_text_and_rejects_empty_or_oversized_text():
     valid_form = MessageDraftForm(data={"body": "  Hello <strong>there</strong>  "})
     empty_form = MessageDraftForm(data={"body": "   "})
@@ -3342,6 +3540,7 @@ def test_message_draft_form_accepts_plain_text_and_rejects_empty_or_oversized_te
     assert "body" in oversized_form.errors
 
 
+# WHY: Checks that direct message policy requires distinct verified active unblocked pair so a future change cannot quietly break it.
 def test_direct_message_policy_requires_distinct_verified_active_unblocked_pair():
     sender = create_test_user()
     create_verified_test_profile(user=sender)
@@ -3368,6 +3567,7 @@ def test_direct_message_policy_requires_distinct_verified_active_unblocked_pair(
     assert not can_start_or_continue_direct_messages(AnonymousUser(), recipient)
 
 
+# WHY: Checks that conversation service returns one ordered pair and refuses without writes so a future change cannot quietly break it.
 def test_conversation_service_returns_one_ordered_pair_and_refuses_without_writes():
     first_user = create_test_user()
     create_verified_test_profile(user=first_user)
@@ -3397,6 +3597,7 @@ def test_conversation_service_returns_one_ordered_pair_and_refuses_without_write
     assert Conversation.objects.count() == 1
 
 
+# WHY: Checks that message service stores plain text and updates conversation activity so a future change cannot quietly break it.
 def test_message_service_stores_plain_text_and_updates_conversation_activity():
     sender = create_test_user()
     create_verified_test_profile(user=sender)
@@ -3424,6 +3625,7 @@ def test_message_service_stores_plain_text_and_updates_conversation_activity():
     )
 
 
+# WHY: Checks that message service refuses changed permissions without partial state so a future change cannot quietly break it.
 def test_message_service_refuses_changed_permissions_without_partial_state():
     sender = create_test_user()
     create_verified_test_profile(user=sender)
@@ -3472,6 +3674,7 @@ def test_message_service_refuses_changed_permissions_without_partial_state():
     assert conversation.updated_at == original_activity
 
 
+# WHY: Checks that message service rolls back message when activity update fails so a future change cannot quietly break it.
 def test_message_service_rolls_back_message_when_activity_update_fails(monkeypatch):
     sender = create_test_user()
     create_verified_test_profile(user=sender)
@@ -3481,6 +3684,7 @@ def test_message_service_rolls_back_message_when_activity_update_fails(monkeypat
     original_activity = conversation.updated_at
     normal_save = Conversation.save
 
+    # WHY: Keeps the refuse activity update steps in one named place so they can be understood, checked, and reused.
     def refuse_activity_update(conversation_to_save, *args, **kwargs):
         if kwargs.get("update_fields") == ["updated_at"]:
             raise RuntimeError("synthetic conversation update failure")
@@ -3496,6 +3700,7 @@ def test_message_service_rolls_back_message_when_activity_update_fails(monkeypat
     assert conversation.updated_at == original_activity
 
 
+# WHY: Checks that inbox selector orders only currently permitted conversations so a future change cannot quietly break it.
 def test_inbox_selector_orders_only_currently_permitted_conversations():
     viewer = create_test_user()
     viewer_profile = create_verified_test_profile(user=viewer)
@@ -3549,6 +3754,7 @@ def test_inbox_selector_orders_only_currently_permitted_conversations():
     assert not get_unblocked_conversations_for_inbox(viewer).exists()
 
 
+# WHY: Checks that message selector returns chronological content only to permitted member so a future change cannot quietly break it.
 def test_message_selector_returns_chronological_content_only_to_permitted_member():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -3575,6 +3781,7 @@ def test_message_selector_returns_chronological_content_only_to_permitted_member
     assert get_messages_if_user_can_open_conversation(viewer, conversation.pk) is None
 
 
+# WHY: Checks that block http requires csrf closes interaction and keeps reporting open so a future change cannot quietly break it.
 def test_block_http_requires_csrf_closes_interaction_and_keeps_reporting_open():
     blocker = create_test_user()
     create_verified_test_profile(user=blocker)
@@ -3624,6 +3831,7 @@ def test_block_http_requires_csrf_closes_interaction_and_keeps_reporting_open():
     assert b"blocker" not in target_account_response.content.lower()
 
 
+# WHY: Checks that private report http forces authority stays private and avoids logs so a future change cannot quietly break it.
 def test_private_report_http_forces_authority_stays_private_and_avoids_logs(caplog):
     reporter = create_test_user()
     Profile.objects.create(user=reporter, display_name="Unverified reporter")
@@ -3702,6 +3910,7 @@ def test_private_report_http_forces_authority_stays_private_and_avoids_logs(capl
     assert self_response.content == missing_response.content == b"Report unavailable."
 
 
+# WHY: Checks that private report http validates plan context and rejects unrelated plan so a future change cannot quietly break it.
 def test_private_report_http_validates_plan_context_and_rejects_unrelated_plan():
     reporter = create_test_user()
     create_verified_test_profile(user=reporter)
@@ -3765,6 +3974,7 @@ def test_private_report_http_validates_plan_context_and_rejects_unrelated_plan()
     assert Report.objects.count() == 1
 
 
+# WHY: Checks that private report http validates conversation and received message contexts so a future change cannot quietly break it.
 def test_private_report_http_validates_conversation_and_received_message_contexts():
     reporter = create_test_user()
     create_verified_test_profile(user=reporter)
@@ -3861,6 +4071,7 @@ def test_private_report_http_validates_conversation_and_received_message_context
     assert Report.objects.count() == 2
 
 
+# WHY: Checks that private report form accepts only bounded category and description so a future change cannot quietly break it.
 def test_private_report_form_accepts_only_bounded_category_and_description():
     valid_form = PrivateReportForm(
         data={
@@ -3894,6 +4105,7 @@ def test_private_report_form_accepts_only_bounded_category_and_description():
     assert "description" in empty_form.errors
 
 
+# WHY: Checks that report policy allows different authenticated accounts despite blocks so a future change cannot quietly break it.
 def test_report_policy_allows_different_authenticated_accounts_despite_blocks():
     reporter = create_test_user()
     reported_user = create_test_user()
@@ -3907,6 +4119,7 @@ def test_report_policy_allows_different_authenticated_accounts_despite_blocks():
     assert not can_report_another_user(reporter, None)
 
 
+# WHY: Checks that block service is idempotent and closes discovery and messaging so a future change cannot quietly break it.
 def test_block_service_is_idempotent_and_closes_discovery_and_messaging():
     blocker = create_test_user()
     create_verified_test_profile(user=blocker, broad_area="central")
@@ -3945,6 +4158,7 @@ def test_block_service_is_idempotent_and_closes_discovery_and_messaging():
     assert not can_start_or_continue_direct_messages(blocker, blocked_user)
 
 
+# WHY: Checks that block service refuses anonymous self and missing targets without writes so a future change cannot quietly break it.
 def test_block_service_refuses_anonymous_self_and_missing_targets_without_writes():
     blocker = create_test_user()
     target = create_test_user()
@@ -3959,6 +4173,7 @@ def test_block_service_refuses_anonymous_self_and_missing_targets_without_writes
     assert not Block.objects.exists()
 
 
+# WHY: Checks that report target selector resolves blocked different account only so a future change cannot quietly break it.
 def test_report_target_selector_resolves_blocked_different_account_only():
     reporter = create_test_user()
     create_verified_test_profile(user=reporter)
@@ -3996,6 +4211,7 @@ def test_report_target_selector_resolves_blocked_different_account_only():
     )
 
 
+# WHY: Checks that private report service stores received reports with valid contexts so a future change cannot quietly break it.
 def test_private_report_service_stores_received_reports_with_valid_contexts():
     reporter = create_test_user()
     reported_user = create_test_user()
@@ -4060,6 +4276,7 @@ def test_private_report_service_stores_received_reports_with_valid_contexts():
     assert "reports" not in reported_user_summary
 
 
+# WHY: Checks that private report service rejects unrelated or multiple context without writes so a future change cannot quietly break it.
 def test_private_report_service_rejects_unrelated_or_multiple_context_without_writes():
     reporter = create_test_user()
     reported_user = create_test_user()
@@ -4121,18 +4338,22 @@ def test_private_report_service_rejects_unrelated_or_multiple_context_without_wr
     assert not Report.objects.exists()
 
 
+# WHY: Keeps the ConversationPairRaceTests information and its rules together so they stay consistent.
 class ConversationPairRaceTests(TransactionTestCase):
     """Prove PostgreSQL uniqueness resolves simultaneous pair creation once."""
 
+    # WHY: Keeps the setUp steps in one named place so they can be understood, checked, and reused.
     def setUp(self):
         self.first_user = create_test_user()
         create_verified_test_profile(user=self.first_user)
         self.second_user = create_test_user()
         create_verified_test_profile(user=self.second_user)
 
+    # WHY: Checks that conversation pair race returns one database authoritative row so a future change cannot quietly break it.
     def test_conversation_pair_race_returns_one_database_authoritative_row(self):
         start_together = Barrier(2)
 
+        # WHY: Keeps the start conversation steps in one named place so they can be understood, checked, and reused.
         def start_conversation(user_id, other_user_id):
             close_old_connections()
             try:
@@ -4161,6 +4382,7 @@ class ConversationPairRaceTests(TransactionTestCase):
         self.assertEqual(conversation.second_user_id, self.second_user.pk)
 
 
+# WHY: Checks that profile verification constraint and availability helper so a future change cannot quietly break it.
 def test_profile_verification_constraint_and_availability_helper():
     user = create_test_user()
     reviewer = create_test_user(is_staff=True)
@@ -4189,6 +4411,7 @@ def test_profile_verification_constraint_and_availability_helper():
         profile.save(update_fields=["is_verified"])
 
 
+# WHY: Checks that plan approval and capacity constraints and open helper so a future change cannot quietly break it.
 def test_plan_approval_and_capacity_constraints_and_open_helper():
     owner = create_test_user()
     reviewer = create_test_user(is_staff=True)
@@ -4211,6 +4434,7 @@ def test_plan_approval_and_capacity_constraints_and_open_helper():
     assert not plan.is_open_for_joining(timezone.now())
 
 
+# WHY: Checks that participation state and uniqueness constraints so a future change cannot quietly break it.
 def test_participation_state_and_uniqueness_constraints():
     plan = create_test_plan()
     user = create_test_user()
@@ -4234,6 +4458,7 @@ def test_participation_state_and_uniqueness_constraints():
         )
 
 
+# WHY: Checks that conversation pair constraints and membership helper so a future change cannot quietly break it.
 def test_conversation_pair_constraints_and_membership_helper():
     lower_user = create_test_user()
     higher_user = create_test_user()
@@ -4252,6 +4477,7 @@ def test_conversation_pair_constraints_and_membership_helper():
         Conversation.objects.create(first_user=lower_user, second_user=higher_user)
 
 
+# WHY: Checks that block direction constraints so a future change cannot quietly break it.
 def test_block_direction_constraints():
     blocker = create_test_user()
     blocked_user = create_test_user()
@@ -4263,6 +4489,7 @@ def test_block_direction_constraints():
         Block.objects.create(blocker=blocker, blocked_user=blocked_user)
 
 
+# WHY: Checks that report target and single context constraints so a future change cannot quietly break it.
 def test_report_target_and_single_context_constraints():
     reporter = create_test_user()
     reported_user = create_test_user()
@@ -4297,7 +4524,8 @@ def test_report_target_and_single_context_constraints():
     assert report.reported_message_id is None
 
 
-def test_first_checkout_uses_one_no_card_trial_and_browser_return_grants_nothing(
+# WHY: Checks that checkout collects yearly payment and browser return grants nothing so a future change cannot quietly break it.
+def test_checkout_collects_yearly_payment_and_browser_return_grants_nothing(
     monkeypatch,
     settings,
 ):
@@ -4306,6 +4534,7 @@ def test_first_checkout_uses_one_no_card_trial_and_browser_return_grants_nothing
     settings.STRIPE_PRICE_ID = "price_test_gbp_499_year"
     submitted_values = {}
 
+    # WHY: Builds checkout with all required starting values and checks applied.
     def create_checkout(**values):
         submitted_values.update(values)
         return SimpleNamespace(
@@ -4313,7 +4542,7 @@ def test_first_checkout_uses_one_no_card_trial_and_browser_return_grants_nothing
         )
 
     monkeypatch.setattr(
-        "kindlelise.services.stripe.checkout.Session.create",
+        "kindlelise.services.billing.stripe.checkout.Session.create",
         create_checkout,
     )
 
@@ -4329,19 +4558,16 @@ def test_first_checkout_uses_one_no_card_trial_and_browser_return_grants_nothing
         {"price": "price_test_gbp_499_year", "quantity": 1}
     ]
     assert submitted_values["client_reference_id"] == str(account.pk)
-    assert submitted_values["payment_method_collection"] == "if_required"
     assert submitted_values["subscription_data"] == {
         "metadata": {"kindlelise_user_id": str(account.pk)},
-        "trial_period_days": 30,
-        "trial_settings": {
-            "end_behavior": {"missing_payment_method": "create_invoice"}
-        },
     }
+    assert "payment_method_collection" not in submitted_values
     assert "customer" not in submitted_values
     assert not PlatformSubscription.objects.filter(user=account).exists()
 
 
-def test_stripe_history_omits_second_trial_and_active_subscription_is_not_duplicated(
+# WHY: Checks that stripe history reuses customer and active subscription is not duplicated so a future change cannot quietly break it.
+def test_stripe_history_reuses_customer_and_active_subscription_is_not_duplicated(
     monkeypatch,
     settings,
 ):
@@ -4357,6 +4583,7 @@ def test_stripe_history_omits_second_trial_and_active_subscription_is_not_duplic
     submitted_values = {}
     provider_call_count = 0
 
+    # WHY: Builds checkout with all required starting values and checks applied.
     def create_checkout(**values):
         nonlocal provider_call_count
         provider_call_count += 1
@@ -4366,7 +4593,7 @@ def test_stripe_history_omits_second_trial_and_active_subscription_is_not_duplic
         )
 
     monkeypatch.setattr(
-        "kindlelise.services.stripe.checkout.Session.create",
+        "kindlelise.services.billing.stripe.checkout.Session.create",
         create_checkout,
     )
     start_stripe_subscription_checkout(
@@ -4391,6 +4618,7 @@ def test_stripe_history_omits_second_trial_and_active_subscription_is_not_duplic
     assert provider_call_count == 1
 
 
+# WHY: Checks that customer portal uses only the owning accounts recorded customer so a future change cannot quietly break it.
 def test_customer_portal_uses_only_the_owning_accounts_recorded_customer(
     monkeypatch,
     settings,
@@ -4404,6 +4632,7 @@ def test_customer_portal_uses_only_the_owning_accounts_recorded_customer(
     )
     submitted_values = {}
 
+    # WHY: Builds portal with all required starting values and checks applied.
     def create_portal(**values):
         submitted_values.update(values)
         return SimpleNamespace(
@@ -4411,7 +4640,7 @@ def test_customer_portal_uses_only_the_owning_accounts_recorded_customer(
         )
 
     monkeypatch.setattr(
-        "kindlelise.services.stripe.billing_portal.Session.create",
+        "kindlelise.services.billing.stripe.billing_portal.Session.create",
         create_portal,
     )
     portal_url = open_stripe_customer_portal(
@@ -4429,6 +4658,7 @@ def test_customer_portal_uses_only_the_owning_accounts_recorded_customer(
         )
 
 
+# WHY: Checks that checkout webhook links by immutable user id and never grants access so a future change cannot quietly break it.
 def test_checkout_webhook_links_by_immutable_user_id_and_never_grants_access():
     account = create_test_user(email="ignored-owner@example.test")
     event = build_stripe_test_event(
@@ -4472,6 +4702,7 @@ def test_checkout_webhook_links_by_immutable_user_id_and_never_grants_access():
     ).exists()
 
 
+# WHY: Checks that conflicting stripe identifiers are rejected without receipt or reassignment so a future change cannot quietly break it.
 def test_conflicting_stripe_identifiers_are_rejected_without_receipt_or_reassignment():
     owner = create_test_user()
     attacker_target = create_test_user()
@@ -4505,11 +4736,13 @@ def test_conflicting_stripe_identifiers_are_rejected_without_receipt_or_reassign
     ).exists()
 
 
-def test_stripe_trialing_update_grants_only_trial_and_ineligible_updates_deny_access():
+# WHY: Checks that stripe trialing creation grants only trial and ineligible updates deny access so a future change cannot quietly break it.
+def test_stripe_trialing_creation_grants_only_trial_and_ineligible_updates_deny_access():
     account = create_test_user()
     now = timezone.now()
     trial_end = now + timezone.timedelta(days=30)
     trial_event = build_stripe_test_event(
+        "customer.subscription.created",
         event_id="evt_test_trialing",
         provider_created_at=now,
         data={
@@ -4578,6 +4811,7 @@ def test_stripe_trialing_update_grants_only_trial_and_ineligible_updates_deny_ac
     assert not subscription.has_premium_access()
 
 
+# WHY: Checks that stripe paid invoice for configured gbp price grants only annual period so a future change cannot quietly break it.
 def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
     settings,
 ):
@@ -4639,6 +4873,7 @@ def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
     assert subscription.has_premium_access()
 
 
+# WHY: Checks that wrong price or unpaid invoice cannot grant premium so a future change cannot quietly break it.
 def test_wrong_price_or_unpaid_invoice_cannot_grant_premium(settings):
     account = create_test_user()
     settings.STRIPE_SECRET_KEY = "sk_test_synthetic"
@@ -4710,6 +4945,7 @@ def test_wrong_price_or_unpaid_invoice_cannot_grant_premium(settings):
     ).exists()
 
 
+# WHY: Checks that stripe duplicate old equal time and delayed paid events preserve ordering so a future change cannot quietly break it.
 def test_stripe_duplicate_old_equal_time_and_delayed_paid_events_preserve_ordering(
     settings,
 ):
@@ -4817,6 +5053,7 @@ def test_stripe_duplicate_old_equal_time_and_delayed_paid_events_preserve_orderi
     assert subscription.access_until is None
 
 
+# WHY: Checks that stripe supported event failure rolls back receipt and subscription change so a future change cannot quietly break it.
 def test_stripe_supported_event_failure_rolls_back_receipt_and_subscription_change(
     monkeypatch,
 ):
@@ -4835,6 +5072,7 @@ def test_stripe_supported_event_failure_rolls_back_receipt_and_subscription_chan
         },
     )
 
+    # WHY: Keeps the refuse subscription save steps in one named place so they can be understood, checked, and reused.
     def refuse_subscription_save(*args, **kwargs):
         raise IntegrityError("synthetic projection failure")
 
@@ -4851,6 +5089,7 @@ def test_stripe_supported_event_failure_rolls_back_receipt_and_subscription_chan
     ).exists()
 
 
+# WHY: Checks that stripe webhook verifies exact body and returns mapped statuses so a future change cannot quietly break it.
 def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
     monkeypatch,
     settings,
@@ -4871,6 +5110,7 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
         },
     )
 
+    # WHY: Keeps the construct event steps in one named place so they can be understood, checked, and reused.
     def construct_event(payload, signature, secret, **values):
         received.update(
             {
@@ -4880,10 +5120,10 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
                 "api_key": values.get("api_key"),
             }
         )
-        return supported_event
+        return stripe.Event.construct_from(supported_event, "sk_test_synthetic")
 
     monkeypatch.setattr(
-        "kindlelise.views.stripe.Webhook.construct_event",
+        "kindlelise.views.billing.stripe.Webhook.construct_event",
         construct_event,
     )
     client = Client(enforce_csrf_checks=True)
@@ -4903,12 +5143,36 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
     assert StripeWebhookReceipt.objects.filter(
         stripe_event_id="evt_test_http_webhook"
     ).exists()
+    trial_end = timezone.now() + timezone.timedelta(days=30)
+    monkeypatch.setattr(
+        "kindlelise.views.billing.stripe.Webhook.construct_event",
+        lambda *args, **kwargs: build_stripe_test_event(
+            "customer.subscription.created",
+            event_id="evt_test_http_subscription_created",
+            data={
+                "id": "sub_test_http_webhook",
+                "customer": "cus_test_http_webhook",
+                "status": "trialing",
+                "trial_end": int(trial_end.timestamp()),
+                "metadata": {"kindlelise_user_id": str(account.pk)},
+            },
+        ),
+    )
+    assert client.post(
+        reverse("stripe_webhook"),
+        data=b"{}",
+        content_type="application/json",
+        HTTP_STRIPE_SIGNATURE="synthetic",
+    ).status_code == 200
+    subscription = PlatformSubscription.objects.get(user=account)
+    assert subscription.stripe_status == "trialing"
+    assert subscription.has_premium_access()
     assert "private-webhook-marker" not in caplog.text
     assert "whsec_test_synthetic" not in caplog.text
     assert client.get(reverse("stripe_webhook")).status_code == 405
 
     monkeypatch.setattr(
-        "kindlelise.views.stripe.Webhook.construct_event",
+        "kindlelise.views.billing.stripe.Webhook.construct_event",
         lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("invalid")),
     )
     assert client.post(
@@ -4919,7 +5183,7 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
     ).status_code == 400
 
     monkeypatch.setattr(
-        "kindlelise.views.stripe.Webhook.construct_event",
+        "kindlelise.views.billing.stripe.Webhook.construct_event",
         lambda *args, **kwargs: build_stripe_test_event(
             "invoice.created",
             event_id="evt_test_unsupported_http",
@@ -4936,7 +5200,7 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
     ).exists()
 
     monkeypatch.setattr(
-        "kindlelise.views.stripe.Webhook.construct_event",
+        "kindlelise.views.billing.stripe.Webhook.construct_event",
         lambda *args, **kwargs: build_stripe_test_event(
             "checkout.session.completed",
             event_id="evt_test_retryable_http",
@@ -4948,7 +5212,7 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
         ),
     )
     monkeypatch.setattr(
-        "kindlelise.views.update_premium_access_from_verified_stripe_event",
+        "kindlelise.views.billing.update_premium_access_from_verified_stripe_event",
         lambda event: (_ for _ in ()).throw(IntegrityError("synthetic failure")),
     )
     assert client.post(
@@ -4963,6 +5227,7 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
     assert "private-webhook-marker" not in caplog.text
 
 
+# WHY: Checks that premium http uses csrf server urls and safe account presentation so a future change cannot quietly break it.
 def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
     monkeypatch,
     settings,
@@ -4973,6 +5238,7 @@ def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
     settings.STRIPE_PRICE_ID = "price_test_gbp_499_year"
     checkout_values = {}
 
+    # WHY: Builds checkout with all required starting values and checks applied.
     def create_checkout(**values):
         checkout_values.update(values)
         return SimpleNamespace(
@@ -4980,17 +5246,17 @@ def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
         )
 
     monkeypatch.setattr(
-        "kindlelise.services.stripe.checkout.Session.create",
+        "kindlelise.services.billing.stripe.checkout.Session.create",
         create_checkout,
     )
     client = Client(enforce_csrf_checks=True)
     client.force_login(account)
     account_response = client.get(reverse("account"))
     assert account_response.status_code == 200
-    assert b"30 days free" in account_response.content
-    assert b"then \xc2\xa34.99 yearly" in account_response.content
-    assert b"Start 30-day trial" in account_response.content
-    assert b"No payment details are required" in account_response.content
+    assert b"30 days free" not in account_response.content
+    assert b"\xc2\xa34.99 yearly" in account_response.content
+    assert b"Pay \xc2\xa34.99 for one year" in account_response.content
+    assert b"Payment is collected securely by Stripe" in account_response.content
     assert client.post(reverse("premium_subscription_checkout")).status_code == 403
 
     csrf_token = client.cookies["csrftoken"].value
@@ -5018,6 +5284,7 @@ def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
     )
     portal_values = {}
 
+    # WHY: Builds portal with all required starting values and checks applied.
     def create_portal(**values):
         portal_values.update(values)
         return SimpleNamespace(
@@ -5025,7 +5292,7 @@ def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
         )
 
     monkeypatch.setattr(
-        "kindlelise.services.stripe.billing_portal.Session.create",
+        "kindlelise.services.billing.stripe.billing_portal.Session.create",
         create_portal,
     )
     account_response = client.get(reverse("account"))
@@ -5045,6 +5312,7 @@ def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
     assert portal_values["return_url"] == "http://testserver/account/"
 
 
+# WHY: Checks that ollama editor sends only bounded draft and each fixed goal so a future change cannot quietly break it.
 def test_ollama_editor_sends_only_bounded_draft_and_each_fixed_goal(
     monkeypatch,
     settings,
@@ -5096,6 +5364,8 @@ def test_ollama_editor_sends_only_bounded_draft_and_each_fixed_goal(
     assert grammar_payload["stream"] is False
     assert grammar_payload["system"].startswith("Correct grammar only.")
     assert clarity_payload["system"].startswith("Improve clarity only.")
+    assert "Do not rephrase or simplify." in grammar_payload["system"]
+    assert "You may restructure sentences" in clarity_payload["system"]
     assert grammar_payload["system"] != clarity_payload["system"]
     assert grammar_request.full_url == "https://ollama.test/api/generate"
     assert grammar_request.get_method() == "POST"
@@ -5114,6 +5384,7 @@ def test_ollama_editor_sends_only_bounded_draft_and_each_fixed_goal(
     assert "ollama_test_synthetic_key" not in caplog.text
 
 
+# WHY: Checks that ollama form and editor reject invalid input before provider call so a future change cannot quietly break it.
 def test_ollama_form_and_editor_reject_invalid_input_before_provider_call(
     monkeypatch,
     settings,
@@ -5159,11 +5430,18 @@ def test_ollama_form_and_editor_reject_invalid_input_before_provider_call(
     assert get_edited_message_draft_suggestion("Draft", "write_reply") is None
     settings.OLLAMA_API_URL = "http://ollama.test/api/generate"
     assert get_edited_message_draft_suggestion("Draft", "fix_grammar") is None
+    settings.OLLAMA_API_URL = "http://127.0.0.1:11434/api/generate"
+    settings.OLLAMA_API_KEY = ""
+    assert get_edited_message_draft_suggestion("Draft", "fix_grammar") is None
+    local_request = fake_request.calls[0][0][0]
+    assert local_request.full_url == "http://127.0.0.1:11434/api/generate"
+    assert local_request.get_header("Authorization") is None
     settings.OLLAMA_API_URL = "https://user:password@ollama.test/api/generate"
     assert get_edited_message_draft_suggestion("Draft", "fix_grammar") is None
-    assert fake_request.calls == []
+    assert len(fake_request.calls) == 1
 
 
+# WHY: Checks that ollama timeout and invalid outputs preserve draft without logs so a future change cannot quietly break it.
 def test_ollama_timeout_and_invalid_outputs_preserve_draft_without_logs(
     monkeypatch,
     settings,
@@ -5212,6 +5490,7 @@ def test_ollama_timeout_and_invalid_outputs_preserve_draft_without_logs(
     assert "ollama_test_synthetic_key" not in caplog.text
 
 
+# WHY: Checks that ollama http requires csrf preserves draft then uses manual send so a future change cannot quietly break it.
 def test_ollama_http_requires_csrf_preserves_draft_then_uses_manual_send(
     monkeypatch,
     caplog,
@@ -5225,12 +5504,13 @@ def test_ollama_http_requires_csrf_preserves_draft_then_uses_manual_send(
     original_draft = "  this are the original private draft  "
     suggestion = "This is the suggested <script>plain text</script> draft."
 
+    # WHY: Keeps the return suggestion steps in one named place so they can be understood, checked, and reused.
     def return_suggestion(draft, editing_goal):
         edit_calls.append((draft, editing_goal))
         return suggestion
 
     monkeypatch.setattr(
-        "kindlelise.views.get_edited_message_draft_suggestion",
+        "kindlelise.views.messages.get_edited_message_draft_suggestion",
         return_suggestion,
     )
     client = Client(enforce_csrf_checks=True)
@@ -5286,6 +5566,7 @@ def test_ollama_http_requires_csrf_preserves_draft_then_uses_manual_send(
     assert stored_message.body == suggestion
 
 
+# WHY: Checks that ollama http refuses invalid or unauthorised requests without provider call so a future change cannot quietly break it.
 def test_ollama_http_refuses_invalid_or_unauthorised_requests_without_provider_call(
     monkeypatch,
 ):
@@ -5301,12 +5582,13 @@ def test_ollama_http_refuses_invalid_or_unauthorised_requests_without_provider_c
     unverified_conversation = create_test_conversation(unverified, recipient)
     provider_calls = []
 
+    # WHY: Keeps the record provider call steps in one named place so they can be understood, checked, and reused.
     def record_provider_call(draft, editing_goal):
         provider_calls.append((draft, editing_goal))
         return "Must never be returned"
 
     monkeypatch.setattr(
-        "kindlelise.views.get_edited_message_draft_suggestion",
+        "kindlelise.views.messages.get_edited_message_draft_suggestion",
         record_provider_call,
     )
     edit_url = reverse(
@@ -5362,6 +5644,7 @@ def test_ollama_http_refuses_invalid_or_unauthorised_requests_without_provider_c
     assert sender_profile.is_verified
 
 
+# WHY: Checks that ollama provider failure returns quiet error without sending so a future change cannot quietly break it.
 def test_ollama_provider_failure_returns_quiet_error_without_sending(
     monkeypatch,
 ):
@@ -5371,7 +5654,7 @@ def test_ollama_provider_failure_returns_quiet_error_without_sending(
     create_verified_test_profile(user=recipient)
     conversation = create_test_conversation(sender, recipient)
     monkeypatch.setattr(
-        "kindlelise.views.get_edited_message_draft_suggestion",
+        "kindlelise.views.messages.get_edited_message_draft_suggestion",
         lambda draft, editing_goal: None,
     )
     client = Client()
@@ -5393,6 +5676,7 @@ def test_ollama_provider_failure_returns_quiet_error_without_sending(
     assert not Message.objects.filter(conversation=conversation).exists()
 
 
+# WHY: Checks that authenticated interface has accessible primary navigation and errors so a future change cannot quietly break it.
 def test_authenticated_interface_has_accessible_primary_navigation_and_errors():
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -5431,6 +5715,7 @@ def test_authenticated_interface_has_accessible_primary_navigation_and_errors():
     assert 'id="id_display_name_error"' in invalid_html
 
 
+# WHY: Checks that list page query counts stay constant from five to fifty rows so a future change cannot quietly break it.
 def test_list_page_query_counts_stay_constant_from_five_to_fifty_rows():
     viewer = create_test_user()
     reviewer = create_test_user(is_staff=True)
@@ -5438,6 +5723,7 @@ def test_list_page_query_counts_stay_constant_from_five_to_fifty_rows():
     client = Client()
     client.force_login(viewer)
 
+    # WHY: Keeps the add visible rows steps in one named place so they can be understood, checked, and reused.
     def add_visible_rows(first_number, last_number):
         user_model = get_user_model()
         accounts = user_model.objects.bulk_create(
@@ -5484,6 +5770,7 @@ def test_list_page_query_counts_stay_constant_from_five_to_fifty_rows():
             ]
         )
 
+    # WHY: Keeps the page query counts steps in one named place so they can be understood, checked, and reused.
     def page_query_counts():
         counts = []
         for route_name in ("discover", "plan_list", "inbox"):
@@ -5501,6 +5788,7 @@ def test_list_page_query_counts_stay_constant_from_five_to_fifty_rows():
     assert five_row_counts == fifty_row_counts
 
 
+# WHY: Checks that subscription identifier constraints and access helper so a future change cannot quietly break it.
 def test_subscription_identifier_constraints_and_access_helper():
     first_user = create_test_user()
     second_user = create_test_user()
@@ -5543,6 +5831,7 @@ def test_subscription_identifier_constraints_and_access_helper():
     PlatformSubscription.objects.create(user=third_user)
 
 
+# WHY: Checks that webhook event identifier constraint so a future change cannot quietly break it.
 def test_webhook_event_identifier_constraint():
     values = {
         "stripe_event_id": "evt_test_unique",
@@ -5555,6 +5844,7 @@ def test_webhook_event_identifier_constraint():
         StripeWebhookReceipt.objects.create(**values)
 
 
+# WHY: Checks that mapped non unique indexes exist so a future change cannot quietly break it.
 def test_mapped_non_unique_indexes_exist():
     expected_indexes = {
         Profile._meta.db_table: {"profile_verified_area_idx"},
@@ -5583,6 +5873,7 @@ def test_mapped_non_unique_indexes_exist():
             assert expected_names <= actual_names
 
 
+# WHY: Checks that foreign key deletion contracts are explicit so a future change cannot quietly break it.
 def test_foreign_key_deletion_contracts_are_explicit():
     assert Profile._meta.get_field("user").remote_field.on_delete is models.CASCADE
     assert Profile._meta.get_field("verified_by").remote_field.on_delete is models.PROTECT

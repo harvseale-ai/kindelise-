@@ -1,8 +1,8 @@
-# Kindlelise 36-File Vertical Slice
+# Kindelise 36-File Vertical Slice
 
 ## 1. Purpose
 
-This document is the implementation boundary for a student-scale Kindlelise MVP.
+This document is the implementation boundary for a student-scale Kindelise MVP.
 It describes the smallest system that can be built, tested, demonstrated and
 explained clearly within the project period.
 
@@ -32,7 +32,7 @@ an implementation source for this vertical slice.
 
 The implementation should be defended in these terms:
 
-> Kindlelise deliberately replaces production-scale location, meeting-evidence
+> Kindelise deliberately replaces production-scale location, meeting-evidence
 > and workflow systems with broad areas, manual profile verification and bounded
 > public-place metadata assistance. Stripe and
 > Ollama Cloud are narrow integrations. The implemented journey is small enough
@@ -166,7 +166,7 @@ the stable-key and explicit-nearby-map rules remain unchanged.
 - The URL must identify an independently established public place or organised
   activity. A dropped map pin, residential address, payment link or personal
   social post cannot be approved as the primary meeting evidence.
-- Kindlelise does not preserve the fetched page, prove that the venue is safe or
+- Kindelise does not preserve the fetched page, prove that the venue is safe or
   guarantee that the external page will not later change.
 - Only approved future plans appear in the public plan list and accept joins.
 - The first successful join makes the entire plan read-only except cancellation.
@@ -193,26 +193,21 @@ the stable-key and explicit-nearby-map rules remain unchanged.
 
 - One subscription product and one configured recurring Stripe price of GBP 499
   (£4.99) per year.
-- Each local account may receive one 30-day Premium trial. Trial eligibility is
-  exhausted once that account has a recorded Stripe customer or subscription;
-  cancelling and starting again never creates a second trial.
-- Stripe-hosted Checkout starts the subscription with
-  `payment_method_collection=if_required`, `trial_period_days=30` and
-  `trial_settings.end_behavior.missing_payment_method=create_invoice` for a
-  trial-eligible account. This does not require payment details before the trial.
-- A later eligible Checkout for an account with Stripe history uses the same
-  annual price without another trial. An existing `active` or `trialing`
-  subscription cannot be duplicated and is managed through the portal instead.
-- At trial end Stripe creates the first GBP 4.99 annual invoice. Stripe's hosted
-  invoice and customer-portal surfaces request and manage payment; Kindlelise
-  does not render a local card form or promise that an email is sent unless the
+- Stripe-hosted Checkout collects the first GBP 4.99 annual payment immediately;
+  Kindelise does not create a Stripe trial.
+- A later eligible Checkout for an account with Stripe history reuses the known
+  customer. An existing `active` or legacy `trialing` subscription cannot be
+  duplicated and is managed through the portal instead.
+- Stripe's hosted invoice and customer-portal surfaces manage later payments;
+  Kindelise does not render a local card form or promise that an email is sent unless the
   applicable Stripe email setting is enabled.
 - The paid subscription renews yearly at GBP 4.99 unless it is cancelled through
   Stripe's hosted customer portal.
 - Stripe's hosted customer portal handles cancellation and payment management.
 - A verified webhook is authoritative for local premium access.
-- Only `checkout.session.completed`, `customer.subscription.updated`,
-  `invoice.paid` and `customer.subscription.deleted` are handled.
+- Only `checkout.session.completed`, `customer.subscription.created`,
+  `customer.subscription.updated`, `invoice.paid` and
+  `customer.subscription.deleted` are handled.
 - Checkout completion records the Stripe customer and subscription identifiers;
   a trialing update grants trial access, a paid invoice grants the paid service
   period, and subscription deletion removes access.
@@ -227,7 +222,7 @@ the stable-key and explicit-nearby-map rules remain unchanged.
   `active` subscription and a future paid service-period end stored as
   `access_until`. An unpaid, `past_due`, `unpaid`, expired or otherwise
   ineligible state denies Premium.
-- No card or bank details are stored by Kindlelise.
+- No card or bank details are stored by Kindelise.
 
 ### Ollama Cloud message editing
 
@@ -288,10 +283,10 @@ authorise new product responsibilities. The current map uses 34 of the permitted
 14  kindlelise/models.py
 15  kindlelise/forms.py
 16  kindlelise/policies.py
-17  kindlelise/services.py
+17  kindlelise/services/ (accounts, plans, messages, safety, billing, stripe_events)
 18  kindlelise/plan_metadata.py
 19  kindlelise/selectors.py
-20  kindlelise/views.py
+20  kindlelise/views/ (accounts, discovery, plans, messages, safety, billing, common)
 21  kindlelise/urls.py
 22  kindlelise/ai_message_editor.py
 23  kindlelise/migrations/__init__.py
@@ -323,7 +318,7 @@ Models must not import views, forms, selectors, services or provider clients.
 
 ## 6. Small durable model
 
-The MVP uses ten Kindlelise models plus Django's existing `User` model:
+The MVP uses eleven Kindelise models plus Django's existing `User` model:
 
 | Entity | Durable purpose |
 | --- | --- |
@@ -333,12 +328,13 @@ The MVP uses ten Kindlelise models plus Django's existing `User` model:
 | `Participation` | One user's current or ended participation in one plan. |
 | `Conversation` | The unique unordered relationship between two users. |
 | `Message` | One plain-text message sent inside a conversation. |
+| `Notification` | One private incoming-message or owned-plan-join alert. |
 | `Block` | One directional block; policy treats either direction as exclusion. |
 | `Report` | A private user statement about another user with an optional plan, conversation or message reference. |
 | `PlatformSubscription` | Minimal local projection of one Stripe subscription. |
 | `StripeWebhookReceipt` | Unique processed Stripe event ID and ordering timestamp. |
 
-Django's existing `User` supplies the eleventh durable entity; Kindlelise must not
+Django's existing `User` supplies the twelfth durable entity; Kindelise must not
 create a replacement account model for this slice.
 
 The `Profile.interests` relation uses Django's automatic many-to-many join table.
@@ -355,6 +351,7 @@ behaviour.
 | `Participation` | `plan`, `user`, `status[joined\|left]`, `joined_at`, `left_at` |
 | `Conversation` | `first_user`, `second_user`, `updated_at` |
 | `Message` | `conversation`, `sender`, `body`, `sent_at` |
+| `Notification` | `recipient`, `kind[message\|plan_join]`, matching message/participation context, `created_at`, nullable `read_at` |
 | `Block` | `blocker`, `blocked_user` |
 | `Report` | `reporter`, `reported_user`, `category`, `description`, one optional plan/conversation/message FK, `status[received\|reviewed]`, `received_at` |
 | `PlatformSubscription` | `user`, nullable `stripe_customer_id`, nullable `stripe_subscription_id`, nullable `stripe_status`, nullable `access_until`, nullable `latest_provider_event_at`, `updated_at` |
@@ -477,10 +474,9 @@ Application invariants must enforce:
   metadata or an existing unique Stripe-ID link; customer email is never used.
 - A Stripe customer or subscription ID already linked to another account is
   rejected rather than reassigned.
-- The configured Stripe price is one GBP 499 yearly recurring price. A first
-  completed subscription Checkout may apply exactly 30 trial days without
-  upfront payment details; any later Checkout for that local account omits the
-  trial, and an existing active or trialing subscription is not duplicated.
+- The configured Stripe price is one GBP 499 yearly recurring price. Checkout
+  collects the first annual payment immediately, and an existing active or
+  legacy trialing subscription is not duplicated.
 - Duplicate Stripe events are harmless because the event ID is unique.
 - Older Stripe events cannot overwrite a newer accepted subscription state.
 - Because Stripe delivers related event types asynchronously, a delayed
@@ -488,9 +484,9 @@ Application invariants must enforce:
   only while the linked subscription remains active and has not been revoked or
   made ineligible by a newer event. It never rewinds status or revives a
   cancelled subscription.
-- `checkout.session.completed` stores identifiers only. A newer
-  `customer.subscription.updated` supplies status but grants or extends access
-  only for a trialing period. A verified `invoice.paid` supplies the paid annual
+- `checkout.session.completed` stores identifiers only. Subscription created and
+  updated events preserve supported provider status, including legacy trialing
+  periods. A verified `invoice.paid` supplies the paid annual
   service-period end; `customer.subscription.deleted` removes access.
 - Subscription deletion retains the stored Stripe customer and subscription IDs
   for safe event matching and customer-portal ownership.
@@ -566,7 +562,7 @@ fields, constraints or an already mapped service cannot do the job more simply.
 - `KindleliseUserAdmin` — Extend Django's existing User change page with a
   form-only `Profile verified` checkbox in Permissions. Show and accept the
   control only for staff who have both Django User change permission and
-  Kindlelise Profile change permission. On save, recheck that the related
+  Kindelise Profile change permission. On save, recheck that the related
   profile has a non-empty display name and configured broad-area key before
   verification; record the requesting staff account/time when checked and clear
   all three verification fields when unchecked. Do not add a custom admin URL,
@@ -607,6 +603,7 @@ Model classes:
 - `Conversation` — Stores two accounts once, with the lower account ID first.
 - `Message` — Stores one bounded plain-text message; templates escape it when
   rendering.
+- `Notification` — Stores one private incoming-message or owned-plan-join alert.
 - `Block` — Stores a directional block.
 - `Report` — Stores a private statement and at most one optional plan,
   conversation or message reference.
@@ -695,7 +692,7 @@ Form classes:
 Policy functions return decisions only. They do not redirect, write, send,
 notify or call Stripe or Ollama.
 
-### `kindlelise/services.py`
+### `kindlelise/services/`
 
 - `create_account_and_profile(new_account_details)` — Create one Django account
   and its empty unverified profile in one transaction so neither record remains if
@@ -740,11 +737,9 @@ notify or call Stripe or Ollama.
 - `start_stripe_subscription_checkout(user, success_url, cancel_url)` — Create
   one Stripe-hosted subscription Checkout session for the configured premium
   GBP 499 yearly price, set the immutable local user ID in
-  `client_reference_id` and subscription metadata, and apply exactly 30 trial
-  days with payment-method collection only if required and missing-payment-method
-  invoice creation only when the account has no recorded Stripe history. Omit
-  the trial for any later eligible Checkout, refuse a duplicate active or
-  trialing subscription, accept only success and cancellation URLs already
+  `client_reference_id` and subscription metadata, collect the first annual
+  payment immediately, reuse a recorded customer, refuse a duplicate active or
+  legacy trialing subscription, accept only success and cancellation URLs already
   constructed by the view from the named local account route, and return its URL
   without granting premium access locally.
 - `open_stripe_customer_portal(user, return_url)` — Create a hosted portal session
@@ -806,7 +801,7 @@ not render templates or trust IDs supplied by a browser.
 Selectors only read. They do not change database records, repair state or call
 Stripe or Ollama.
 
-### `kindlelise/views.py`
+### `kindlelise/views/`
 
 - `home_page(request)` — Redirect an authenticated verified account to discovery,
   an authenticated unverified account to its private account page and an
@@ -1041,7 +1036,7 @@ webhook receipt identity or expose report text to users.
 
 #### 14 — `kindlelise/models.py`
 
-Own the ten Kindlelise model classes, fields, relationships, constraints, indexes
+Own the ten Kindelise model classes, fields, relationships, constraints, indexes
 and four read-only helpers mapped above. It must not contain HTTP, provider calls,
 multi-step workflows or any deferred entity.
 
@@ -1055,10 +1050,12 @@ input but do not save cross-model workflows or expose staff-controlled fields.
 Own the eight mapped permission functions. Every rule is server-side, deny-by-
 default and independent of template visibility.
 
-#### 17 — `kindlelise/services.py`
+#### 17 — `kindlelise/services/`
 
-Own the fourteen mapped state-changing workflows. Use short transactions for
-database work; no network call may run inside a database transaction.
+Own the fifteen mapped state-changing workflows. The package separates account,
+plan, message, safety, browser-facing billing and verified Stripe-event work while
+keeping the public imports stable. Use short transactions for database work; no
+network call may run inside a database transaction.
 
 #### 18 — `kindlelise/plan_metadata.py`
 
@@ -1068,16 +1065,18 @@ provider reads outside database transactions.
 
 #### 19 — `kindlelise/selectors.py`
 
-Own the nine mapped read operations. Apply each selector's mapped authorisation
+Own the eleven mapped read operations. Apply each selector's mapped authorisation
 before presentation. Discovery and messaging selectors enforce block exclusions;
 the report-target selector deliberately does not, because blocking cannot suppress
 private reporting.
 
-#### 20 — `kindlelise/views.py`
+#### 20 — `kindlelise/views/`
 
-Own the twenty-eight mapped HTTP adapters. Use login protection, POST for changes,
-CSRF protection, generic not-found responses where disclosure matters and Django
-messages for understandable feedback.
+Own the thirty-one mapped HTTP adapters. The package separates account, discovery,
+plan, message, safety and billing pages while `common.py` holds only the small
+presentation helpers shared between those page groups. Use login protection, POST
+for changes, CSRF protection, generic not-found responses where disclosure matters
+and Django messages for understandable feedback.
 
 #### 21 — `kindlelise/urls.py`
 
@@ -1277,11 +1276,9 @@ Stripe
 - invalid signatures are rejected before processing
 - unsupported signed events create no receipt and do not change access
 - duplicate event IDs are harmless
-- Checkout uses the configured GBP 499 yearly price; a first eligible Checkout
-  applies exactly 30 trial days, does not require upfront payment details and
-  creates the annual invoice when the trial ends without a payment method
-- the same local account never receives a second trial, and an active or trialing
-  subscription cannot be duplicated
+- Checkout uses the configured GBP 499 yearly price and collects payment
+  immediately without creating a trial
+- an active or legacy trialing subscription cannot be duplicated
 - checkout stores customer/subscription IDs but never grants premium
 - checkout and subscription metadata map to immutable local user ID, never email
 - Stripe IDs already linked to another account are rejected
@@ -1335,9 +1332,9 @@ test should assert a production-scale design that is not implemented.
 This authoritative boundary: scope, ownership, public function map, constraints,
 tests and change process.
 
-#### `doc_old/WIREFRAMES.md` (archived reference)
+#### `_achive/doc_old/WIREFRAMES.md` (archived reference)
 
-Map the reference screenshots into original Kindlelise pages and states. It may
+Map the reference screenshots into original Kindelise pages and states. It may
 describe navigation and visible controls but cannot create backend requirements
 outside this document.
 
@@ -1347,27 +1344,22 @@ Record approved decisions with date, reason, alternatives and consequences.
 Record rejected expansion requests too, so removed complexity does not return by
 accident.
 
-#### `docs/IMPLEMENTATION_PLAN.md`
+#### `_achive/doc_old/IMPLEMENTATION_PLAN.md` (archived)
 
-Define the approved build sequence, phase dependencies, exit gates, runtime
-verification and assessment-evidence requirements. It cannot change scope or
-claim completion without the evidence required by the vertical slice.
+Retains the approved build sequence, phase dependencies, exit gates, runtime
+verification and assessment-evidence requirements used during implementation.
+It is historical and cannot change current scope or completion status.
 
-#### `docs/IMPLEMENTATION_PROGRESS.md`
+#### `_achive/doc_old/IMPLEMENTATION_PROGRESS.md` (archived)
 
-Record only the mutable State and Evidence values for the phases defined by the
-implementation plan. It is a supporting governance document outside the
-implementation-file count. It cannot add work, redefine a phase, weaken an exit
-gate or claim completion without the plan's required evidence.
+Retains the historical State and Evidence values recorded during implementation.
+It cannot add work, redefine a phase or represent current project status.
 
-#### `docs/MASTER_INSTRUCTION_PROMPT.md`
+#### `_achive/doc_old/MASTER_INSTRUCTION_PROMPT.md` (archived)
 
-Provide one reusable pass-start instruction derived from this vertical slice so
-architecture, data-model, decision, implementation, test, interface and runtime
-passes apply the same authority and guardrails. It is a supporting governance
-document outside the implementation-file count, not a second specification. It
-cannot approve a boundary change, and this vertical slice wins if the prompt is
-stale, incomplete or inconsistent.
+Retains the reusable pass-start instruction used during implementation. Its
+recorded checksum is stale, so it is historical rather than a current governing
+instruction. This vertical slice remains the implementation authority.
 
 ## 10. Main route flow
 
@@ -1402,7 +1394,7 @@ Each stage must work before the next integration is added.
 
 ## 12. Future production work
 
-If Kindlelise progresses beyond assessment, future design may revisit:
+If Kindelise progresses beyond assessment, future design may revisit:
 
 - Privacy-preserving proximity calculations instead of broad named areas.
 - Versioned URL evidence, safe server retrieval and formal anchor decisions.

@@ -1,3 +1,28 @@
+/* ==========================================================================
+   KINDELISE STYLESHEET MAP
+   01. Colours and page foundations
+   02. Shared header, navigation and page frame
+   03. Shared controls, forms and feedback
+   04. Discovery page
+   05. Profile and plan forms
+   06. Messages and conversations
+   07. Profiles, plan details, notifications and guide
+   08. Plans list and cards
+   09. Colour themes and reduced motion
+   ========================================================================== */
+
+/* # KEYWORD: selector — names the page element or group that the following appearance rules affect. */
+/* # KEYWORD: custom property — a reusable colour or size name beginning with -- so related rules stay matched. */
+/* # KEYWORD: media query — applies its rules only when the screen meets the stated size. */
+/* # KEYWORD: pseudo-class — a selector part such as :hover or :checked that describes an element's current state. */
+/* # KEYWORD: :root — represents the whole page and provides one place for values used everywhere. */
+/* # KEYWORD: var() — reads one of the reusable custom-property values defined for the current colour theme. */
+
+/* ==========================================================================
+   01. COLOURS AND PAGE FOUNDATIONS
+   ========================================================================== */
+
+/* # WHY: Defines the shared colours once so every page and selectable colour theme stays consistent. */
 :root {
   color-scheme: dark;
   --ink: #f3f3f5;
@@ -10,54 +35,65 @@
   --border: #3c3c46;
   --danger: #ffaaaa;
   --focus: #ffd166;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
+/* # WHY: Each optional theme changes only shared colours, allowing every component rule to be reused. */
 :root[data-theme="blue"] {
-  --ink: #eef6ff;
-  --muted: #9eb5cf;
-  --page: #07111f;
-  --surface: #0d1a2b;
-  --soft: #14263c;
-  --accent: #b7d8ff;
-  --accent-strong: #244a73;
-  --border: #365d86;
-  --focus: #78b9ff;
-}
-:root[data-theme="pink"] {
-  --ink: #fff1f8;
-  --muted: #d2a6bc;
-  --page: #190a13;
-  --surface: #25101d;
-  --soft: #351629;
-  --accent: #ffc2de;
-  --accent-strong: #6b2c4b;
-  --border: #82405f;
-  --focus: #ff8fc1;
-}
-:root[data-theme="green"] {
-  --ink: #eefaf3;
-  --muted: #a4c7b3;
-  --page: #07130d;
-  --surface: #0d2117;
-  --soft: #153322;
-  --accent: #b5e2c6;
-  --accent-strong: #275b3c;
-  --border: #39734f;
-  --focus: #76c995;
+  --ink: #f4f6f8;
+  --muted: #aeb9c5;
+  --page: #0d1117;
+  --surface: #141a22;
+  --soft: #1c2530;
+  --accent: #c4d5e7;
+  --accent-strong: #34485d;
+  --border: #495a6d;
+  --focus: #a8c7e8;
 }
 
+:root[data-theme="pink"] {
+  --ink: #f8f3f5;
+  --muted: #c2afb8;
+  --page: #151012;
+  --surface: #1d171a;
+  --soft: #292126;
+  --accent: #e7c5d3;
+  --accent-strong: #59404b;
+  --border: #69525d;
+  --focus: #e4b7c9;
+}
+
+:root[data-theme="green"] {
+  --ink: #f2f7f4;
+  --muted: #adc0b5;
+  --page: #0f1411;
+  --surface: #171d19;
+  --soft: #212a24;
+  --accent: #c3d9ca;
+  --accent-strong: #3f5547;
+  --border: #53665a;
+  --focus: #acd0b8;
+}
+
+/* # KEYWORD: universal selector (*) — matches every element on the page. */
+/* # WHY: Includes padding and borders inside declared widths so component measurements stay predictable. */
 * { box-sizing: border-box; }
+/* # WHY: Stops the layout shrinking below a practical small-phone width. */
 html { min-width: 20rem; }
 
+/* # WHY: Establishes shared page colours, readable spacing and Apple-style system font rendering. */
 body {
   margin: 0;
   background: var(--page);
   color: var(--ink);
   line-height: 1.5;
   overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
+/* # KEYWORD: :focus-visible — appears when the browser decides a keyboard-style focus mark is needed. */
+/* # WHY: Gives keyboard users a clear focus mark without adding a permanent outline to every control. */
 a { color: var(--accent); }
 a:focus-visible,
 button:focus-visible,
@@ -69,7 +105,10 @@ summary:focus-visible {
   outline-offset: 3px;
 }
 
+/* # KEYWORD: attribute selector — square brackets select elements carrying the named HTML attribute. */
+/* # WHY: Ensures HTML's hidden state always wins over a component's normal display rule. */
 [hidden] { display: none !important; }
+/* # WHY: Keeps helpful labels available to screen readers while removing them from the visual layout. */
 .visually-hidden {
   position: absolute !important;
   width: 1px !important;
@@ -82,6 +121,7 @@ summary:focus-visible {
   border: 0 !important;
 }
 
+/* # WHY: Keeps the keyboard shortcut off-screen until focused, then places it above the page. */
 .skip-link {
   position: fixed;
   left: 1rem;
@@ -94,6 +134,12 @@ summary:focus-visible {
 }
 .skip-link:focus { top: 1rem; }
 
+/* ==========================================================================
+   02. SHARED HEADER, NAVIGATION AND PAGE FRAME
+   ========================================================================== */
+
+/* # KEYWORD: env() — reads safe screen space reserved by a phone around controls such as its home indicator. */
+/* # WHY: Keeps the brand and useful shortcuts visible while the main page moves underneath them. */
 .site-header {
   position: sticky;
   top: 0;
@@ -114,6 +160,7 @@ summary:focus-visible {
   font-weight: 800;
   text-decoration: none;
 }
+/* # WHY: Keeps the colour, create-plan, guide and notification controls aligned as one top-bar group. */
 .site-context { display: inline-flex; align-items: center; gap: 1rem; color: var(--muted); font-size: .8rem; text-align: right; }
 .site-context a,
 .site-theme-toggle { display: inline-flex; color: inherit; }
@@ -125,6 +172,7 @@ summary:focus-visible {
   background: transparent;
 }
 .site-theme-toggle:hover { background: transparent; color: var(--ink); }
+/* # WHY: Anchors the unread count to the notification bell rather than using extra header space. */
 .site-notification-link { position: relative; }
 .site-notification-count {
   min-width: 1.1rem;
@@ -142,8 +190,9 @@ summary:focus-visible {
   font-weight: 800;
   line-height: 1;
 }
-.quiet-link, .back-link { font-weight: 700; }
+.back-link { font-weight: 700; }
 
+/* # WHY: Keeps the four main destinations within reach without changing their shape between pages. */
 .primary-navigation {
   position: fixed;
   right: auto;
@@ -180,8 +229,8 @@ summary:focus-visible {
   color: var(--ink);
 }
 
+/* # WHY: Provides the shared page width, temporary notices, and connection warning. */
 .page-shell,
-.site-footer,
 .messages,
 .connection-status {
   width: min(100% - 2rem, 48rem);
@@ -191,12 +240,9 @@ summary:focus-visible {
   margin-block: 1.5rem 2rem;
   padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
-.site-footer {
-  margin-block: 2rem calc(5rem + env(safe-area-inset-bottom));
-  color: var(--muted);
-  font-size: .875rem;
-}
+/* # WHY: Leaves room for the fixed navigation so footer text never sits underneath it. */
 .messages, .connection-status { margin-top: 1rem; }
+/* # WHY: Turns Django messages into temporary top-right notices instead of moving page content. */
 .messages {
   position: fixed;
   top: 1rem;
@@ -206,6 +252,7 @@ summary:focus-visible {
   margin: 0;
   pointer-events: none;
 }
+/* # WHY: Gives loss of connection a distinct warning separate from normal success and error messages. */
 .connection-status {
   padding: .85rem 1rem;
   border: 1px solid var(--focus);
@@ -214,6 +261,11 @@ summary:focus-visible {
   color: #fff3c6;
 }
 
+/* ==========================================================================
+   03. SHARED CONTROLS, FORMS AND FEEDBACK
+   ========================================================================== */
+
+/* # WHY: Gives ordinary panels and profile images the same surface, border, and corner treatment. */
 .card {
   min-width: 0;
   background: var(--surface);
@@ -222,7 +274,6 @@ summary:focus-visible {
   padding: clamp(1.1rem, 4vw, 2rem);
   box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .22);
 }
-.auth-card { max-width: 31rem; margin-inline: auto; }
 .profile-image {
   display: block;
   width: 6rem;
@@ -232,7 +283,7 @@ summary:focus-visible {
   border-radius: 50%;
   object-fit: cover;
 }
-.discovery-grid .profile-image { width: 4rem; height: 4rem; }
+/* # WHY: Keeps small section labels visibly separate from primary page headings. */
 .eyebrow {
   margin: 0 0 .25rem;
   color: var(--accent);
@@ -244,7 +295,8 @@ summary:focus-visible {
 h1 { margin: 0 0 1rem; font-size: clamp(1.8rem, 7vw, 2.5rem); line-height: 1.1; }
 h2 { margin: 1.75rem 0 .6rem; font-size: 1.15rem; }
 
-form p, .form-row { margin: 1rem 0; }
+/* # WHY: Gives every basic form a usable starting layout before a page adds specific styling. */
+form p { margin: 1rem 0; }
 label { display: block; margin-bottom: .35rem; font-weight: 700; }
 input, select, textarea {
   width: 100%;
@@ -257,6 +309,7 @@ input, select, textarea {
   font: inherit;
 }
 textarea { min-height: 7rem; resize: vertical; }
+/* # WHY: Keeps checkboxes compact instead of inheriting the full width of text fields. */
 input[type="checkbox"] { width: 1.4rem; min-height: 1.4rem; margin: 0; accent-color: var(--accent-strong); }
 select[multiple] { min-height: 10rem; }
 .interest-fieldset, .area-fieldset { margin-block: 1rem; }
@@ -281,12 +334,18 @@ select[multiple] { min-height: 10rem; }
 }
 .interest-checkboxes input[type="checkbox"],
 .area-checkboxes input[type="checkbox"] { flex: 0 0 auto; }
+/* # KEYWORD: :has() — selects a parent when a matching element exists inside it. */
+/* # WHY: Lets the whole choice row show its selected state, not only the small checkbox. */
 .interest-checkboxes label:has(input:checked),
 .area-checkboxes label:has(input:checked) {
   border-color: var(--accent);
   background: var(--accent-strong);
   color: #fff;
 }
+
+/* --- Discovery filter controls shared by desktop and mobile layouts ---------- */
+
+/* # WHY: Keeps every filter reachable on a narrow screen by scrolling one tidy horizontal row. */
 .filter-pill-scroller {
   width: 100%;
   max-width: 100%;
@@ -331,6 +390,7 @@ select[multiple] { min-height: 10rem; }
   background: var(--accent-strong);
   color: #fff;
 }
+/* # WHY: Separates an open filter from both the filter row and the results below it. */
 .discovery-filter-panel {
   width: 100%;
   margin-top: .85rem;
@@ -341,6 +401,7 @@ select[multiple] { min-height: 10rem; }
   color: var(--ink);
   box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .28);
 }
+/* # WHY: JavaScript adds this class only after it can safely control which panel is visible. */
 .filter-panels-ready .discovery-filter-panel { display: none; }
 .filter-panels-ready .discovery-filter-panel.is-active { display: block; }
 .discovery-filter-panel > fieldset {
@@ -350,6 +411,8 @@ select[multiple] { min-height: 10rem; }
 .availability-filter-fieldset .checkbox-row { margin: 0; }
 .checkbox-row { display: flex; align-items: center; gap: .65rem; min-height: 2.75rem; }
 .checkbox-row label { margin: 0; }
+/* # KEYWORD: appearance — removes the browser's standard control drawing so the site can draw a switch. */
+/* # WHY: Shows availability as a clear on-and-off switch without changing the checkbox's saved value. */
 .toggle-row input[type="checkbox"],
 .availability-toggle {
   appearance: none;
@@ -388,16 +451,21 @@ select[multiple] { min-height: 10rem; }
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* --- Form guidance, actions and saved-state feedback ------------------------- */
+
+/* # WHY: Keeps guidance quieter than labels while keeping errors visible and free of list bullets. */
 .helptext { display: block; color: var(--muted); font-size: .875rem; margin-top: .25rem; font-weight: 400; }
 .helptext ul { padding-left: 1.25rem; }
 .errorlist, .error-summary { color: var(--danger); font-weight: 700; }
-.errorlist { padding-left: 1.25rem; }
-.error-summary { border-left: .25rem solid var(--danger); padding: .75rem 1rem; background: #361d1d; }
+.errorlist { padding-left: 0; list-style: none; }
+.error-summary { padding: .75rem 1rem; background: #361d1d; }
 
 button, .button, summary {
   min-height: 2.75rem;
   touch-action: manipulation;
 }
+/* # WHY: Gives real buttons and button-shaped links one consistent click target and visual weight. */
 button, .button {
   display: inline-flex;
   align-items: center;
@@ -422,6 +490,8 @@ summary { display: flex; align-items: center; width: fit-content; cursor: pointe
 fieldset { margin-block: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: .7rem; }
 legend { padding-inline: .35rem; font-weight: 750; }
 
+/* # KEYWORD: @keyframes — describes the starting appearance of a named movement. */
+/* # WHY: Uses one panel shape for page state while allowing temporary messages to enter and leave gently. */
 .message, .state-panel {
   padding: .85rem 1rem;
   border-radius: .65rem;
@@ -442,10 +512,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
 @keyframes message-pop-in {
   from { opacity: 0; transform: translateX(1rem); }
 }
+/* # WHY: Keeps repeated facts, chips and empty states aligned without each page rebuilding their layout. */
 .state-panel p:last-child { margin-bottom: 0; }
-.section-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.account-facts { display: grid; gap: 0; border-block: 1px solid var(--border); }
-.account-facts div,
 .plain-list > li {
   min-width: 0;
   display: flex;
@@ -454,9 +522,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   padding: .85rem 0;
   border-bottom: 1px solid var(--border);
 }
-.account-facts div:last-child, .plain-list > li:last-child { border-bottom: 0; }
-.account-facts dt { color: var(--muted); }
-.account-facts dd { margin: 0; text-align: right; font-weight: 700; }
+.plain-list > li:last-child { border-bottom: 0; }
 .chips, .plain-list { list-style: none; padding: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: .5rem; }
 .chips li { border: 1px solid var(--border); border-radius: 999px; background: var(--soft); padding: .35rem .7rem; }
@@ -466,6 +532,12 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .discovery-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
 .discovery-grid > li { display: block; padding: 1rem; border: 1px solid var(--border); }
 .discovery-grid > .empty-state { grid-column: 1 / -1; }
+
+/* ==========================================================================
+   04. DISCOVERY PAGE
+   ========================================================================== */
+
+/* # WHY: Keeps discovery controls and square profile-image cards within the colours used elsewhere. */
 .discovery-route {
   background: #000;
   color: #f3f3f5;
@@ -500,6 +572,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .discovery-route input[name="available_now"]:checked {
   accent-color: #4fae73;
 }
+/* # KEYWORD: aspect-ratio — keeps width and height in the stated proportion as the grid changes size. */
+/* # WHY: Makes every discovery result a consistent square card regardless of its text length. */
 .discovery-grid > .discovery-profile-card {
   aspect-ratio: 1;
   position: relative;
@@ -512,11 +586,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
   border-radius: 1rem;
   background: #19191e;
 }
-.discovery-profile-card--with-image {
-  background-image: var(--discovery-profile-image);
-  background-position: center;
-  background-size: cover;
-}
+/* # KEYWORD: pseudo-element — ::after creates a decorative layer without adding extra template markup. */
+/* # WHY: Darkens the lower image so names and profile details remain readable over different photos. */
 .discovery-profile-card::after {
   content: "";
   position: absolute;
@@ -560,385 +631,33 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: none;
 }
 
-/* Profile edit visual pass: CSS-only, scoped to /account/profile/edit/. */
-body:has(#edit-profile-title) {
-  background: #000;
-  color: #f3f3f5;
-}
-body:has(#edit-profile-title) .site-footer {
-  display: none;
-}
-.page-shell > .card:has(#edit-profile-title) {
-  --profile-edit-panel: #19191d;
-  --profile-edit-control: #24242a;
-  --profile-edit-line: #303038;
-  --profile-edit-muted: #8f8f9a;
-  --profile-edit-green: #555561;
-  position: relative;
-  isolation: isolate;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: 0;
-  padding: 0 1rem calc(2rem + env(safe-area-inset-bottom));
-  border: 0;
-  border-radius: 0;
-  background: #000;
-  box-shadow: none;
-}
-.page-shell > .card:has(#edit-profile-title)::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: 0 0 auto;
-  height: 8.75rem;
-  border-bottom: 1px solid #202026;
-  background: #111114;
-}
-.page-shell > .card:has(#edit-profile-title) > .back-link {
-  order: 1;
-  width: fit-content;
-  margin: 3.25rem 0 0;
-  color: var(--profile-edit-muted);
-  font-size: .78rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-.page-shell > .card:has(#edit-profile-title) > #edit-profile-title {
-  order: 2;
-  margin: .8rem 0 3.7rem;
-  font-size: 1.2rem;
-  line-height: 1.2;
-}
-.page-shell > .card:has(#edit-profile-title) > p {
-  display: none;
-}
-.page-shell > .card:has(#edit-profile-title) > form {
-  display: contents;
-}
-.page-shell > .card:has(#edit-profile-title) > .profile-image {
-  order: 9;
-  position: absolute;
-  z-index: 2;
-  top: 12.8rem;
-  left: 2rem;
-  width: 4.25rem;
-  height: 4.25rem;
-  margin: 0;
-  border: 1px solid #393943;
-  background: #222229;
-}
-.page-shell > .card:has(#edit-profile-title) form > p:not(.error-summary) {
-  position: relative;
-  margin: 0 0 2.7rem;
-  color: #f3f3f5;
-}
-.page-shell > .card:has(#edit-profile-title) form > p:not(.error-summary) > label:first-child {
-  position: absolute;
-  top: -2rem;
-  left: 0;
-  margin: 0;
-  color: #f3f3f5;
-  font-size: .88rem;
-  font-weight: 750;
-}
-.page-shell > .card:has(#edit-profile-title) form input:not([type="checkbox"]),
-.page-shell > .card:has(#edit-profile-title) form select,
-.page-shell > .card:has(#edit-profile-title) form textarea {
-  border: 1px solid #383842;
-  border-radius: .75rem;
-  background: var(--profile-edit-control);
-  color: #f1f1f4;
-  box-shadow: none;
-}
-.page-shell > .card:has(#edit-profile-title) form input::placeholder,
-.page-shell > .card:has(#edit-profile-title) form textarea::placeholder {
-  color: #72727d;
-}
-.page-shell > .card:has(#edit-profile-title) form .helptext {
-  color: var(--profile-edit-muted);
-  font-size: .72rem;
-  line-height: 1.35;
-}
-.page-shell > .card:has(#edit-profile-title) form .errorlist {
-  margin: 0 0 .65rem;
-  padding: 0;
-  color: #ff6b72;
-  font-size: .72rem;
-  list-style: none;
-}
-.page-shell > .card:has(#edit-profile-title) form > .error-summary {
-  order: 3;
-  margin: -2.5rem 0 3.5rem;
-  border: 1px solid #71343a;
-  border-left: .25rem solid #ff6b72;
-  border-radius: .75rem;
-  background: #261518;
-  color: #ff9aa0;
-  font-size: .8rem;
-}
-
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_profile_image) {
-  order: 10;
-  min-height: 7.4rem;
-  padding: 1.45rem 1rem 1rem 6.4rem;
-  border: 1px solid var(--profile-edit-line);
-  border-radius: .9rem;
-  background: var(--profile-edit-panel);
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_profile_image)::before {
-  content: "";
-  position: absolute;
-  top: 1.55rem;
-  left: 1rem;
-  width: 4.25rem;
-  height: 4.25rem;
-  border: 1px solid #393943;
-  border-radius: 50%;
-  background: radial-gradient(circle at 50% 36%, #3b3b44 0 17%, transparent 18%), linear-gradient(145deg, transparent 48%, #303038 49%);
-}
-.page-shell > .card:has(#edit-profile-title) form #id_profile_image {
-  min-height: 2.2rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--profile-edit-muted);
-  font-size: .72rem;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_profile_image::file-selector-button {
-  display: block;
-  margin: 0 0 .25rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #dedee3;
-  font: inherit;
-  font-size: .84rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_display_name) {
-  order: 20;
-  padding: 2.6rem 1rem 1rem;
-  border: 1px solid var(--profile-edit-line);
-  border-radius: .9rem;
-  background: var(--profile-edit-panel);
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_display_name)::before,
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_biography)::before {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  color: var(--profile-edit-muted);
-  font-size: .76rem;
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_display_name)::before {
-  content: "Display name";
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_biography) {
-  order: 30;
-  padding: 3.55rem 1rem 1rem;
-  border: 1px solid var(--profile-edit-line);
-  border-radius: .9rem;
-  background: var(--profile-edit-panel);
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_biography)::before {
-  content: "Biography\A Tell people a little about yourself.";
-  white-space: pre;
-  line-height: 1.75;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_biography {
-  min-height: 8rem;
-}
-
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_interests) {
-  order: 40;
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_interests) > .helptext {
-  margin: 0 0 .85rem;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_interests.interest-checkboxes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .45rem;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_interests.interest-checkboxes > div {
-  flex: 0 0 auto;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_interests.interest-checkboxes label {
-  min-height: 2.6rem;
-  gap: .4rem;
-  padding: .55rem .9rem;
-  border: 1px solid #3e3e48;
-  border-radius: 999px;
-  background: #050506;
-  color: #9b9ba7;
-  font-size: .76rem;
-  font-weight: 650;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_interests.interest-checkboxes input {
-  appearance: none;
-  width: .85rem;
-  min-height: .85rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_interests.interest-checkboxes input::before {
-  content: "✓";
-  display: block;
-  opacity: 0;
-  color: #161619;
-  font-size: .8rem;
-  line-height: 1;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_interests.interest-checkboxes label:has(input:checked) {
-  border-color: #f3f3f5;
-  background: #f3f3f5;
-  color: #161619;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_interests.interest-checkboxes input:checked::before {
-  opacity: 1;
-}
-
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_broad_area) {
-  order: 50;
-  padding-top: 1.25rem;
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_broad_area)::before {
-  content: "Your broad area helps people discover you. Your exact location and distance are never shown.";
-  display: block;
-  margin: 0 0 .85rem;
-  color: var(--profile-edit-muted);
-  font-size: .72rem;
-  line-height: 1.35;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_broad_area {
-  min-height: 4rem;
-  background-color: var(--profile-edit-panel);
-}
-
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_free_now) {
-  order: 60;
-  min-height: 6.4rem;
-  margin-bottom: 0;
-  padding: 1rem 4.75rem 1rem 1rem;
-  border: 1px solid var(--profile-edit-line);
-  border-bottom: 0;
-  border-radius: .9rem .9rem 0 0;
-  background: var(--profile-edit-panel);
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_free_now) > label:first-child {
-  position: static;
-  color: #dedee3;
-  font-size: .85rem;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_free_now {
-  position: absolute;
-  top: 1.2rem;
-  right: 1rem;
-  border-color: #4b4b55;
-  background: #2b2b32;
-}
-.page-shell > .card:has(#edit-profile-title) form #id_free_now:checked {
-  border-color: #4fae73;
-  background: #4fae73;
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_availability_start) {
-  order: 61;
-  margin-bottom: 2.7rem;
-  padding: 2.8rem 1rem 1rem;
-  border: 1px solid var(--profile-edit-line);
-  border-radius: 0 0 .9rem .9rem;
-  background: var(--profile-edit-panel);
-}
-.page-shell > .card:has(#edit-profile-title) form > p:has(#id_availability_start) > label:first-child {
-  top: 1rem;
-  left: 1rem;
-  color: var(--profile-edit-muted);
-  font-size: .76rem;
-}
-
-.page-shell > .card:has(#edit-profile-title) > .state-panel {
-  order: 80;
-  position: relative;
-  margin: 0 0 1.65rem;
-  padding: 1.15rem 1rem 1.15rem 3.2rem;
-  border: 1px solid var(--profile-edit-line);
-  border-left: 1px solid var(--profile-edit-line);
-  border-radius: .9rem;
-  background: var(--profile-edit-panel);
-  color: #dcdce1;
-}
-.page-shell > .card:has(#edit-profile-title) > .state-panel::before {
-  content: "✓";
-  position: absolute;
-  top: 1.1rem;
-  left: 1rem;
-  width: 1.4rem;
-  height: 1.4rem;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--profile-edit-green);
-  border-radius: 50%;
-  color: var(--profile-edit-green);
-  font-size: .72rem;
-}
-.page-shell > .card:has(#edit-profile-title) > .state-panel strong {
-  font-size: .82rem;
-}
-.page-shell > .card:has(#edit-profile-title) > .state-panel p {
-  margin-top: .35rem;
-  color: var(--profile-edit-muted);
-  font-size: .72rem;
-  line-height: 1.35;
-}
-.page-shell > .card:has(#edit-profile-title) form > button[type="submit"] {
-  order: 90;
-  width: 100%;
-  min-height: 3.25rem;
-  border: 0;
-  border-radius: .8rem;
-  background: #f1f1f3;
-  color: #17171a;
-  font-size: .86rem;
-  font-weight: 750;
-}
-.page-shell > .card:has(#edit-profile-title) form > button[type="submit"]:hover {
-  background: #fff;
-}
-
 @media (max-width: 35rem) {
+  /* # WHY: Removes desktop framing and preserves usable touch space when the available width is small. */
   .site-header { min-height: 3.5rem; }
   .site-context { max-width: 9rem; }
   .page-shell { width: 100%; margin-block: 0; padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
   .discovery-route .discovery-controls { padding-top: 1rem; }
   .page-shell > .card { border-inline: 0; border-radius: 0; box-shadow: none; }
-  .page-shell > section:not(.card) { padding-inline: 1rem; }
-  .site-footer { margin-block: 1rem; padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
   .primary-navigation {
     padding: .4rem;
   }
   .primary-navigation a { min-height: 3rem; font-size: .8rem; }
   .messages, .connection-status { width: calc(100% - 2rem); }
-  .section-heading { align-items: stretch; }
-  .account-facts div, .plain-list > li { flex-wrap: wrap; }
-  .account-facts dd { max-width: 65%; }
+  .plain-list > li { flex-wrap: wrap; }
   .action-row > * { flex: 1 1 9rem; }
   .discovery-grid { gap: .4rem; }
   .discovery-grid > li { padding: .7rem; }
   .discovery-grid .chips { display: none; }
 }
 
-/* Stable template hooks for the profile-edit page. */
+/* ==========================================================================
+   05. PROFILE AND PLAN FORMS
+   ========================================================================== */
+
+/* # WHY: Gives the profile-edit page stable field, image, availability, and verification styling. */
 .profile-edit-route {
   background: #000;
   color: #f3f3f5;
-}
-.profile-edit-route .site-footer {
-  display: none;
 }
 .profile-edit-page {
   --edit-panel: #19191d;
@@ -954,9 +673,8 @@ body:has(#edit-profile-title) .site-footer {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 2.9rem .85rem 1.05rem;
+  padding: .9rem .85rem 1.05rem;
   border-bottom: 1px solid #202026;
-  /* background: #111114; */
 }
 .profile-edit-header .back-link {
   width: fit-content;
@@ -979,7 +697,6 @@ body:has(#edit-profile-title) .site-footer {
 .profile-edit-form > .error-summary {
   margin: 0;
   border: 1px solid #71343a;
-  border-left: .25rem solid #ff6b72;
   border-radius: .75rem;
   background: #261518;
   color: #ff9aa0;
@@ -1017,6 +734,7 @@ body:has(#edit-profile-title) .site-footer {
   font-size: .72rem;
   list-style: none;
 }
+/* # WHY: Gives every current profile panel the same border and surface before its inner layout differs. */
 .profile-image-panel,
 .profile-field-panel,
 .profile-choice-list,
@@ -1027,6 +745,11 @@ body:has(#edit-profile-title) .site-footer {
   background: #18181c;
   box-shadow: 0 .45rem 1.4rem rgba(0, 0, 0, .16);
 }
+
+/* --- Profile image ---------------------------------------------------------- */
+
+/* # KEYWORD: clamp() — chooses a size between a minimum and maximum using the screen width between them. */
+/* # WHY: Keeps the profile image proportional on both phones and wider form pages. */
 .profile-image-panel {
   --profile-edit-image-size: clamp(4.5rem, 14vw, 6rem);
   min-height: 8.5rem;
@@ -1065,6 +788,7 @@ body:has(#edit-profile-title) .site-footer {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
 }
+/* # WHY: Keeps the real file input available to assistive tools while the labelled control matches the page. */
 .profile-image-button {
   display: block;
   width: fit-content;
@@ -1085,6 +809,10 @@ body:has(#edit-profile-title) .site-footer {
   color: var(--edit-muted);
   font-size: .67rem;
 }
+
+/* --- Profile text fields ---------------------------------------------------- */
+
+/* # WHY: Gives text, selection and biography fields one dark control style inside this form only. */
 .profile-edit-page input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
 .profile-edit-page select,
 .profile-edit-page textarea {
@@ -1138,6 +866,10 @@ body:has(#edit-profile-title) .site-footer {
   outline: 2px solid var(--edit-green);
   outline-offset: 2px;
 }
+
+/* --- Interests and broad areas --------------------------------------------- */
+
+/* # WHY: Wraps interests as compact choices so the list adapts without horizontal scrolling. */
 .profile-interests-field .interest-checkboxes {
   display: flex;
   flex-wrap: wrap;
@@ -1187,6 +919,7 @@ body:has(#edit-profile-title) .site-footer {
 .profile-choice-list {
   overflow: hidden;
 }
+/* # WHY: Presents broad areas as full rows because people may choose more than one area. */
 .profile-area-field > legend {
   margin-bottom: .8rem;
   font-size: .84rem;
@@ -1240,6 +973,10 @@ body:has(#edit-profile-title) .site-footer {
 .availability-choice-chips span:hover {
   border-color: #5b5b67;
 }
+
+/* --- Availability ----------------------------------------------------------- */
+
+/* # WHY: Keeps the Free now switch and longer availability choices together as one understandable group. */
 .profile-availability-field {
   padding: 0;
 }
@@ -1289,6 +1026,7 @@ body:has(#edit-profile-title) .site-footer {
   border: 0;
   opacity: 0;
 }
+/* # WHY: Draws the visible switch beside the hidden real checkbox so forms still submit normal values. */
 .availability-switch-track {
   position: absolute;
   inset: 0;
@@ -1375,6 +1113,10 @@ body:has(#edit-profile-title) .site-footer {
   font-size: .45rem;
   vertical-align: .1rem;
 }
+
+/* --- Verification and save action ------------------------------------------ */
+
+/* # WHY: Separates staff verification information from fields the account owner can edit. */
 .verification-panel {
   display: grid;
   grid-template-columns: 1.5rem minmax(0, 1fr);
@@ -1418,7 +1160,9 @@ body:has(#edit-profile-title) .site-footer {
   background: #fff;
 }
 
-/* Small shared shell for account access and private-report forms. */
+/* --- Account access and private-report forms -------------------------------- */
+
+/* # WHY: Reuses one restrained form shell for account access and private safety reports. */
 .brand-form-intro,
 .brand-form-footer,
 .brand-form-state {
@@ -1453,7 +1197,9 @@ body:has(#edit-profile-title) .site-footer {
   color: #17171a;
 }
 
-/* Plan form: reuse the profile-edit system with only plan-specific field layout. */
+/* --- Plan create and edit form ---------------------------------------------- */
+
+/* # WHY: Reuses the profile form proportions and changes only the fields unique to a plan. */
 .plan-details-form {
   padding-bottom: 2rem;
 }
@@ -1490,6 +1236,7 @@ body:has(#edit-profile-title) .site-footer {
   gap: .75rem;
   margin-top: .65rem;
 }
+/* # WHY: Keeps the fetched image and status beside the URL without preventing manual place entry. */
 .plan-metadata-actions button {
   min-height: 2.35rem;
   flex: 0 0 auto;
@@ -1510,13 +1257,14 @@ body:has(#edit-profile-title) .site-footer {
   object-fit: cover;
 }
 
-/* Inbox: composed from the standard shell, heading, button, chips and avatar. */
+/* ==========================================================================
+   06. MESSAGES AND CONVERSATIONS
+   ========================================================================== */
+
+/* # WHY: Builds the message list from the standard heading, button, filter, and profile-image pieces. */
 .inbox-route {
   background: #000;
   color: #f3f3f5;
-}
-.inbox-route .site-footer {
-  display: none;
 }
 .inbox-page {
   overflow: hidden;
@@ -1524,26 +1272,10 @@ body:has(#edit-profile-title) .site-footer {
   border-radius: 1rem;
   background: #000;
 }
-.inbox-page-header {
-  padding: 2.25rem 2rem 1.75rem;
-  border-bottom: 1px solid #202026;
-  background: #111114;
-}
-.inbox-page-header .section-heading {
-  align-items: flex-end;
-}
-.inbox-page-header .eyebrow {
-  color: #777782;
-}
-.inbox-page-header h1 {
-  margin: 0;
-  font-size: clamp(2rem, 7vw, 2.7rem);
-}
-.inbox-page-header .button {
-  min-width: 8rem;
-  border-color: #3c3c46;
-  color: #a7a7b1;
-}
+
+/* --- Inbox interest filters ------------------------------------------------ */
+
+/* # WHY: Keeps the interest filters and explanation together below the shared page heading. */
 .inbox-intro {
   padding: 1.5rem 2rem;
   border-bottom: 1px solid #202026;
@@ -1583,6 +1315,10 @@ body:has(#edit-profile-title) .site-footer {
   font-size: 1rem;
   line-height: 1.55;
 }
+
+/* --- Inbox conversation rows ------------------------------------------------ */
+
+/* # WHY: Removes browser list styling so each whole conversation row becomes the visible navigation control. */
 .inbox-conversation-list {
   margin: 0;
   padding: 0;
@@ -1601,6 +1337,7 @@ body:has(#edit-profile-title) .site-footer {
   color: #f3f3f5;
   text-decoration: none;
 }
+/* # WHY: Keeps image, person details and latest time in predictable columns as names change length. */
 .inbox-conversation-row:hover {
   background: #101013;
 }
@@ -1615,6 +1352,7 @@ body:has(#edit-profile-title) .site-footer {
   position: relative;
   overflow: hidden;
 }
+/* # WHY: Draws a neutral person shape when no profile image is available. */
 .inbox-avatar-placeholder::before,
 .inbox-avatar-placeholder span {
   position: absolute;
@@ -1665,17 +1403,14 @@ body:has(#edit-profile-title) .site-footer {
 }
 
 @media (max-width: 35rem) {
+  /* # WHY: Removes outer desktop corners and narrows row spacing while keeping avatars easy to recognise. */
   .inbox-page {
     border-inline: 0;
     border-radius: 0;
   }
-  .inbox-page-header,
   .inbox-intro,
   .inbox-conversation-row {
     padding-inline: 1rem;
-  }
-  .inbox-page-header .button {
-    min-width: 6.5rem;
   }
   .inbox-conversation-row {
     grid-template-columns: 4rem minmax(0, 1fr) auto;
@@ -1687,7 +1422,9 @@ body:has(#edit-profile-title) .site-footer {
   }
 }
 
-/* Direct conversation: reuses inbox avatars, buttons, states and site shell. */
+/* --- One direct conversation ------------------------------------------------ */
+
+/* # WHY: Reuses message-list images and shared controls while keeping conversation text open and uncluttered. */
 .conversation-route {
   background: #000;
   color: #f3f3f5;
@@ -1698,6 +1435,7 @@ body:has(#edit-profile-title) .site-footer {
   border-radius: 1rem;
   background: #0a0a0c;
 }
+/* # WHY: Keeps the person's identity and safety control visible while messages move underneath. */
 .conversation-page-header {
   position: sticky;
   top: 0;
@@ -1750,6 +1488,7 @@ body:has(#edit-profile-title) .site-footer {
 .conversation-safety {
   position: relative;
 }
+/* # WHY: Keeps less-used reporting controls collapsed until the visitor deliberately opens Safety. */
 .conversation-safety > summary {
   min-height: 2.75rem;
   padding: .55rem .9rem;
@@ -1780,6 +1519,10 @@ body:has(#edit-profile-title) .site-footer {
 .conversation-safety-panel form {
   margin: 0;
 }
+
+/* --- Message thread --------------------------------------------------------- */
+
+/* # WHY: Stacks messages in reading order while leaving a useful empty area before short conversations. */
 .conversation-thread {
   min-height: clamp(24rem, 55vh, 42rem);
   display: flex;
@@ -1799,6 +1542,7 @@ body:has(#edit-profile-title) .site-footer {
 .conversation-message.is-other {
   justify-content: flex-start;
 }
+/* # WHY: Uses alignment rather than colour-filled bubbles to distinguish sent and received messages. */
 .conversation-bubble {
   max-width: min(78%, 32rem);
   padding: .75rem .9rem .6rem;
@@ -1843,6 +1587,10 @@ body:has(#edit-profile-title) .site-footer {
   margin: auto;
   text-align: center;
 }
+
+/* --- Message composer and writing helper ----------------------------------- */
+
+/* # WHY: Keeps the unsent message field above the fixed main navigation while the thread scrolls. */
 .conversation-composer {
   position: sticky;
   bottom: calc(5.75rem + env(safe-area-inset-bottom));
@@ -1881,6 +1629,7 @@ body:has(#edit-profile-title) .site-footer {
 .conversation-draft-tools {
   margin-top: .55rem;
 }
+/* # WHY: Keeps optional writing help collapsed so the ordinary Send action remains the main task. */
 .conversation-draft-tools > summary {
   min-height: 2rem;
   color: #9696a1;
@@ -1899,12 +1648,16 @@ body:has(#edit-profile-title) .site-footer {
 }
 .conversation-composer > .state-panel {
   margin-top: .75rem;
+  border: 1px solid #3a3a44;
+  border-radius: .9rem;
+  background: #19191d;
 }
 .conversation-composer > .state-panel h2 {
   margin-top: 0;
 }
 
 @media (max-width: 35rem) {
+  /* # WHY: Uses the full phone width and slightly wider message text without crowding the Send button. */
   .conversation-page {
     border-inline: 0;
     border-radius: 0;
@@ -1925,7 +1678,11 @@ body:has(#edit-profile-title) .site-footer {
   }
 }
 
-/* Signed-in profile presentation. Uses the standard site shell and navigation. */
+/* ==========================================================================
+   07. PROFILES, PLAN DETAILS, NOTIFICATIONS AND GUIDE
+   ========================================================================== */
+
+/* # WHY: Gives profiles, plan details, notifications, and the guide one matching content layout. */
 .private-profile-route {
   background: #000;
   color: #f3f3f5;
@@ -1940,6 +1697,7 @@ body:has(#edit-profile-title) .site-footer {
   background: #000;
   color: #f3f3f5;
 }
+/* # WHY: Provides a compact heading only on page modes that do not begin with a large image. */
 .private-profile-header {
   min-height: 5.75rem;
   display: flex;
@@ -1956,6 +1714,10 @@ body:has(#edit-profile-title) .site-footer {
 .private-profile-header .back-link:hover {
   color: #f3f3f5;
 }
+
+/* --- Profile or plan hero image -------------------------------------------- */
+
+/* # WHY: Reserves a stable image area so page content does not jump when media finishes loading. */
 .private-profile-hero {
   min-height: clamp(22rem, 62vw, 31rem);
   position: relative;
@@ -1969,6 +1731,7 @@ body:has(#edit-profile-title) .site-footer {
   background: linear-gradient(transparent, rgba(0, 0, 0, .76));
   pointer-events: none;
 }
+/* # WHY: Crops different uploaded image sizes consistently while preserving the card proportions. */
 .private-profile-hero > img {
   width: 100%;
   height: 100%;
@@ -1985,6 +1748,7 @@ body:has(#edit-profile-title) .site-footer {
   place-items: end center;
   background: #1d1d22;
 }
+/* # WHY: Draws a recognisable neutral person shape when the account has no usable image. */
 .private-profile-placeholder::before,
 .private-profile-placeholder span {
   display: block;
@@ -2003,23 +1767,7 @@ body:has(#edit-profile-title) .site-footer {
   height: 48%;
   border-radius: 50% 50% 0 0;
 }
-.private-profile-edit {
-  min-width: 4.4rem;
-  min-height: 2.75rem;
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: .55rem 1rem;
-  border-radius: 999px;
-  background: rgba(5, 5, 6, .88);
-  color: #f3f3f5;
-  font-weight: 750;
-  text-decoration: none;
-}
+/* # WHY: Places the back action over the image while keeping it subtle until hovered or focused. */
 .private-profile-back {
   width: 4.5rem;
   height: 4.5rem;
@@ -2059,6 +1807,10 @@ body:has(#edit-profile-title) .site-footer {
   width: 1.35rem;
   height: 1.35rem;
 }
+
+/* --- Identity and public details ------------------------------------------- */
+
+/* # WHY: Uses one consistent vertical rhythm for identity, biography, interests and actions. */
 .private-profile-content {
   display: grid;
   gap: 2rem;
@@ -2102,6 +1854,7 @@ body:has(#edit-profile-title) .site-footer {
   border-radius: 50%;
   background: var(--profile-green);
 }
+/* # WHY: Reserves green for the meaningful state that the person is currently available. */
 .private-profile-status-dot.is-online {
   background: #4fae73;
 }
@@ -2135,6 +1888,7 @@ body:has(#edit-profile-title) .site-footer {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* # WHY: Keeps location and availability on one visual line where space allows and wraps safely when needed. */
 .private-profile-meta {
   display: flex;
   flex-wrap: wrap;
@@ -2157,12 +1911,6 @@ body:has(#edit-profile-title) .site-footer {
   stroke: currentColor;
   stroke-width: 1.8;
 }
-.private-profile-verification {
-  margin-top: .55rem !important;
-  color: var(--profile-green) !important;
-  font-size: .8rem;
-  font-weight: 700;
-}
 .private-profile-notice {
   padding: 1rem;
   border: 1px solid #574928;
@@ -2175,6 +1923,10 @@ body:has(#edit-profile-title) .site-footer {
   color: #c9bea2;
   font-size: .82rem;
 }
+
+/* --- Profile sections, interests and information rows ---------------------- */
+
+/* # WHY: Uses quiet uppercase labels so the person's content remains more prominent than section names. */
 .private-profile-section h2 {
   margin: 0 0 1rem;
   color: #7f7f8a;
@@ -2205,6 +1957,7 @@ body:has(#edit-profile-title) .site-footer {
   color: #cacad1;
   line-height: 1.65;
 }
+/* # WHY: Aligns each fact label with its value without relying on a visual HTML table. */
 .private-profile-availability,
 .private-profile-availability div {
   margin: 0;
@@ -2228,6 +1981,10 @@ body:has(#edit-profile-title) .site-footer {
 .private-profile-availability a {
   text-decoration: none;
 }
+
+/* --- Linked plans and their states ----------------------------------------- */
+
+/* # WHY: Keeps profile plans and plan-detail facts in one reusable bordered list. */
 .private-profile-plans {
   overflow: hidden;
   border: 1px solid var(--profile-line);
@@ -2257,6 +2014,7 @@ body:has(#edit-profile-title) .site-footer {
   color: inherit;
   text-decoration: none;
 }
+/* # WHY: Makes the complete plan row clickable while preserving its two-column alignment. */
 .private-profile-plan-links li > a:hover {
   background: #202026;
 }
@@ -2284,16 +2042,16 @@ body:has(#edit-profile-title) .site-footer {
   font-size: .9rem;
   font-weight: 700;
 }
+/* # WHY: Keeps current and completed plan states visually distinct without changing row sizing. */
 .private-plan-state--approved {
   border-color: #45454f;
   background: #242429;
   color: #c7c7cf;
 }
-.private-plan-state--completed {
-  border-color: #604300;
-  background: #2a2108;
-  color: #ffd04e;
-}
+
+/* --- Premium and profile actions ------------------------------------------- */
+
+/* # WHY: Keeps the Premium explanation, crown and action together as one compact account option. */
 .private-profile-premium {
   display: grid;
   grid-template-columns: 4.5rem minmax(0, 1fr) auto;
@@ -2352,6 +2110,7 @@ body:has(#edit-profile-title) .site-footer {
 .private-profile-sign-out {
   margin: 0;
 }
+/* # WHY: Gives account exit and safety actions full-width, clearly labelled controls at the end of the page. */
 .private-profile-sign-out button {
   width: 100%;
   min-height: 3.5rem;
@@ -2387,6 +2146,7 @@ body:has(#edit-profile-title) .site-footer {
 }
 
 @media (max-width: 35rem) {
+  /* # WHY: Uses the full phone width and stacks the Premium action below its explanation. */
   .private-profile-page {
     border-inline: 0;
     border-radius: 0;
@@ -2433,16 +2193,16 @@ body:has(#edit-profile-title) .site-footer {
   }
 }
 
-/* Plans: the established dark shell, compact filters and bottom-aligned cards. */
+/* ==========================================================================
+   08. PLANS LIST AND CARDS
+   ========================================================================== */
+
+/* # WHY: Keeps plan headings, filters, image cards, and detail rows aligned with the rest of the site. */
 .plans-route {
   background: #000;
   color: #f3f3f5;
 }
-.plans-route .site-footer {
-  display: none;
-}
 .plans-page {
-  --plans-panel: #19191e;
   --plans-line: #292930;
   --plans-muted: #777782;
   --plans-green: #c7c7cf;
@@ -2450,6 +2210,7 @@ body:has(#edit-profile-title) .site-footer {
   border-radius: 1rem;
   background: #000;
 }
+/* # WHY: Matches the Messages heading proportions so moving between the main pages feels consistent. */
 .plans-page-header {
   min-height: 8.45rem;
   display: flex;
@@ -2481,6 +2242,10 @@ body:has(#edit-profile-title) .site-footer {
   background: #18181d;
   color: #ededf0;
 }
+
+/* --- Plan filters and introduction ----------------------------------------- */
+
+/* # WHY: Keeps every plan state reachable in one line and permits horizontal scrolling on narrow screens. */
 .plans-filter-strip {
   width: 100%;
   max-width: 100%;
@@ -2532,6 +2297,10 @@ body:has(#edit-profile-title) .site-footer {
   font-size: 1rem;
   line-height: 1.55;
 }
+
+/* --- Plan card grid --------------------------------------------------------- */
+
+/* # WHY: Uses three equal columns so cards preserve the supplied wireframe proportions across page sizes. */
 .plans-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2555,6 +2324,7 @@ body:has(#edit-profile-title) .site-footer {
   text-decoration: none;
   box-shadow: inset 0 1px rgba(255, 255, 255, .015);
 }
+/* # WHY: Anchors plan information at the bottom where it remains predictable with or without an image. */
 .plan-card:hover {
   background: linear-gradient(165deg, #232329 0%, #1b1b20 56%, #111114 100%);
 }
@@ -2565,6 +2335,7 @@ body:has(#edit-profile-title) .site-footer {
   background-position: center;
   background-size: cover;
 }
+/* # WHY: Places a dark gradient over fetched pictures so every plan title and detail stays readable. */
 .plan-card--with-image:hover {
   background-image:
     linear-gradient(to top, rgba(5, 5, 7, .96) 0%, rgba(7, 7, 10, .76) 45%, rgba(8, 8, 11, .3) 100%),
@@ -2594,6 +2365,7 @@ body:has(#edit-profile-title) .site-footer {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+/* # WHY: Limits descriptions to two lines so longer wording cannot make one card taller than its neighbours. */
 .plan-card-detail {
   min-width: 0;
   display: flex;
@@ -2629,6 +2401,10 @@ body:has(#edit-profile-title) .site-footer {
   gap: .5rem;
   margin-top: .8rem;
 }
+
+/* --- Plan state and capacity pills ----------------------------------------- */
+
+/* # WHY: Keeps state and capacity values on one compact visual line at the foot of each card. */
 .plan-state,
 .plan-capacity {
   min-height: 2.3rem;
@@ -2656,6 +2432,7 @@ body:has(#edit-profile-title) .site-footer {
   border-color: #4fae73;
   color: #4fae73;
 }
+/* # WHY: Uses exceptional colours only for meaningful states such as ownership, full capacity and pending review. */
 .plan-state--full {
   border-color: #733300;
   background: #301700;
@@ -2680,10 +2457,10 @@ body:has(#edit-profile-title) .site-footer {
   justify-items: center;
   padding: 2rem;
   border-radius: 1rem;
-  /* background: linear-gradient(165deg, #1d1d23, #0e0e11); */
   color: #ededf0;
   text-align: center;
 }
+/* # WHY: Gives an empty filter result the same height as one card so the page structure remains steady. */
 .plans-empty-state p {
   color: var(--plans-muted);
 }
@@ -2698,6 +2475,7 @@ body:has(#edit-profile-title) .site-footer {
   border-top: 1px solid var(--plans-line);
   color: #555560;
 }
+/* # WHY: Keeps the public-place reminder separate from the cards without presenting it as an error. */
 .plans-safety-note svg {
   width: 1.1rem;
   height: 1.1rem;
@@ -2714,6 +2492,7 @@ body:has(#edit-profile-title) .site-footer {
 }
 
 @media (max-width: 35rem) {
+  /* # WHY: Retains the three-card overview on phones while reducing only card type and spacing proportionally. */
   .plans-route .page-shell > .plans-page {
     padding-inline: 0;
   }
@@ -2824,12 +2603,19 @@ body:has(#edit-profile-title) .site-footer {
   }
 }
 
-/* Theme cycling changes only the shared colour system, never component geometry. */
+/* ==========================================================================
+   09. COLOUR THEMES AND REDUCED MOTION
+   ========================================================================== */
+
+/* # KEYWORD: :is() — groups several selectors that need the same rule without repeating the declarations. */
+/* # WHY: Changes only shared colours when cycling themes so component sizes and page layout never move. */
 :root[data-theme]:not([data-theme="black"]) body,
 :root[data-theme]:not([data-theme="black"]) :is(.profile-edit-page, .inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller) {
   background-color: var(--page);
   color: var(--ink);
 }
+/* # KEYWORD: color-mix() — blends two current theme colours into a related control colour. */
+/* # WHY: Derives form surfaces from each selected theme rather than maintaining more hard-coded palettes. */
 :root[data-theme]:not([data-theme="black"]) .profile-edit-page {
   --edit-panel: var(--soft);
   --edit-control: color-mix(in srgb, var(--soft) 82%, var(--ink));
@@ -2842,11 +2628,10 @@ body:has(#edit-profile-title) .site-footer {
   --profile-muted: var(--muted);
 }
 :root[data-theme]:not([data-theme="black"]) .plans-page {
-  --plans-panel: var(--soft);
   --plans-line: var(--border);
   --plans-muted: var(--muted);
 }
-:root[data-theme]:not([data-theme="black"]) :is(.plans-page-header, .inbox-page-header, .conversation-page-header, .private-profile-header, .discovery-filter-panel) {
+:root[data-theme]:not([data-theme="black"]) :is(.plans-page-header, .conversation-page-header, .private-profile-header, .discovery-filter-panel) {
   border-color: var(--border);
   background-color: var(--surface);
 }
@@ -2877,6 +2662,28 @@ body:has(#edit-profile-title) .site-footer {
   color: var(--ink);
 }
 
+.guide-page { --profile-line: #292930; }
+/* # WHY: Allows guide sentences to wrap normally instead of using the one-line profile statement treatment. */
+.guide-page .private-profile-content > * { min-width: 0; }
+.guide-page .private-profile-identity > .private-profile-title-statement {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+.inbox-page,
+.conversation-page,
+.private-profile-page,
+.plans-page,
+.filter-pill-scroller,
+.discovery-filter-panel,
+.discovery-grid > .card,
+.plan-card { border-color: #292930; }
+:root[data-theme]:not([data-theme="black"]) :is(.inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller, .discovery-filter-panel, .plan-card),
+:root[data-theme]:not([data-theme="black"]) .discovery-grid > .card { border-color: #292930; }
+.guide-page .private-profile-header { border-bottom-color: var(--border); }
+
+/* # KEYWORD: prefers-reduced-motion — follows a device request to avoid unnecessary movement. */
+/* # WHY: Keeps the same content and controls while making animation effectively immediate for motion-sensitive visitors. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;

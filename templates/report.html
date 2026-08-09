@@ -1,9 +1,17 @@
 {% extends "base.html" %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Collects one private safety report or confirms that the report was received. #}
 
-{% block title %}{% if mode == "confirmation" %}Report received{% else %}Private report{% endif %} · Kindlelise{% endblock %}
 
+{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
+{% block title %}{% if mode == "confirmation" %}Report received{% else %}Private report{% endif %} · Kindelise{% endblock %}
+
+{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
   <section class="profile-edit-page brand-form-page" aria-labelledby="report-title">
+    {# # WHY: Shows the following part only when its stated page condition is true. #}
     {% if mode == "confirmation" %}
       <header class="profile-edit-header">
         <h1 id="report-title">Report received</h1>
@@ -14,6 +22,7 @@
         <p>The reported account is not notified. Submission does not by itself prove wrongdoing or create a finding or sanction.</p>
       </div>
       <p class="brand-form-footer"><a class="button" href="{% url 'account' %}">Return to Profile</a></p>
+    {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
     {% else %}
       <header class="profile-edit-header">
         <a class="private-profile-back" href="{% url 'account' %}" aria-label="Back to profile"></a>
@@ -24,17 +33,23 @@
         <p>This report is private. It is information for authorised staff and does not by itself prove wrongdoing.</p>
         <p>Describe only relevant facts. Do not include home addresses, financial details, unrelated people or unnecessary health or identity information.</p>
       </div>
+      {# # WHY: Shows the following part only when its stated page condition is true. #}
       {% if context_label %}<p class="state-panel brand-form-state"><strong>Related item:</strong> {{ context_label }}</p>{% endif %}
+      <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
         {% csrf_token %}
+        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for field_name, field_value in hidden_values.items %}
           <input type="hidden" name="{{ field_name }}" value="{{ field_value }}">
         {% endfor %}
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
         {{ form.non_field_errors }}
+        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for field in form %}
           <section class="profile-edit-field plan-form-field plan-form-field--{{ field.name }}{% if field.name == 'description' %} biography-field{% endif %}" aria-labelledby="{{ field.id_for_label }}-label">
             <h2 id="{{ field.id_for_label }}-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label></h2>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
             <div class="profile-field-panel">{{ field }}</div>
             {{ field.errors }}
@@ -42,7 +57,7 @@
         {% endfor %}
         <button type="submit">Submit private report</button>
       </form>
-      <p class="muted brand-form-footer">Kindlelise is not an emergency service.</p>
+      <p class="muted brand-form-footer">Kindelise is not an emergency service.</p>
     {% endif %}
   </section>
 {% endblock %}

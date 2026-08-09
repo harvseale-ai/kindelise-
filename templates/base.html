@@ -1,25 +1,33 @@
 {% load static %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Provides the shared heading, navigation, notices, and page space used across the site. #}
+
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Kindlelise{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'app.css' %}?v=20260806-popup-messages">
+  <title>{% block title %}Kindelise{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'app.css' %}?v=20260809-apple-type">
 </head>
 <body{% if request.resolver_match.url_name == "profile_edit" or request.resolver_match.url_name == "sign_up" or request.resolver_match.url_name == "sign_in" or request.resolver_match.url_name == "report_create" %} class="profile-edit-route"{% elif request.resolver_match.url_name == "plan_create" or request.resolver_match.url_name == "plan_edit" %} class="profile-edit-route plan-form-route"{% elif request.resolver_match.url_name == "account" or request.resolver_match.url_name == "profile" or request.resolver_match.url_name == "profile_detail" or request.resolver_match.url_name == "plan_detail" or request.resolver_match.url_name == "guide" or request.resolver_match.url_name == "notifications" %} class="private-profile-route"{% elif request.resolver_match.url_name == "inbox" %} class="inbox-route"{% elif request.resolver_match.url_name == "conversation_detail" %} class="conversation-route"{% elif request.resolver_match.url_name == "plan_list" %} class="plans-route"{% elif request.resolver_match.url_name == "discover" %} class="discovery-route"{% endif %}>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
-    <a class="brand" href="{% url 'home' %}">Kindlelise</a>
+    <a class="brand" href="{% url 'home' %}">Kindelise</a>
     <span class="site-context">
       <button class="site-theme-toggle" type="button" data-theme-toggle aria-label="Change colour theme" title="Change colour theme"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 17a4 4 0 0 1-8 0V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2Z"></path><path d="M16.7 13H19a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2H7"></path><path d="M7 17h.01"></path><path d="m11 8 2.3-2.3a2.4 2.4 0 0 1 3.404.004L18.6 7.6a2.4 2.4 0 0 1 .026 3.434L9.9 19.8"></path></svg></button>
       <a href="{% url 'plan_create' %}" aria-label="Create plan"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 21v-5a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v5"></path><path d="M17.774 10.31a1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.451 0 1.12 1.12 0 0 0-1.548 0 2.5 2.5 0 0 1-3.452 0 1.12 1.12 0 0 0-1.549 0 2.5 2.5 0 0 1-3.77-3.248l2.889-4.184A2 2 0 0 1 7 2h10a2 2 0 0 1 1.653.873l2.895 4.192a2.5 2.5 0 0 1-3.774 3.244"></path><path d="M4 10.95V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8.05"></path></svg></a>
-      <a href="{% url 'guide' %}" aria-label="How to use Kindlelise" title="How to use Kindlelise"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg></a>
+      <a href="{% url 'guide' %}" aria-label="How to use Kindelise" title="How to use Kindelise"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14"></path><path d="M12 6v14"></path><path d="M8 8v12"></path><path d="M4 4v16"></path></svg></a>
+      {# # WHY: Shows the following part only when its stated page condition is true. #}
       {% if user.is_authenticated %}<a class="site-notification-link" href="{% url 'notifications' %}" aria-label="Notifications{% if unread_notification_count %}: {{ unread_notification_count }} unread{% endif %}" title="Notifications"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.27 21a2 2 0 0 0 3.46 0"></path><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33Z"></path></svg>{% if unread_notification_count %}<span class="site-notification-count" aria-hidden="true">{% if unread_notification_count > 99 %}99+{% else %}{{ unread_notification_count }}{% endif %}</span>{% endif %}</a>{% endif %}
     </span>
   </header>
 
+  {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if user.is_authenticated %}
+    {# # KEYWORD: with — gives a long template value a short local name inside this section. #}
     {% with route_name=request.resolver_match.url_name %}
       <nav class="primary-navigation" aria-label="Primary navigation">
         <a href="{% url 'discover' %}" aria-label="Discover"{% if route_name == "discover" or route_name == "profile_detail" %} aria-current="page"{% endif %}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m16.24 7.76-1.8 5.4a2 2 0 0 1-1.27 1.27l-5.41 1.81 1.8-5.4a2 2 0 0 1 1.27-1.27Z"></path></svg></a>
@@ -34,8 +42,10 @@
     You appear to be offline. Keep this page open to preserve current form text, then retry when connected.
   </p>
 
+  {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if messages %}
     <div class="messages" aria-label="Notifications">
+      {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
       {% for message in messages %}
         <p class="message {{ message.tags }}" role="{% if 'error' in message.tags %}alert{% else %}status{% endif %}">{{ message }}</p>
       {% endfor %}
@@ -43,6 +53,7 @@
   {% endif %}
 
   <main id="main-content" class="page-shell" tabindex="-1">
+    {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
     {% block content %}{% endblock %}
   </main>
 

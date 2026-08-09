@@ -1,11 +1,14 @@
+# KEYWORD: build system — the tool and version used to turn this source into an installable Python project.
+# WHY: Pins the build tool so local and hosted installs prepare the project the same way.
 [build-system]
 requires = ["setuptools==80.9.0"]
 build-backend = "setuptools.build_meta"
 
+# WHY: Records the supported Python version and the exact packages required by the running site.
 [project]
 name = "kindlelise"
 version = "0.1.0"
-description = "Student-scale, server-rendered Kindlelise MVP"
+description = "Student-scale, server-rendered Kindelise MVP"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "certifi==2026.7.22",
@@ -19,17 +22,44 @@ dependencies = [
     "whitenoise==6.12.0",
 ]
 
+# WHY: Keeps test and code-checking tools optional because the live website does not run them.
 [project.optional-dependencies]
 test = [
-    "pytest==8.4.2",
+    "bandit==1.9.4",
+    "coverage==7.15.4",
+    "pip-audit==2.10.1",
+    "pytest==9.0.3",
     "pytest-django==4.11.1",
+    "ruff==0.16.2",
 ]
 
+# WHY: Limits package discovery to the active configuration and application folders.
 [tool.setuptools.packages.find]
 include = ["config*", "kindlelise*"]
 exclude = ["_achive*"]
 
+# WHY: Tells the test runner which Django settings and test folder to use.
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "config.settings"
 addopts = "-ra"
 testpaths = ["tests"]
+
+# WHY: Keeps generated, archived, and numbered database-change files out of style checks.
+[tool.ruff]
+exclude = ["_achive", "kindlelise/migrations", "staticfiles"]
+
+# WHY: Restricts style checks to errors that can hide broken or unused code.
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+# KEYWORD: branch coverage — checks both the true and false paths through a decision.
+# WHY: Measures which active application paths the automatic checks actually run.
+[tool.coverage.run]
+branch = true
+source = ["config", "kindlelise"]
+
+# WHY: Requires broad coverage while excluding numbered database changes that Django generates.
+[tool.coverage.report]
+fail_under = 80
+omit = ["kindlelise/migrations/*"]
+show_missing = true

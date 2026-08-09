@@ -1,3 +1,4 @@
+# WHY: Prevents private settings, temporary files, generated output, and local uploads entering Git history.
 .DS_Store
 .env
 .env.*

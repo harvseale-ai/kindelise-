@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kindelise Runtime Explorer</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #08090b;
+        color: #f5f5f7;
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; background: #08090b; color: #f5f5f7; }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #292930;
+        background: rgba(8, 9, 11, 0.96);
+        backdrop-filter: blur(12px);
+      }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { margin-bottom: 0.2rem; font-size: 1.3rem; }
+      header p { margin-bottom: 0; color: #9999a5; font-size: 0.88rem; }
+      .header-status { color: #8de0b2; font-size: 0.82rem; text-align: right; }
+      main { width: min(1720px, 100%); margin: 0 auto; padding: 1.5rem; }
+      .intro { max-width: 850px; color: #c6c6ce; line-height: 1.65; }
+      .tool-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 1.25rem 0 1.5rem;
+      }
+      .flow-search {
+        width: min(420px, 100%);
+        min-height: 2.8rem;
+        padding: 0.65rem 0.85rem;
+        border: 1px solid #3b3b45;
+        border-radius: 0.7rem;
+        background: #17181d;
+        color: #fff;
+        font: inherit;
+      }
+      .flow-search:focus { border-color: #a6a6b2; outline: 2px solid transparent; }
+      .legend { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+      .legend span {
+        padding: 0.42rem 0.62rem;
+        border: 1px solid #34343d;
+        border-radius: 999px;
+        color: #b8b8c2;
+        font-size: 0.78rem;
+      }
+      .flow-contents {
+        margin-bottom: 2rem;
+        padding: 1.75rem 1.25rem;
+        border: 1px solid #292930;
+        border-radius: 0.9rem;
+        background: #111216;
+      }
+      .flow-contents h2 { margin-bottom: 0.3rem; font-size: 1rem; }
+      .flow-contents p { margin-bottom: 0.9rem; color: #8f8f9a; font-size: 0.88rem; }
+      .flow-contents ol {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 0.55rem 2rem;
+        margin: 0;
+        padding-left: 1.4rem;
+      }
+      .flow-contents a { color: #d9d9df; text-decoration: none; }
+      .flow-contents a:hover, .flow-contents a:focus { color: #fff; text-decoration: underline; }
+      .runtime-flow {
+        scroll-margin-top: 6rem;
+        padding: 1.65rem 0 2.7rem;
+        border-top: 1px solid #292930;
+      }
+      .runtime-flow[hidden] { display: none; }
+      .runtime-flow h2 { margin-bottom: 0.55rem; font-size: 1.5rem; }
+      .flow-description { max-width: 900px; color: #a9a9b4; font-size: 1rem; line-height: 1.55; }
+      .diagram-shell {
+        overflow-x: auto;
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid #292930;
+        border-radius: 0.9rem;
+        background: #101116;
+      }
+      .mermaid { min-width: 1100px; text-align: center; }
+      .mermaid svg {
+        width: 160% !important;
+        max-width: none !important;
+        height: auto;
+      }
+      .runtime-node-link { cursor: pointer; outline: none; }
+      .runtime-node-link rect,
+      .runtime-node-link polygon,
+      .runtime-node-link path { transition: stroke 120ms ease, filter 120ms ease; }
+      .runtime-node-link:hover rect,
+      .runtime-node-link:hover polygon,
+      .runtime-node-link:hover path,
+      .runtime-node-link:focus rect,
+      .runtime-node-link:focus polygon,
+      .runtime-node-link:focus path {
+        stroke: #8de0b2 !important;
+        stroke-width: 3px !important;
+        filter: drop-shadow(0 0 5px rgba(141, 224, 178, 0.3));
+      }
+      .source-links { margin-top: 0.85rem; }
+      .source-links summary { cursor: pointer; color: #b8b8c2; }
+      .source-links ul {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 0.5rem 1rem;
+        margin: 0.75rem 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .source-links a { color: #9ddbb9; overflow-wrap: anywhere; }
+      .empty-result { color: #ffadad; }
+      .error { color: #ff8f8f; }
+      @media (max-width: 720px) {
+        header { align-items: flex-start; flex-direction: column; }
+        .header-status { text-align: left; }
+        main { padding: 1rem; }
+        .mermaid { min-width: 980px; }
+        .mermaid svg { width: 210% !important; }
+        .source-links ul { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>Kindelise Runtime Explorer</h1>
+        <p>Click a flowchart block to open the code that owns it in VS Code.</p>
+      </div>
+      <div class="header-status" id="status">Loading runtime diagrams...</div>
+    </header>
+    <main>
+      <p class="intro">
+        This is a local learning tool, not a product page. It shows how each part of Kindelise passes work to the
+        next part. Use a diagram for the simple overview, then click a block to see the code behind it.
+      </p>
+      <div class="tool-row">
+        <label>
+          <span hidden>Filter runtime flows</span>
+          <input class="flow-search" id="flow-search" type="search" placeholder="Find plans, messages, Stripe, profiles...">
+        </label>
+        <div class="legend" aria-label="Runtime layers">
+          <span>Opening and showing pages</span>
+          <span>Checking details and permission</span>
+          <span>Loading and saving</span>
+          <span>Stored information</span>
+          <span>Outside services</span>
+        </div>
+      </div>
+      <section class="flow-contents" aria-labelledby="flow-contents-title">
+        <h2 id="flow-contents-title">Flowchart contents</h2>
+        <p>Choose a behavior to jump to its diagram.</p>
+        <ol id="flow-contents"></ol>
+      </section>
+      <p class="empty-result" id="empty-result" hidden>No runtime flows match that search.</p>
+      <div id="explorer"></div>
+    </main>
+    <script id="runtime-data" type="application/json">[{"title":"How all Kindelise files work together","description":"Start here for the whole application. Each block represents one file or a small group of related files. Click any block to open that file from the top.","source":"flowchart TD\n  A[\"Browser\u003cbr/>Visitor opens Kindelise\"] --> B[\"config/wsgi.py\u003cbr/>Starts Django\"]\n  B --> C[\"config/settings.py\u003cbr/>Loads site setup\"]\n  C --> D[\"config/urls.py\u003cbr/>Opens main address list\"]\n  D --> E[\"kindlelise/urls.py\u003cbr/>Chooses page address\"]\n  E --> F[\"kindlelise/views/&lt;area&gt;.py\u003cbr/>Runs page task\"]\n  F --> Z[\"kindlelise/views/common.py\u003cbr/>Shares small page helpers\"]\n  Z --> F\n\n  F --> G[\"kindlelise/forms.py\u003cbr/>Checks entered details\"]\n  G --> F\n  F --> H[\"kindlelise/policies.py\u003cbr/>Checks allowed actions\"]\n  H --> F\n  F --> I[\"kindlelise/selectors.py\u003cbr/>Loads allowed information\"]\n  F --> J[\"kindlelise/services/&lt;area&gt;.py\u003cbr/>Saves requested changes\"]\n  I --> K[\"kindlelise/models.py\u003cbr/>Describes saved information\"]\n  J --> K\n  K --> L[\"PostgreSQL\u003cbr/>Keeps main saved data\"]\n\n  F --> M[\"kindlelise/context_processors.py\u003cbr/>Adds notification count\"]\n  F --> N[\"templates/page files\u003cbr/>Build chosen page\"]\n  M --> O[\"templates/base.html\u003cbr/>Adds shared page frame\"]\n  N --> O\n  O --> P[\"Browser\u003cbr/>Shows finished page\"]\n  P --> Q[\"static/app.css\u003cbr/>Controls look and spacing\"]\n  P --> R[\"static/app.js\u003cbr/>Adds small page actions\"]\n\n  F --> S[\"kindlelise/plan_metadata.py\u003cbr/>Finds plan place and picture\"]\n  S --> T[\"Public place websites\u003cbr/>Supply public details\"]\n  F --> U[\"kindlelise/ai_message_editor.py\u003cbr/>Requests a writing suggestion\"]\n  U --> V[\"Ollama\u003cbr/>Returns suggested wording\"]\n  J --> W[\"Stripe\u003cbr/>Handles Premium payment\"]\n  K --> X[\"Cloudinary or local folder\u003cbr/>Keeps uploaded pictures\"]\n  Y[\"kindlelise/admin.py\u003cbr/>Lets staff manage allowed records\"] --> K","targets":[{"nodeId":"A","label":"Open the shared browser page","path":"templates/base.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/base.html:1:1"},{"nodeId":"B","label":"Open config/wsgi.py","path":"config/wsgi.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/wsgi.py:1:1"},{"nodeId":"C","label":"Open config/settings.py","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"D","label":"Open config/urls.py","path":"config/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/urls.py:1:1"},{"nodeId":"E","label":"Open kindlelise/urls.py","path":"kindlelise/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/urls.py:1:1"},{"nodeId":"F","label":"Open the page-code package","path":"kindlelise/views/__init__.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/__init__.py:1:1"},{"nodeId":"Z","label":"Open shared page helpers","path":"kindlelise/views/common.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/common.py:1:1"},{"nodeId":"G","label":"Open kindlelise/forms.py","path":"kindlelise/forms.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:1:1"},{"nodeId":"H","label":"Open kindlelise/policies.py","path":"kindlelise/policies.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/policies.py:1:1"},{"nodeId":"I","label":"Open kindlelise/selectors.py","path":"kindlelise/selectors.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:1:1"},{"nodeId":"J","label":"Open the saved-change package","path":"kindlelise/services/__init__.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/__init__.py:1:1"},{"nodeId":"K","label":"Open kindlelise/models.py","path":"kindlelise/models.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:1:1"},{"nodeId":"L","label":"Open database setup","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"M","label":"Open notification page data","path":"kindlelise/context_processors.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/context_processors.py:1:1"},{"nodeId":"N","label":"Open a page template","path":"templates/account.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/account.html:1:1"},{"nodeId":"O","label":"Open shared page frame","path":"templates/base.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/base.html:1:1"},{"nodeId":"P","label":"Open returned browser page","path":"templates/base.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/base.html:1:1"},{"nodeId":"Q","label":"Open page styles","path":"static/app.css","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.css:1:1"},{"nodeId":"R","label":"Open browser actions","path":"static/app.js","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.js:1:1"},{"nodeId":"S","label":"Open plan detail finder","path":"kindlelise/plan_metadata.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/plan_metadata.py:1:1"},{"nodeId":"T","label":"Open public website connection","path":"kindlelise/plan_metadata.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/plan_metadata.py:1:1"},{"nodeId":"U","label":"Open AI writing helper","path":"kindlelise/ai_message_editor.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/ai_message_editor.py:1:1"},{"nodeId":"V","label":"Open Ollama connection","path":"kindlelise/ai_message_editor.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/ai_message_editor.py:1:1"},{"nodeId":"W","label":"Open Stripe payment connection","path":"kindlelise/services/billing.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/billing.py:1:1"},{"nodeId":"X","label":"Open picture storage setup","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"Y","label":"Open staff admin setup","path":"kindlelise/admin.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/admin.py:1:1"}]},{"title":"Starting the live website","description":"Heroku updates the database first and then starts the website. Django loads the live settings and connects to the database, stylesheets and picture storage.","source":"flowchart LR\n  A[\"Start new release\"] --> B[\"Update database structure\"]\n  B --> C[\"Apply database changes\"]\n  D[\"Start live website\"] --> E[\"Start web server\"]\n  E --> F[\"Start Django\"]\n  F --> G[\"Load live settings\"]\n  G --> H[\"Connect to database\"]\n  G --> I[\"Load styles and scripts\"]\n  G --> J[\"Connect picture storage\"]\n  G --> K[\"Run request checks\"]\n  K --> L[\"Open page routes\"]","targets":[{"nodeId":"A","label":"Open Heroku release command","path":"Procfile","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/Procfile:1:1"},{"nodeId":"B","label":"Open Django command entry point","path":"manage.py","line":12,"symbol":"main","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/manage.py:12:1"},{"nodeId":"C","label":"Open initial schema migration","path":"kindlelise/migrations/0001_initial.py","line":12,"symbol":"Migration","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/migrations/0001_initial.py:12:1"},{"nodeId":"D","label":"Open Heroku web command","path":"Procfile","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/Procfile:1:1"},{"nodeId":"E","label":"Open Gunicorn command","path":"Procfile","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/Procfile:1:1"},{"nodeId":"F","label":"Open WSGI application","path":"config/wsgi.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/wsgi.py:1:1"},{"nodeId":"G","label":"Open environment configuration","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"H","label":"Open PostgreSQL configuration","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"I","label":"Open static-file storage","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"J","label":"Open media storage","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"K","label":"Open middleware stack","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"L","label":"Open root URL routing","path":"config/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/urls.py:1:1"}]},{"title":"Opening a page","description":"When you open a page, Kindelise finds the right page code, checks what you are allowed to do, loads or saves the required information and returns the result.","source":"flowchart LR\n  A[\"You open a page\"] --> B[\"Web server receives request\"]\n  B --> C[\"Django starts request\"]\n  C --> D[\"Run security checks\"]\n  D --> E[\"Find main route\"]\n  E --> F[\"Find Kindelise page\"]\n  F --> G[\"Run page code\"]\n  G --> H{\"What is needed?\"}\n  H -->|Entered details| I[\"Check entered details\"]\n  H -->|Saved details| J[\"Load allowed details\"]\n  H -->|Permission| K[\"Check user permission\"]\n  I --> L[\"Save changes safely\"]\n  J --> M[\"Read saved information\"]\n  K --> M\n  L --> M\n  M --> N[\"Show page or result\"]\n  N --> A","targets":[{"nodeId":"A","label":"Open the shared browser shell","path":"templates/base.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/base.html:1:1"},{"nodeId":"B","label":"Open the Gunicorn process command","path":"Procfile","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/Procfile:1:1"},{"nodeId":"C","label":"Open the WSGI application","path":"config/wsgi.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/wsgi.py:1:1"},{"nodeId":"D","label":"Open settings","path":"config/settings.py","line":21,"symbol":"_environment_flag","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:21:1"},{"nodeId":"E","label":"Open project URL routing","path":"config/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/urls.py:1:1"},{"nodeId":"F","label":"Open application URL routing","path":"kindlelise/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/urls.py:1:1"},{"nodeId":"G","label":"Open a view entry point","path":"kindlelise/views/accounts.py","line":33,"symbol":"home_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:33:1"},{"nodeId":"H","label":"Open HTTP coordination","path":"kindlelise/views/__init__.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/__init__.py:1:1"},{"nodeId":"I","label":"Open form validation","path":"kindlelise/forms.py","line":134,"symbol":"ProfileDetailsForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:134:1"},{"nodeId":"J","label":"Open an authorised read","path":"kindlelise/selectors.py","line":61,"symbol":"get_signed_in_user_account_summary","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:61:1"},{"nodeId":"K","label":"Open an access decision","path":"kindlelise/policies.py","line":19,"symbol":"can_access_discovery_plans_and_messages","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/policies.py:19:1"},{"nodeId":"L","label":"Open a state-changing service","path":"kindlelise/services/accounts.py","line":40,"symbol":"update_signed_in_user_profile","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/accounts.py:40:1"},{"nodeId":"M","label":"Open the data model","path":"kindlelise/models.py","line":54,"symbol":"Profile","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:54:1"},{"nodeId":"N","label":"Open the shared response template","path":"templates/base.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/base.html:1:1"}]},{"title":"Creating an account and updating your profile","description":"Creating an account also creates its empty profile. Signing in starts the user's session. Profile changes and staff verification are handled separately.","source":"flowchart LR\n  A[\"Send sign-up form\"] --> B[\"Open sign-up code\"]\n  B --> C[\"Check account details\"]\n  C --> D[\"Create account and profile\"]\n  D --> E[\"Save account and profile\"]\n  E --> F[\"Sign in and start session\"]\n  F --> G[\"Show private profile\"]\n  G --> H[\"Send profile changes\"]\n  H --> I[\"Check profile details\"]\n  I --> J[\"Save profile changes\"]\n  J --> E\n  K[\"Staff chooses verification\"] --> L[\"Update verification status\"]\n  L --> E\n  E --> M[\"Show account page\"]","targets":[{"nodeId":"A","label":"Open the account routes","path":"kindlelise/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/urls.py:1:1"},{"nodeId":"B","label":"Open registration view","path":"kindlelise/views/accounts.py","line":79,"symbol":"sign_up_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:79:1"},{"nodeId":"C","label":"Open registration validation","path":"kindlelise/forms.py","line":86,"symbol":"AccountSignUpForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:86:1"},{"nodeId":"D","label":"Open atomic account creation","path":"kindlelise/services/accounts.py","line":15,"symbol":"create_account_and_profile","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/accounts.py:15:1"},{"nodeId":"E","label":"Open Profile model","path":"kindlelise/models.py","line":54,"symbol":"Profile","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:54:1"},{"nodeId":"F","label":"Open sign-in and session start","path":"kindlelise/views/accounts.py","line":109,"symbol":"sign_in_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:109:1"},{"nodeId":"G","label":"Open private account view","path":"kindlelise/views/accounts.py","line":178,"symbol":"account_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:178:1"},{"nodeId":"H","label":"Open profile edit view","path":"kindlelise/views/accounts.py","line":207,"symbol":"edit_profile_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:207:1"},{"nodeId":"I","label":"Open profile validation","path":"kindlelise/forms.py","line":134,"symbol":"ProfileDetailsForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:134:1"},{"nodeId":"J","label":"Open profile update transaction","path":"kindlelise/services/accounts.py","line":40,"symbol":"update_signed_in_user_profile","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/accounts.py:40:1"},{"nodeId":"K","label":"Open staff verification action","path":"kindlelise/admin.py","line":212,"symbol":"verify_selected_profiles_for_discovery_plans_and_messages","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/admin.py:212:1"},{"nodeId":"L","label":"Open verification state change","path":"kindlelise/admin.py","line":47,"symbol":"_set_profile_verification","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/admin.py:47:1"},{"nodeId":"M","label":"Open account and profile template","path":"templates/account.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/account.html:1:1"}]},{"title":"Finding and viewing other people","description":"Kindelise checks the viewer first, applies the allowed filters and removes blocked or unavailable profiles before showing any results.","source":"flowchart LR\n  A[\"Open Discover\"] --> B[\"Run Discover page\"]\n  B --> C[\"Check verified access\"]\n  C --> D[\"Work out allowed filters\"]\n  D --> E[\"Check chosen filters\"]\n  E --> F[\"Find matching profiles\"]\n  F --> G[\"Remove blocked profiles\"]\n  G --> H[\"Show profile cards\"]\n  H --> I[\"Choose a profile\"]\n  I --> J[\"Run profile page\"]\n  J --> K[\"Check profile can be viewed\"]\n  K --> L[\"Show public profile\"]","targets":[{"nodeId":"A","label":"Open discovery routes","path":"kindlelise/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/urls.py:1:1"},{"nodeId":"B","label":"Open discovery view","path":"kindlelise/views/discovery.py","line":27,"symbol":"discovery_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/discovery.py:27:1"},{"nodeId":"C","label":"Open the verification gate","path":"kindlelise/policies.py","line":19,"symbol":"can_access_discovery_plans_and_messages","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/policies.py:19:1"},{"nodeId":"D","label":"Open Free and Premium limits","path":"kindlelise/policies.py","line":41,"symbol":"get_allowed_discovery_areas_and_interest_limit","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/policies.py:41:1"},{"nodeId":"E","label":"Open filter validation","path":"kindlelise/forms.py","line":329,"symbol":"DiscoveryFiltersForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:329:1"},{"nodeId":"F","label":"Open discovery query","path":"kindlelise/selectors.py","line":123,"symbol":"get_profiles_for_discovery_grid","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:123:1"},{"nodeId":"G","label":"Open the exclusion model","path":"kindlelise/models.py","line":483,"symbol":"Block","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:483:1"},{"nodeId":"H","label":"Open discovery cards","path":"templates/discover.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/discover.html:1:1"},{"nodeId":"I","label":"Open public profile route","path":"kindlelise/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/urls.py:1:1"},{"nodeId":"J","label":"Open public profile view","path":"kindlelise/views/discovery.py","line":96,"symbol":"profile_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/discovery.py:96:1"},{"nodeId":"K","label":"Open profile visibility read","path":"kindlelise/selectors.py","line":196,"symbol":"get_profile_page_if_viewer_is_allowed","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:196:1"},{"nodeId":"L","label":"Open public profile template mode","path":"templates/account.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/account.html:1:1"}]},{"title":"Creating a plan and finding its picture","description":"The Fetch details button looks for a public place name and picture. Kindelise checks the result again before saving the new plan and its picture.","source":"flowchart LR\n  A[\"Enter plan details\"] --> B[\"Choose Fetch details\"]\n  B --> C[\"Send public URL\"]\n  C --> D[\"Check public URL\"]\n  D --> E[\"Look for place and picture\"]\n  E --> F[\"Read public page safely\"]\n  F --> G[\"Return place and preview\"]\n  G --> A\n  A --> H[\"Send completed plan\"]\n  H --> I[\"Check plan details\"]\n  I --> J[\"Check fetched picture\"]\n  J --> K[\"Create available plan\"]\n  K --> L[\"Save plan and picture\"]\n  L --> M[\"Show plan page\"]","targets":[{"nodeId":"A","label":"Open create-plan template","path":"templates/plan.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/plan.html:1:1"},{"nodeId":"B","label":"Open browser metadata request","path":"static/app.js","line":97,"symbol":"requestPlanMetadata","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.js:97:1"},{"nodeId":"C","label":"Open metadata endpoint","path":"kindlelise/views/plans.py","line":95,"symbol":"request_plan_metadata","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:95:1"},{"nodeId":"D","label":"Open URL validation","path":"kindlelise/forms.py","line":428,"symbol":"PlanMetadataRequestForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:428:1"},{"nodeId":"E","label":"Open metadata workflow","path":"kindlelise/plan_metadata.py","line":405,"symbol":"fetch_plan_metadata","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/plan_metadata.py:405:1"},{"nodeId":"F","label":"Open bounded HTTPS fetch","path":"kindlelise/plan_metadata.py","line":150,"symbol":"_fetch_https_bytes","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/plan_metadata.py:150:1"},{"nodeId":"G","label":"Open signed response creation","path":"kindlelise/plan_metadata.py","line":405,"symbol":"fetch_plan_metadata","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/plan_metadata.py:405:1"},{"nodeId":"H","label":"Open plan creation view","path":"kindlelise/views/plans.py","line":121,"symbol":"create_plan_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:121:1"},{"nodeId":"I","label":"Open plan validation","path":"kindlelise/forms.py","line":381,"symbol":"PlanDetailsForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:381:1"},{"nodeId":"J","label":"Open token verification","path":"kindlelise/plan_metadata.py","line":464,"symbol":"thumbnail_from_metadata_token","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/plan_metadata.py:464:1"},{"nodeId":"K","label":"Open plan creation service","path":"kindlelise/services/plans.py","line":19,"symbol":"create_available_plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/plans.py:19:1"},{"nodeId":"L","label":"Open Plan model","path":"kindlelise/models.py","line":160,"symbol":"Plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:160:1"},{"nodeId":"M","label":"Open plan detail view","path":"kindlelise/views/plans.py","line":192,"symbol":"plan_detail_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:192:1"}]},{"title":"Joining, leaving or cancelling a plan","description":"Each action checks the latest plan details first. Joining updates the space count and tells the owner. Leaving or cancelling keeps the earlier history.","source":"flowchart LR\n  A[\"Open plan\"] --> B[\"Check plan can be viewed\"]\n  B --> C[\"Show plan details\"]\n  C --> D{\"Choose an action\"}\n  D -->|Join| E[\"Send join request\"]\n  E --> F[\"Check space and permission\"]\n  F --> G[\"Join and lock plan details\"]\n  G --> H[\"Update plan and attendance\"]\n  G --> I[\"Tell plan owner\"]\n  D -->|Leave| J[\"Send leave request\"]\n  J --> K[\"Mark attendance as left\"]\n  K --> H\n  D -->|Cancel as owner| L[\"Send cancel request\"]\n  L --> M[\"Cancel and hide plan\"]\n  M --> H\n  H --> N[\"Show updated plan\"]","targets":[{"nodeId":"A","label":"Open plan routes","path":"kindlelise/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/urls.py:1:1"},{"nodeId":"B","label":"Open plan visibility read","path":"kindlelise/selectors.py","line":326,"symbol":"get_plan_page_if_viewer_is_allowed","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:326:1"},{"nodeId":"C","label":"Open plan detail coordination","path":"kindlelise/views/plans.py","line":192,"symbol":"plan_detail_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:192:1"},{"nodeId":"D","label":"Open plan action controls","path":"templates/plan.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/plan.html:1:1"},{"nodeId":"E","label":"Open join endpoint","path":"kindlelise/views/plans.py","line":311,"symbol":"join_plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:311:1"},{"nodeId":"F","label":"Open join policy","path":"kindlelise/policies.py","line":166,"symbol":"can_join_approved_plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/policies.py:166:1"},{"nodeId":"G","label":"Open atomic join","path":"kindlelise/services/plans.py","line":139,"symbol":"join_approved_plan_and_lock_meeting_details","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/plans.py:139:1"},{"nodeId":"H","label":"Open participation history model","path":"kindlelise/models.py","line":263,"symbol":"Participation","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:263:1"},{"nodeId":"I","label":"Open notification model","path":"kindlelise/models.py","line":419,"symbol":"Notification","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:419:1"},{"nodeId":"J","label":"Open leave endpoint","path":"kindlelise/views/plans.py","line":339,"symbol":"leave_plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:339:1"},{"nodeId":"K","label":"Open leave service","path":"kindlelise/services/plans.py","line":199,"symbol":"leave_plan_and_keep_participation_history","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/plans.py:199:1"},{"nodeId":"L","label":"Open cancellation endpoint","path":"kindlelise/views/plans.py","line":367,"symbol":"cancel_plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:367:1"},{"nodeId":"M","label":"Open cancellation service","path":"kindlelise/services/plans.py","line":233,"symbol":"cancel_owned_plan_and_hide_it_from_discovery","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/plans.py:233:1"},{"nodeId":"N","label":"Open plan detail template","path":"templates/plan.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/plan.html:1:1"}]},{"title":"Starting a conversation and sending a message","description":"Kindelise creates one private conversation for the two people or reopens the one they already have. Sending a message saves it and tells the other person.","source":"flowchart LR\n  A[\"Choose Send Message\"] --> B[\"Start conversation\"]\n  B --> C[\"Find or create conversation\"]\n  C --> D[\"Save conversation pair\"]\n  D --> E[\"Open conversation\"]\n  E --> F[\"Check user can read messages\"]\n  F --> G[\"Show conversation\"]\n  G --> H[\"Check written message\"]\n  H --> I[\"Send message request\"]\n  I --> J[\"Save message safely\"]\n  J --> K[\"Save message\"]\n  J --> L[\"Tell recipient\"]\n  K --> E","targets":[{"nodeId":"A","label":"Open public profile message action","path":"templates/account.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/account.html:1:1"},{"nodeId":"B","label":"Open conversation start endpoint","path":"kindlelise/views/messages.py","line":135,"symbol":"start_direct_conversation","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/messages.py:135:1"},{"nodeId":"C","label":"Open unique pair service","path":"kindlelise/services/messages.py","line":13,"symbol":"find_or_start_direct_conversation","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/messages.py:13:1"},{"nodeId":"D","label":"Open Conversation model","path":"kindlelise/models.py","line":323,"symbol":"Conversation","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:323:1"},{"nodeId":"E","label":"Open conversation page","path":"kindlelise/views/messages.py","line":111,"symbol":"conversation_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/messages.py:111:1"},{"nodeId":"F","label":"Open authorised message read","path":"kindlelise/selectors.py","line":437,"symbol":"get_messages_if_user_can_open_conversation","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:437:1"},{"nodeId":"G","label":"Open conversation template","path":"templates/conversation.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/conversation.html:1:1"},{"nodeId":"H","label":"Open draft validation","path":"kindlelise/forms.py","line":444,"symbol":"MessageDraftForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:444:1"},{"nodeId":"I","label":"Open send endpoint","path":"kindlelise/views/messages.py","line":164,"symbol":"send_conversation_message","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/messages.py:164:1"},{"nodeId":"J","label":"Open message transaction","path":"kindlelise/services/messages.py","line":49,"symbol":"send_direct_message","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/messages.py:49:1"},{"nodeId":"K","label":"Open Message model","path":"kindlelise/models.py","line":389,"symbol":"Message","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:389:1"},{"nodeId":"L","label":"Open message notification","path":"kindlelise/models.py","line":419,"symbol":"Notification","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:419:1"}]},{"title":"Improving a message before sending it","description":"The AI receives only the unsent draft and the chosen editing goal. The original stays visible, and the user decides what to keep before pressing Send.","source":"flowchart LR\n  A[\"Choose editing goal\"] --> B[\"Send unsent draft\"]\n  B --> C[\"Receive edit request\"]\n  C --> D[\"Check conversation access\"]\n  D --> E[\"Check draft and goal\"]\n  E --> F[\"Ask AI for suggestion\"]\n  F --> G[\"Ollama AI service\"]\n  G --> F\n  F --> H[\"Return suggested draft\"]\n  H --> I[\"Show both drafts\"]\n  I --> J{\"Choose a draft\"}\n  J -->|Keep original| K[\"Keep original text\"]\n  J -->|Use suggestion| L[\"Use suggested text\"]\n  K --> M[\"Press Send manually\"]\n  L --> M","targets":[{"nodeId":"A","label":"Open AI editing controls","path":"templates/conversation.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/conversation.html:1:1"},{"nodeId":"B","label":"Open browser request","path":"static/app.js","line":35,"symbol":"requestMessageDraftEditSuggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.js:35:1"},{"nodeId":"C","label":"Open suggestion endpoint","path":"kindlelise/views/messages.py","line":204,"symbol":"request_conversation_message_edit_suggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/messages.py:204:1"},{"nodeId":"D","label":"Open conversation access check","path":"kindlelise/selectors.py","line":437,"symbol":"get_messages_if_user_can_open_conversation","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:437:1"},{"nodeId":"E","label":"Open AI request validation","path":"kindlelise/forms.py","line":452,"symbol":"MessageEditRequestForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:452:1"},{"nodeId":"F","label":"Open bounded Ollama client","path":"kindlelise/ai_message_editor.py","line":40,"symbol":"get_edited_message_draft_suggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/ai_message_editor.py:40:1"},{"nodeId":"G","label":"Open provider request boundary","path":"kindlelise/ai_message_editor.py","line":40,"symbol":"get_edited_message_draft_suggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/ai_message_editor.py:40:1"},{"nodeId":"H","label":"Open suggestion response","path":"kindlelise/views/messages.py","line":204,"symbol":"request_conversation_message_edit_suggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/messages.py:204:1"},{"nodeId":"I","label":"Open comparison panel logic","path":"static/app.js","line":69,"symbol":"showMessageDraftEditSuggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.js:69:1"},{"nodeId":"J","label":"Open explicit choice handling","path":"static/app.js","line":69,"symbol":"showMessageDraftEditSuggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.js:69:1"},{"nodeId":"K","label":"Open Keep original behavior","path":"static/app.js","line":69,"symbol":"showMessageDraftEditSuggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.js:69:1"},{"nodeId":"L","label":"Open Use suggestion behavior","path":"static/app.js","line":69,"symbol":"showMessageDraftEditSuggestion","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/static/app.js:69:1"},{"nodeId":"M","label":"Open the separate send endpoint","path":"kindlelise/views/messages.py","line":164,"symbol":"send_conversation_message","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/messages.py:164:1"}]},{"title":"Seeing and clearing notifications","description":"New messages and plan joins create notifications. The top bar shows how many are unread. Opening the notifications page lets the user mark them as read.","source":"flowchart LR\n  A[\"New message\"] --> C[\"Save notification\"]\n  B[\"New plan join\"] --> C\n  C --> D[\"Prepare top-bar count\"]\n  D --> E[\"Count unread items\"]\n  E --> F[\"Show number in top bar\"]\n  F --> G[\"Open notifications page\"]\n  G --> H[\"Load recent notifications\"]\n  H --> I[\"Show notification list\"]\n  I --> J[\"Choose Mark as read\"]\n  J --> K[\"Mark all as read\"]\n  K --> C","targets":[{"nodeId":"A","label":"Open message notification creation","path":"kindlelise/services/messages.py","line":49,"symbol":"send_direct_message","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/messages.py:49:1"},{"nodeId":"B","label":"Open plan-join notification creation","path":"kindlelise/services/plans.py","line":139,"symbol":"join_approved_plan_and_lock_meeting_details","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/plans.py:139:1"},{"nodeId":"C","label":"Open Notification model","path":"kindlelise/models.py","line":419,"symbol":"Notification","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:419:1"},{"nodeId":"D","label":"Open shared context processor","path":"kindlelise/context_processors.py","line":10,"symbol":"notification_badge","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/context_processors.py:10:1"},{"nodeId":"E","label":"Open unread count query","path":"kindlelise/selectors.py","line":29,"symbol":"get_unread_notification_count","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:29:1"},{"nodeId":"F","label":"Open the notification icon","path":"templates/base.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/base.html:1:1"},{"nodeId":"G","label":"Open notifications page","path":"kindlelise/views/accounts.py","line":59,"symbol":"notifications_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:59:1"},{"nodeId":"H","label":"Open recent alerts query","path":"kindlelise/selectors.py","line":40,"symbol":"get_recent_notifications","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:40:1"},{"nodeId":"I","label":"Open notifications template","path":"templates/notifications.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/notifications.html:1:1"},{"nodeId":"J","label":"Open mark-read endpoint","path":"kindlelise/views/accounts.py","line":71,"symbol":"mark_notifications_read","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:71:1"},{"nodeId":"K","label":"Open mark-read update","path":"kindlelise/services/accounts.py","line":102,"symbol":"mark_all_notifications_read","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/accounts.py:102:1"}]},{"title":"Blocking someone or sending a private report","description":"Blocking removes contact in both directions. Reporting stays available after a block, and Kindelise checks that any attached plan or message belongs to the people involved.","source":"flowchart LR\n  A[\"Open profile Actions\"] --> B{\"Choose action\"}\n  B -->|Block| C[\"Send block request\"]\n  C --> D[\"Save block safely\"]\n  D --> E[\"Save blocked pair\"]\n  E --> F[\"Remove contact and discovery\"]\n  B -->|Report| G[\"Open report page\"]\n  G --> H[\"Check reported profile\"]\n  H --> I[\"Check attached details\"]\n  I --> J[\"Check report text\"]\n  J --> K[\"Save private report\"]\n  K --> L[\"Store report\"]\n  L --> M[\"Staff can review report\"]","targets":[{"nodeId":"A","label":"Open profile Actions section","path":"templates/account.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/account.html:1:1"},{"nodeId":"B","label":"Open safety endpoints","path":"kindlelise/views/safety.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/safety.py:1:1"},{"nodeId":"C","label":"Open block endpoint","path":"kindlelise/views/safety.py","line":114,"symbol":"block_profile_from_discovery_and_messages","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/safety.py:114:1"},{"nodeId":"D","label":"Open block service","path":"kindlelise/services/safety.py","line":14,"symbol":"block_user_from_discovery_and_messages","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/safety.py:14:1"},{"nodeId":"E","label":"Open Block model","path":"kindlelise/models.py","line":483,"symbol":"Block","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:483:1"},{"nodeId":"F","label":"Open block-aware messaging policy","path":"kindlelise/policies.py","line":192,"symbol":"can_start_or_continue_direct_messages","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/policies.py:192:1"},{"nodeId":"G","label":"Open report page","path":"kindlelise/views/safety.py","line":138,"symbol":"report_user_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/safety.py:138:1"},{"nodeId":"H","label":"Open report target selector","path":"kindlelise/selectors.py","line":245,"symbol":"get_report_target_profile_if_reporter_is_allowed","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:245:1"},{"nodeId":"I","label":"Open context validation","path":"kindlelise/views/safety.py","line":25,"symbol":"_get_private_report_context","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/safety.py:25:1"},{"nodeId":"J","label":"Open report form validation","path":"kindlelise/forms.py","line":467,"symbol":"PrivateReportForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:467:1"},{"nodeId":"K","label":"Open report service","path":"kindlelise/services/safety.py","line":42,"symbol":"submit_private_report_about_user","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/safety.py:42:1"},{"nodeId":"L","label":"Open Report model","path":"kindlelise/models.py","line":514,"symbol":"Report","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:514:1"},{"nodeId":"M","label":"Open staff report view","path":"kindlelise/admin.py","line":432,"symbol":"ReportAdmin","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/admin.py:432:1"}]},{"title":"Paying for and managing Premium","description":"Payment and account management happen on Stripe. Stripe then sends a trusted update back to Kindelise, which updates the user's Premium access.","source":"flowchart LR\n  A[\"Choose Premium action\"] --> B{\"Pay or manage?\"}\n  B -->|Pay| C[\"Start payment\"]\n  C --> D[\"Create Stripe payment page\"]\n  D --> E[\"Pay securely on Stripe\"]\n  B -->|Manage| F[\"Open payment settings\"]\n  F --> G[\"Create Stripe account page\"]\n  G --> H[\"Manage account on Stripe\"]\n  E --> I[\"Stripe sends payment update\"]\n  I --> J[\"Check update is genuine\"]\n  J --> K[\"Update Premium access\"]\n  K --> L[\"Save payment status\"]\n  L --> M[\"Allow extra discovery filters\"]","targets":[{"nodeId":"A","label":"Open Premium account controls","path":"templates/account.html","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/templates/account.html:1:1"},{"nodeId":"B","label":"Open Premium HTTP actions","path":"kindlelise/views/billing.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/billing.py:1:1"},{"nodeId":"C","label":"Open Checkout endpoint","path":"kindlelise/views/billing.py","line":27,"symbol":"start_premium_subscription_checkout","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/billing.py:27:1"},{"nodeId":"D","label":"Open Checkout service","path":"kindlelise/services/billing.py","line":50,"symbol":"start_stripe_subscription_checkout","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/billing.py:50:1"},{"nodeId":"E","label":"Open Stripe Checkout boundary","path":"kindlelise/services/billing.py","line":50,"symbol":"start_stripe_subscription_checkout","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/billing.py:50:1"},{"nodeId":"F","label":"Open portal endpoint","path":"kindlelise/views/billing.py","line":54,"symbol":"open_premium_subscription_portal","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/billing.py:54:1"},{"nodeId":"G","label":"Open portal service","path":"kindlelise/services/billing.py","line":105,"symbol":"open_stripe_customer_portal","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/billing.py:105:1"},{"nodeId":"H","label":"Open Stripe portal boundary","path":"kindlelise/services/billing.py","line":105,"symbol":"open_stripe_customer_portal","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/billing.py:105:1"},{"nodeId":"I","label":"Open webhook route","path":"kindlelise/urls.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/urls.py:1:1"},{"nodeId":"J","label":"Open signature verification","path":"kindlelise/views/billing.py","line":76,"symbol":"receive_and_verify_stripe_webhook","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/billing.py:76:1"},{"nodeId":"K","label":"Open webhook projection","path":"kindlelise/services/stripe_events.py","line":216,"symbol":"update_premium_access_from_verified_stripe_event","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/stripe_events.py:216:1"},{"nodeId":"L","label":"Open idempotency receipt model","path":"kindlelise/models.py","line":658,"symbol":"StripeWebhookReceipt","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:658:1"},{"nodeId":"M","label":"Open Premium effects","path":"kindlelise/policies.py","line":41,"symbol":"get_allowed_discovery_areas_and_interest_limit","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/policies.py:41:1"}]},{"title":"Saving and showing profile or plan pictures","description":"Pictures are saved on the computer during local development and in Cloudinary on the live site. Kindelise checks access before sending any saved picture.","source":"flowchart LR\n  A[\"Upload profile picture\"] --> B[\"Check picture file\"]\n  B --> C[\"Save profile picture\"]\n  C --> D[\"Link picture to profile\"]\n  E[\"Picture found for plan\"] --> F[\"Save plan picture\"]\n  F --> G[\"Link picture to plan\"]\n  D --> H{\"Where should it be saved?\"}\n  G --> H\n  H -->|Production| I[\"Cloudinary\"]\n  H -->|Development| J[\"Local picture folder\"]\n  D --> K[\"Request profile picture\"]\n  K --> L[\"Check profile can be viewed\"]\n  G --> M[\"Request plan picture\"]\n  M --> N[\"Check plan can be viewed\"]\n  L --> O[\"Send allowed picture\"]\n  N --> O","targets":[{"nodeId":"A","label":"Open profile upload endpoint","path":"kindlelise/views/accounts.py","line":207,"symbol":"edit_profile_page","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:207:1"},{"nodeId":"B","label":"Open image validation","path":"kindlelise/forms.py","line":134,"symbol":"ProfileDetailsForm","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/forms.py:134:1"},{"nodeId":"C","label":"Open image replacement service","path":"kindlelise/services/accounts.py","line":40,"symbol":"update_signed_in_user_profile","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/accounts.py:40:1"},{"nodeId":"D","label":"Open profile image field","path":"kindlelise/models.py","line":54,"symbol":"Profile","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:54:1"},{"nodeId":"E","label":"Open plan thumbnail creation","path":"kindlelise/plan_metadata.py","line":464,"symbol":"thumbnail_from_metadata_token","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/plan_metadata.py:464:1"},{"nodeId":"F","label":"Open plan image storage","path":"kindlelise/services/plans.py","line":19,"symbol":"create_available_plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/services/plans.py:19:1"},{"nodeId":"G","label":"Open plan thumbnail field","path":"kindlelise/models.py","line":160,"symbol":"Plan","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/models.py:160:1"},{"nodeId":"H","label":"Open storage selection","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"I","label":"Open Cloudinary storage configuration","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"J","label":"Open local media configuration","path":"config/settings.py","line":1,"symbol":"","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/config/settings.py:1:1"},{"nodeId":"K","label":"Open profile image delivery","path":"kindlelise/views/accounts.py","line":248,"symbol":"profile_image_file","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:248:1"},{"nodeId":"L","label":"Open image visibility selector","path":"kindlelise/selectors.py","line":219,"symbol":"get_profile_image_if_viewer_is_allowed","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:219:1"},{"nodeId":"M","label":"Open plan image delivery","path":"kindlelise/views/plans.py","line":171,"symbol":"plan_thumbnail_file","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/plans.py:171:1"},{"nodeId":"N","label":"Open plan visibility selector","path":"kindlelise/selectors.py","line":326,"symbol":"get_plan_page_if_viewer_is_allowed","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/selectors.py:326:1"},{"nodeId":"O","label":"Open protected file response","path":"kindlelise/views/accounts.py","line":248,"symbol":"profile_image_file","vscodeUri":"vscode://file/Users/harveyseale/dev/kindlelise/kindlelise/views/accounts.py:248:1"}]}]</script>
+    <script type="module">
+      // # KEYWORD: import — loads a named tool supplied by another JavaScript file.
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+      // # WHY: Reads the checked diagram information placed inside this same generated page.
+      const diagrams = JSON.parse(document.getElementById("runtime-data").textContent);
+      const explorer = document.getElementById("explorer");
+      const contents = document.getElementById("flow-contents");
+      const search = document.getElementById("flow-search");
+      const emptyResult = document.getElementById("empty-result");
+      const status = document.getElementById("status");
+
+      // # WHY: Turns a heading into a short, safe page link used by the contents list.
+      function slugify(value) {
+        return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      }
+
+      // # WHY: Builds a plain link list so every code destination remains available if a diagram cannot load.
+      function makeSourceLinks(diagram) {
+        const details = document.createElement("details");
+        details.className = "source-links";
+        const summary = document.createElement("summary");
+        summary.textContent = "Source links";
+        details.append(summary);
+        const list = document.createElement("ul");
+        for (const target of diagram.targets) {
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = target.vscodeUri;
+          link.textContent = target.label + " — " + target.path + ":" + target.line;
+          item.append(link);
+          list.append(item);
+        }
+        details.append(list);
+        return details;
+      }
+
+      // # WHY: Gives every guide entry its own heading, diagram space, and contents link.
+      for (const [index, diagram] of diagrams.entries()) {
+        const section = document.createElement("section");
+        section.className = "runtime-flow";
+        section.dataset.diagramIndex = String(index);
+        section.dataset.search = [diagram.title, diagram.description, ...diagram.targets.map((target) => target.path + " " + target.symbol)]
+          .join(" ")
+          .toLowerCase();
+        section.id = "flow-" + slugify(diagram.title);
+
+        const heading = document.createElement("h2");
+        heading.textContent = diagram.title;
+        const description = document.createElement("p");
+        description.className = "flow-description";
+        description.textContent = diagram.description;
+        const shell = document.createElement("div");
+        shell.className = "diagram-shell";
+        const chart = document.createElement("div");
+        chart.className = "mermaid";
+        shell.append(chart);
+        section.append(heading, description, shell, makeSourceLinks(diagram));
+        explorer.append(section);
+
+        const contentsItem = document.createElement("li");
+        contentsItem.dataset.diagramIndex = String(index);
+        const contentsLink = document.createElement("a");
+        contentsLink.href = "#" + section.id;
+        contentsLink.textContent = diagram.title;
+        contentsItem.append(contentsLink);
+        contents.append(contentsItem);
+      }
+
+      // # WHY: Hides diagrams that do not match the visitor's words while keeping contents in step.
+      search.addEventListener("input", () => {
+        const query = search.value.trim().toLowerCase();
+        let visibleCount = 0;
+        for (const section of explorer.querySelectorAll(".runtime-flow")) {
+          const visible = !query || section.dataset.search.includes(query);
+          section.hidden = !visible;
+          contents.querySelector('[data-diagram-index="' + section.dataset.diagramIndex + '"]').hidden = !visible;
+          if (visible) visibleCount += 1;
+        }
+        emptyResult.hidden = visibleCount !== 0;
+      });
+
+      // # WHY: Uses the same readable colours and spacing for every diagram on the page.
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: "dark",
+        flowchart: {
+          htmlLabels: true,
+          useMaxWidth: true,
+          curve: "basis",
+          nodeSpacing: 55,
+          rankSpacing: 70,
+        },
+        themeVariables: {
+          primaryColor: "#202127",
+          primaryBorderColor: "#52525e",
+          primaryTextColor: "#f5f5f7",
+          lineColor: "#777783",
+          secondaryColor: "#17181d",
+          tertiaryColor: "#111216",
+          fontSize: "18px",
+        },
+      });
+
+      // # WHY: Draws each diagram and connects its blocks to the already checked source destinations.
+      try {
+        let linkedNodes = 0;
+        for (const [index, diagram] of diagrams.entries()) {
+          const section = document.querySelector('.runtime-flow[data-diagram-index="' + index + '"]');
+          const chart = section.querySelector(".mermaid");
+          const rendered = await mermaid.render("runtime-flow-" + index, diagram.source);
+          chart.innerHTML = rendered.svg;
+          if (rendered.bindFunctions) rendered.bindFunctions(chart);
+          const nodes = [...chart.querySelectorAll("g.node")];
+          for (const target of diagram.targets) {
+            const node = nodes.find((candidate) =>
+              candidate.dataset.id === target.nodeId
+              || candidate.id === target.nodeId
+              || candidate.id.includes("-flowchart-" + target.nodeId + "-")
+            );
+            if (!node) {
+              console.warn("Could not bind node " + target.nodeId + " in " + diagram.title);
+              continue;
+            }
+            // # WHY: Opens the exact source line when a diagram block is clicked or used from a keyboard.
+            const openSource = () => { window.location.href = target.vscodeUri; };
+            node.classList.add("runtime-node-link");
+            node.setAttribute("role", "link");
+            node.setAttribute("tabindex", "0");
+            node.setAttribute("aria-label", target.label + ", " + target.path + ", line " + target.line);
+            node.addEventListener("click", openSource);
+            // # WHY: Gives keyboard visitors the same source-opening action as a mouse click.
+            node.addEventListener("keydown", (event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                openSource();
+              }
+            });
+            linkedNodes += 1;
+          }
+        }
+        status.textContent = diagrams.length + " flows · " + linkedNodes + " linked blocks";
+      } catch (error) {
+        status.textContent = "Diagram rendering failed. Source links are still available.";
+        status.classList.add("error");
+        console.error(error);
+      }
+    </script>
+  </body>
+</html>

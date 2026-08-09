@@ -1,7 +1,14 @@
 {% extends "base.html" %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Lists unread and recent account activity and lets the visitor mark it as read. #}
 
+
+{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
 {% block title %}Notifications{% endblock %}
 
+{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
   <article class="private-profile-page" aria-labelledby="notifications-title">
     <header class="private-profile-header">
@@ -12,7 +19,9 @@
       <header class="private-profile-identity">
         <div class="private-profile-identity-heading">
           <h1 id="notifications-title">Notifications</h1>
+          {# # WHY: Shows the following part only when its stated page condition is true. #}
           {% if unread_notification_count %}
+            <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
             <form method="post" action="{% url 'notifications_read' %}">
               {% csrf_token %}
               <button class="secondary" type="submit">Mark all read</button>
@@ -22,16 +31,18 @@
         <p class="private-profile-title-statement">Messages and activity on plans you created.</p>
       </header>
 
-      <section class="private-profile-section" aria-labelledby="notification-list-title">
-        <h2 id="notification-list-title">Recent activity</h2>
+      <section class="private-profile-section" aria-label="Recent activity">
         <ul class="private-profile-plans private-profile-plan-links">
+          {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
           {% for notification in notifications %}
             <li>
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if notification.kind == notification.Kind.MESSAGE %}
                 <a href="{% url 'conversation_detail' notification.message.conversation.pk %}">
                   <span>Message from {{ notification.message.sender.profile.display_name }}</span>
                   <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
                 </a>
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% else %}
                 <a href="{% url 'plan_detail' notification.participation.plan.pk %}">
                   <span>{{ notification.participation.user.profile.display_name }} joined {{ notification.participation.plan.title }}</span>
@@ -39,6 +50,7 @@
                 </a>
               {% endif %}
             </li>
+          {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
           {% empty %}
             <li class="private-profile-plan-empty"><span>No notifications yet.</span></li>
           {% endfor %}

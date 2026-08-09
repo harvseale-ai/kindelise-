@@ -1,10 +1,18 @@
 {% extends "base.html" %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Shows permitted profile cards and the controls used to narrow those results. #}
 
-{% block title %}Discover profiles · Kindlelise{% endblock %}
 
+{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
+{% block title %}Discover profiles · Kindelise{% endblock %}
+
+{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
   <section class="discovery-controls" aria-labelledby="discover-title">
     <h1 class="visually-hidden" id="discover-title">Discover profiles</h1>
+    <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
     <form class="discovery-filter-form" method="get" aria-label="Discovery filters" novalidate>
       {{ form.non_field_errors }}
       <div class="filter-pill-scroller" role="group" aria-label="Open a discovery filter">
@@ -62,20 +70,24 @@
 
   <section aria-label="Profiles">
     <ul class="plain-list discovery-grid">
+      {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
       {% for card in profile_cards %}
         <li class="card discovery-profile-card{% if card.profile.profile_image %} discovery-profile-card--with-image{% endif %}"{% if card.profile.profile_image %} style="background: #19191e center / cover no-repeat url('{% url 'profile_image' card.profile.pk %}?v={{ card.profile.profile_image.name|urlencode }}')"{% endif %}>
           <div>
             <strong><a href="{% url 'profile_detail' card.profile.pk %}">{{ card.profile.display_name }}</a></strong>
             <p>{{ card.broad_area_label }} · Verified{% if card.is_available_now %} · Free now{% endif %}</p>
             <ul class="chips" aria-label="Interests">
+              {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
               {% for interest in card.profile.interests.all %}
                 <li>{{ interest.name }}</li>
+              {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
               {% empty %}
                 <li class="muted">No interests listed</li>
               {% endfor %}
             </ul>
           </div>
         </li>
+      {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
       {% empty %}
         <li class="card empty-state">
           <strong>No profiles match these area and interest filters.</strong>

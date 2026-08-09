@@ -1,11 +1,14 @@
 # Kindlelise Master Instruction Prompt
 
+> **Archived:** this repeated-pass prompt is retained for project history. Its
+> recorded checksum is stale and it must not govern current implementation work.
+
 > **Status:** approved reusable project instruction, synchronized to the
 > vertical-slice revision below.
 >
 > **Synchronized vertical-slice revision:** SHA-256
 > `24fd78915f1c2446230d6831582fae604ec9dd4d139123c990b08061f267ab63`
-> of [`docs/VERTICAL_SLICE.md`](VERTICAL_SLICE.md).
+> of [`docs/VERTICAL_SLICE.md`](../../docs/VERTICAL_SLICE.md).
 >
 > **Synchronized date:** 2026-08-06.
 >
@@ -113,10 +116,10 @@ FIXED PROJECT BOUNDARY
 - The assessed journey is registration/sign-in, profile completion, manual
   staff verification, broad-area discovery, immediate eligible plan creation,
   join/leave, direct messages, blocking and private reporting.
-- Stripe is limited to one hosted Premium subscription: one no-card 30-day trial
-  per local account, followed by GBP 4.99 recurring yearly, with hosted invoice
-  and customer-portal payment/cancellation and a webhook-authoritative local
-  access projection.
+- Stripe is limited to one hosted Premium subscription at GBP 4.99 recurring
+  yearly, collected immediately through Checkout, with hosted invoice and
+  customer-portal payment/cancellation and a webhook-authoritative local access
+  projection.
 - Ollama Cloud is limited to grammar or clarity suggestions for one unsent
   message draft. The user reviews the suggestion and sends manually.
 - Profiles may include one optional owner-uploaded JPEG, PNG or WebP image. It is
@@ -257,10 +260,9 @@ CORE BEHAVIOUR THAT MUST NOT DRIFT
   sanction or notification to the reported account.
 - Stripe ownership uses immutable local user IDs in trusted metadata or an
   existing unique Stripe-ID link, never email. Checkout records identifiers but
-  never grants access. The first eligible Checkout uses the configured GBP 499
-  yearly price with exactly 30 trial days, payment-method collection only if
-  required and post-trial invoice creation; retained Stripe history prevents a
-  second trial or duplicate active/trialing subscription. A trialing update may
+  never grants access. Checkout uses the configured GBP 499 yearly price and
+  collects the first payment immediately; retained Stripe history prevents a
+  duplicate active or legacy trialing subscription. A legacy trialing event may
   grant only the bounded trial. Active status alone never proves payment;
   `invoice.paid` for the linked configured price and active subscription grants
   only its future paid annual service period. Only verified supported webhook

@@ -1,6 +1,9 @@
 # Kindlelise Student MVP Implementation Progress
 
-> **Authority:** [`docs/VERTICAL_SLICE.md`](VERTICAL_SLICE.md) remains the
+> **Archived:** retained as historical implementation evidence. Its phase states
+> are no longer the current project-status source.
+
+> **Authority:** [`docs/VERTICAL_SLICE.md`](../../docs/VERTICAL_SLICE.md) remains the
 > implementation boundary. [`docs/IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)
 > defines the approved phases, dependencies, exit gates and evidence requirements.
 > This document records progress only and cannot introduce or redefine work.

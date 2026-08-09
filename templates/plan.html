@@ -1,10 +1,19 @@
 {% extends "base.html" %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Builds the plan list, create form, edit form, or detail page from the chosen page mode. #}
 
+
+{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
 {% block title %}
-  {% if mode == "create" %}Create plan{% elif mode == "edit" %}Edit plan{% elif mode == "detail" %}{{ summary.plan.title }}{% else %}Plans{% endif %} · Kindlelise
+  {# # WHY: Shows the following part only when its stated page condition is true. #}
+  {% if mode == "create" %}Create plan{% elif mode == "edit" %}Edit plan{% elif mode == "detail" %}{{ summary.plan.title }}{% else %}Plans{% endif %} · Kindelise
 {% endblock %}
 
+{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if mode == "list" %}
     <section class="plans-page" aria-labelledby="plans-title">
       <header class="plans-page-header">
@@ -18,15 +27,16 @@
           <a href="{% url 'plan_list' %}?filter=available"{% if selected_filter == "available" %} aria-current="page"{% endif %}>Available</a>
           <a href="{% url 'plan_list' %}?filter=mine"{% if selected_filter == "mine" %} aria-current="page"{% endif %}>My plans</a>
           <a href="{% url 'plan_list' %}?filter=pending"{% if selected_filter == "pending" %} aria-current="page"{% endif %}>Pending</a>
-          <a href="{% url 'plan_list' %}?filter=rejected"{% if selected_filter == "rejected" %} aria-current="page"{% endif %}>Rejected</a>
+          <a href="{% url 'plan_list' %}?filter=done"{% if selected_filter == "done" %} aria-current="page"{% endif %}>Done</a>
           <a href="{% url 'plan_list' %}?filter=cancelled"{% if selected_filter == "cancelled" %} aria-current="page"{% endif %}>Cancelled</a>
         </nav>
-        <p>Future plans are available as soon as they are created.<br>Open a plan to see its public place, start time and full details.</p>
+        <p>Future plans are available as soon as they are created. Open a plan to see its public place, start time and full details.</p>
       </div>
 
       <section aria-labelledby="plan-list-title">
         <h2 class="visually-hidden" id="plan-list-title">Plans</h2>
         <ul class="plans-grid">
+        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for plan in plans %}
           <li>
             <a class="plan-card{% if plan.thumbnail_image %} plan-card--with-image{% endif %}" href="{% url 'plan_detail' plan.pk %}"{% if plan.thumbnail_image %} style="--plan-card-image: url('{% url 'plan_thumbnail' plan.pk %}')"{% endif %}>
@@ -42,16 +52,25 @@
                   <span>{{ plan.public_place }}</span>
                 </span>
                 <span class="plan-card-footer">
-                  {% if plan.status == plan.Status.APPROVED and plan.owner_id == user.pk %}
+                  {# # WHY: Shows the following part only when its stated page condition is true. #}
+                  {% if selected_filter == "done" %}
+                    <span class="plan-state">Done</span>
+                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
+                  {% elif plan.status == plan.Status.APPROVED and plan.owner_id == user.pk %}
                     <span class="plan-state plan-state--available plan-state--yours">Your plan</span>
+                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                   {% elif plan.status == plan.Status.APPROVED and plan.joined_count >= plan.capacity %}
                     <span class="plan-state plan-state--full">Full</span>
+                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                   {% elif plan.status == plan.Status.APPROVED %}
                     <span class="plan-state plan-state--available">Available</span>
+                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                   {% elif plan.status == plan.Status.PENDING %}
                     <span class="plan-state plan-state--pending">Pending</span>
+                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                   {% elif plan.status == plan.Status.REJECTED %}
                     <span class="plan-state">Rejected</span>
+                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                   {% else %}
                     <span class="plan-state">Cancelled</span>
                   {% endif %}
@@ -63,10 +82,11 @@
               </span>
             </a>
           </li>
+        {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
         {% empty %}
           <li class="plans-empty-state">
             <strong>No plans match this filter.</strong>
-            <p>New future plans will appear here as soon as they are created.</p>
+            <p>{% if selected_filter == "done" %}Plans you hosted or joined will appear here after their start time.{% else %}New future plans will appear here as soon as they are created.{% endif %}</p>
             <a class="button secondary" href="{% url 'plan_create' %}">Create a plan</a>
           </li>
         {% endfor %}
@@ -75,10 +95,11 @@
 
       <footer class="plans-safety-note">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9h.01"/></svg>
-        <p>Kindlelise does not verify venues or guarantee that linked public-place information remains accurate. Check the details before attending.</p>
+        <p>Kindelise does not verify venues or guarantee that linked public-place information remains accurate. Check the details before attending.</p>
       </footer>
     </section>
 
+  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "create" or mode == "edit" %}
     <section class="profile-edit-page plan-form-page" aria-labelledby="plan-form-title">
       <header class="profile-edit-header">
@@ -86,24 +107,31 @@
         <h1 id="plan-form-title">{% if mode == "edit" %}Edit plan{% else %}Create plan{% endif %}</h1>
       </header>
 
+      <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
         {% csrf_token %}
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if mode == "edit" and plan.status == plan.Status.REJECTED %}
           <div class="state-panel" role="status">Saving this plan makes the revised version available.</div>
         {% endif %}
 
+        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for field in form %}
           <section class="profile-edit-field plan-form-field plan-form-field--{{ field.name }}{% if field.name == 'description' %} biography-field{% endif %}" aria-labelledby="{{ field.id_for_label }}-label">
             <h2 id="{{ field.id_for_label }}-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label></h2>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if field.help_text %}
               <span class="helptext">{{ field.help_text }}</span>
+            {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
             {% elif field.name == "public_url" %}
               <span class="helptext">Use a normal HTTPS public-information page for the established public place.</span>
             {% endif %}
             <div class="profile-field-panel">
               {{ field }}
             </div>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if field.name == "public_url" %}
               <div class="plan-metadata-actions">
                 <button class="secondary" type="button" data-plan-metadata-fetch data-fetch-url="{% url 'plan_metadata_fetch' %}">Fetch details</button>
@@ -120,10 +148,12 @@
       </form>
     </section>
 
+  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% else %}
     <article class="private-profile-page" aria-labelledby="plan-title">
       <div class="private-profile-hero">
         <a class="private-profile-back" href="{% url 'plan_list' %}" aria-label="Back to plans"></a>
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if summary.plan.thumbnail_image %}<img src="{% url 'plan_thumbnail' summary.plan.pk %}" alt="">{% endif %}
       </div>
 
@@ -134,6 +164,7 @@
               <h1 id="plan-title">{{ summary.plan.title }}</h1>
               <span class="private-plan-state private-plan-state--{{ summary.plan.status }}">{% if is_past %}Past{% elif summary.plan.status == summary.plan.Status.APPROVED %}Available{% else %}{{ summary.plan.get_status_display }}{% endif %}</span>
             </div>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if can_edit %}<a class="private-profile-identity-edit" href="{% url 'plan_edit' summary.plan.pk %}">Edit</a>{% endif %}
           </div>
           <p class="private-profile-title-statement">Hosted by {{ summary.plan.owner.profile.display_name }}</p>
@@ -174,39 +205,53 @@
 
         <div class="private-profile-notice">
           <strong>Check the public-place information</strong>
-          <p>Kindlelise does not verify the venue, preserve the linked webpage, prove that the venue is safe or guarantee that the page has not changed.</p>
+          <p>Kindelise does not verify the venue, preserve the linked webpage, prove that the venue is safe or guarantee that the page has not changed.</p>
         </div>
 
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if summary.plan.meeting_details_locked_at %}
           <div class="private-profile-notice" role="status"><strong>This plan can no longer be edited because someone has joined.</strong></div>
         {% endif %}
 
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if can_join or summary.viewer_participation_status == "joined" or not is_owner %}
           <section class="private-profile-section" aria-labelledby="plan-actions-title">
             <h2 id="plan-actions-title">Actions</h2>
             <div class="action-row">
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if can_join %}
+                <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
                 <form method="post" action="{% url 'plan_join' summary.plan.pk %}">
                   {% csrf_token %}
                   <button type="submit">{% if summary.viewer_participation_status == "left" %}Join again{% else %}Join plan{% endif %}</button>
                 </form>
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif summary.viewer_participation_status == "joined" %}
+                <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
                 <form method="post" action="{% url 'plan_leave' summary.plan.pk %}">
                   {% csrf_token %}
                   <button class="secondary" type="submit">Leave plan</button>
                 </form>
               {% endif %}
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if not is_owner %}
+                <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
+                <form method="post" action="{% url 'direct_conversation_start' summary.plan.owner.profile.pk %}">
+                  {% csrf_token %}
+                  <button class="secondary" type="submit">Message plan owner</button>
+                </form>
                 <a class="button secondary" href="{% url 'report_create' summary.plan.owner.profile.pk %}{% if summary.viewer_participation_status %}?context_type=plan&amp;context_id={{ summary.plan.pk }}{% endif %}">Report the plan owner privately</a>
               {% endif %}
             </div>
           </section>
         {% endif %}
 
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if can_cancel %}
           <details>
             <summary>Cancel plan</summary>
             <p>Cancellation is terminal. The plan and participation history will be retained.</p>
+            <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
             <form method="post" action="{% url 'plan_cancel' summary.plan.pk %}">
               {% csrf_token %}
               <button class="danger secondary" type="submit">Confirm cancellation</button>

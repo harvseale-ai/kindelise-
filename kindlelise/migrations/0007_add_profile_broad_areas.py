@@ -1,7 +1,10 @@
+# KEYWORD: migration — a numbered database change applied in the same order everywhere the site runs.
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import migrations, models
 
 
+# WHY: Keeps the copy primary area to broad areas steps in one named place so they can be understood, checked, and reused.
 def copy_primary_area_to_broad_areas(apps, _schema_editor):
     Profile = apps.get_model("kindlelise", "Profile")
     for profile in Profile.objects.exclude(broad_area="").iterator():
@@ -9,6 +12,7 @@ def copy_primary_area_to_broad_areas(apps, _schema_editor):
         profile.save(update_fields=["broad_areas"])
 
 
+# WHY: Records this numbered database change so every copy of the site applies it in the same order.
 class Migration(migrations.Migration):
 
     dependencies = [

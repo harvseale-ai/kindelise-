@@ -1,9 +1,12 @@
+# KEYWORD: migration — a numbered database change applied in the same order everywhere the site runs.
+
 import django.db.models.deletion
 import django.utils.timezone
 from django.conf import settings
 from django.db import migrations, models
 
 
+# WHY: Records this numbered database change so every copy of the site applies it in the same order.
 class Migration(migrations.Migration):
     dependencies = [
         ("kindlelise", "0007_add_profile_broad_areas"),

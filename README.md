@@ -1,12 +1,12 @@
-# Kindlelise
+# Kindelise
 
-Kindlelise is a focused, server-rendered Django application for meeting
+Kindelise is a focused, server-rendered Django application for meeting
 people around shared interests and arranging activities at established public
 places. It combines staff-gated profiles, broad-area discovery, public plans,
 direct messaging, private safety controls, Stripe Premium and an optional
 Ollama-assisted draft editor in one deliberately small application.
 
-> **Assessment boundary:** Kindlelise is designed for supervised test accounts.
+> **Assessment boundary:** Kindelise is designed for supervised test accounts.
 > Staff verification controls access to product features; it is not proof of
 > identity, age, character or safety. The MVP is not ready for unrestricted
 > public use.
@@ -22,6 +22,7 @@ Ollama-assisted draft editor in one deliberately small application.
 - [Plain-Language Terms](#plain-language-terms)
 - [Product Pages](#product-pages)
 - [Architecture](#architecture)
+- [Django Project And Application Structure](#django-project-and-application-structure)
 - [Key Technical Decisions](#key-technical-decisions)
 - [Data Structure And Flow](#data-structure-and-flow)
 - [Key Features](#key-features)
@@ -45,7 +46,7 @@ Ollama-assisted draft editor in one deliberately small application.
 Install the following before running the project:
 
 - Python 3.12. The package explicitly supports `>=3.12,<3.13`.
-- PostgreSQL. Kindlelise intentionally has no SQLite fallback.
+- PostgreSQL. Kindelise intentionally has no SQLite fallback.
 - Git for cloning and version control.
 - A modern browser for the responsive interface.
 - Stripe CLI only for a real local test-mode webhook walkthrough.
@@ -114,7 +115,7 @@ need enough information to find shared interests and organise an activity, but
 an MVP should not collect precise location history, expose private participant
 lists or pretend that automated checks prove identity or safety.
 
-Kindlelise addresses that problem with a deliberately bounded interaction:
+Kindelise addresses that problem with a deliberately bounded interaction:
 
 1. People create a small profile using broad named areas and controlled
    interests rather than coordinates.
@@ -150,7 +151,7 @@ safe.
 
 ## Current Solution
 
-Kindlelise is one Django project with one application and a PostgreSQL database.
+Kindelise is one Django project with one application and a PostgreSQL database.
 Django renders the HTML, validates forms, enforces authentication and CSRF,
 applies policy checks, coordinates state changes through services and stores the
 durable records through its ORM.
@@ -186,7 +187,7 @@ External services are limited to:
   between both accounts. It does not stop private reporting.
 - **Private report:** the reporter's statement for authorised staff. Submission
   does not prove wrongdoing or automatically impose a sanction.
-- **Premium projection:** Kindlelise's minimal local record of verified Stripe
+- **Premium projection:** Kindelise's minimal local record of verified Stripe
   state. Browser return pages never grant access.
 - **Ollama suggestion:** a temporary edited version of an unsent draft. It is not
   stored or sent unless the user chooses it and later presses Send.
@@ -199,7 +200,7 @@ semantic forms, protected profile/plan images and notification pop-outs.
 
 | Page | Route | Purpose |
 | --- | --- | --- |
-| How to use Kindlelise | `/guide/` | One-page explanation of profiles, discovery, plans, messages, safety and Premium. |
+| How to use Kindelise | `/guide/` | One-page explanation of profiles, discovery, plans, messages, safety and Premium. |
 | Create account / sign in | `/sign-up/`, `/sign-in/` | Email/password authentication and supervised-use explanation. |
 | Private profile | `/profile/` | Owner profile, plans, availability, Premium action and sign out. |
 | Edit profile | `/account/profile/edit/` | Profile image and owner-editable profile fields. |
@@ -249,6 +250,37 @@ Models           = constraints, indexes and durable state
 Admin            = staff-only verification and review controls
 ```
 
+## Django Project And Application Structure
+
+Kindelise has one custom Django application, named `kindlelise`, inside one
+Django project. The main parts are:
+
+- `config/` — Django project configuration, including settings, main URLs,
+  WSGI and ASGI.
+- `kindlelise/` — the custom application containing models, views, forms and
+  the product's main logic.
+- `django.contrib.*` — Django's built-in applications for authentication,
+  Admin, sessions, messages and static files.
+- `cloudinary*` — installed third-party applications used for uploaded-media
+  storage.
+
+One custom application is used because Kindelise is one closely connected
+product. Profiles, discovery, plans, conversations, reports, notifications and
+Premium access depend heavily on one another. Keeping them together provides:
+
+- One clear place for the product code.
+- Fewer imports and configuration steps between separate applications.
+- Simpler database migrations.
+- Easier navigation when reading and explaining the code.
+- Shared permission and privacy rules without duplication.
+- Less risk of splitting connected workflows too early.
+
+Multiple custom applications would become useful if areas such as payments,
+messaging or moderation grew into genuinely separate systems, were maintained
+independently, or needed to be reused by another project. Using one application
+at the current size is therefore an intentional organisational choice, not a
+Django limitation.
+
 ## Key Technical Decisions
 
 | Decision | Choice | Reason |
@@ -263,7 +295,7 @@ Admin            = staff-only verification and review controls
 | Plan capacity | Transactional join with `select_for_update` | Prevents concurrent joins from exceeding capacity. |
 | Messaging | Refreshed server-rendered plain text | Avoids sockets, media and read-state complexity while preserving the core coordination journey. |
 | Safety | Immediate block plus separate private report | Blocking closes interaction; reporting remains available and does not become a public accusation. |
-| Billing | Stripe-hosted Checkout/Portal and signed webhooks | Card data never enters Kindlelise, and browser redirects cannot grant Premium. |
+| Billing | Stripe-hosted Checkout/Portal and signed webhooks | Card data never enters Kindelise, and browser redirects cannot grant Premium. |
 | AI editing | Explicit bounded Ollama request | Only a current unsent draft and fixed editing goal leave the application; no history or automatic send. |
 | Static files | WhiteNoise compressed manifest storage | Supports a small production deployment without a separate static service. |
 | Images | Normalised protected application files | Removes embedded metadata and checks access, while documenting the need for durable production storage. |
@@ -275,7 +307,7 @@ The rationale and rejected alternatives are recorded in
 
 ### Core Data Structures
 
-Kindlelise defines eleven application models plus Django's existing `User` model.
+Kindelise defines eleven application models plus Django's existing `User` model.
 
 | Model | Important fields | Responsibility |
 | --- | --- | --- |
@@ -420,10 +452,23 @@ authorised conversation + unsent draft
 | [`kindlelise/forms.py`](kindlelise/forms.py) | Authentication, profile, discovery, plan, message, AI and report input validation. |
 | [`kindlelise/policies.py`](kindlelise/policies.py) | Verification, visibility, plan, messaging and report permission decisions. |
 | [`kindlelise/selectors.py`](kindlelise/selectors.py) | Privacy-scoped profile, plan, inbox and conversation reads. |
-| [`kindlelise/services.py`](kindlelise/services.py) | Atomic account, profile, plan, messaging, safety and Stripe workflows. |
+| [`kindlelise/services/`](kindlelise/services/) | State-changing workflows split by account, plan, message, safety and payment responsibility. |
+| [`kindlelise/services/accounts.py`](kindlelise/services/accounts.py) | Atomic account/profile changes and notification reading. |
+| [`kindlelise/services/plans.py`](kindlelise/services/plans.py) | Plan creation, editing, participation and cancellation transactions. |
+| [`kindlelise/services/messages.py`](kindlelise/services/messages.py) | Direct-conversation creation and message sending. |
+| [`kindlelise/services/safety.py`](kindlelise/services/safety.py) | Directional blocking and private reporting. |
+| [`kindlelise/services/billing.py`](kindlelise/services/billing.py) | Stripe Checkout and customer-portal session creation. |
+| [`kindlelise/services/stripe_events.py`](kindlelise/services/stripe_events.py) | Verified Stripe event parsing and Premium-access updates. |
 | [`kindlelise/plan_metadata.py`](kindlelise/plan_metadata.py) | Bounded HTTPS metadata fetch, SSRF controls and thumbnail normalisation. |
 | [`kindlelise/ai_message_editor.py`](kindlelise/ai_message_editor.py) | Bounded Ollama request and response validation. |
-| [`kindlelise/views.py`](kindlelise/views.py) | HTTP methods, forms, sessions, redirects, provider endpoints and templates. |
+| [`kindlelise/views/`](kindlelise/views/) | HTTP page coordination split by account, discovery, plan, message, safety and billing responsibility. |
+| [`kindlelise/views/accounts.py`](kindlelise/views/accounts.py) | Sign-up, sign-in, the private profile, profile images and notifications. |
+| [`kindlelise/views/discovery.py`](kindlelise/views/discovery.py) | Discovery results and public profile pages. |
+| [`kindlelise/views/plans.py`](kindlelise/views/plans.py) | Plan lists, creation, editing, images and participation. |
+| [`kindlelise/views/messages.py`](kindlelise/views/messages.py) | Inbox, direct conversations, sending and draft suggestions. |
+| [`kindlelise/views/safety.py`](kindlelise/views/safety.py) | Private blocking and reporting pages. |
+| [`kindlelise/views/billing.py`](kindlelise/views/billing.py) | Stripe Checkout, customer portal and webhook endpoints. |
+| [`kindlelise/views/common.py`](kindlelise/views/common.py) | Small display and safe-return helpers shared by page groups. |
 | [`kindlelise/admin.py`](kindlelise/admin.py) | Staff verification, legacy plan review and read-only sensitive records. |
 | [`templates/`](templates/) | Server-rendered semantic pages. |
 | [`static/app.css`](static/app.css) | Responsive design system and route-specific presentation. |
@@ -448,6 +493,30 @@ authorised conversation + unsent draft
 | Premium | account checkout and portal | Authenticated POST, then validated Stripe-hosted redirect. |
 | Stripe | `/stripe/webhook/` | POST-only raw-body signature verification; no browser session required. |
 | Staff | `/admin/` | Django staff authentication and model permissions. |
+
+### Local Runtime Explorer
+
+The repository includes a developer-only runtime explorer for learning how the
+application fits together. It is not a Django route and is not part of the
+deployed product.
+
+Build the one-page explorer from the checked runtime guide:
+
+```bash
+node tools/build-runtime-explorer.mjs
+```
+
+Open [`runtime-explorer.html`](runtime-explorer.html) in a browser. Each complete
+flowchart block opens its owning source file and current line in VS Code. The
+page covers request routing, accounts, discovery, plans, messaging, Ollama,
+notifications, safety, Stripe, media and production startup.
+
+After changing a mapped function or diagram, rebuild the page. The check command
+fails when the generated page is stale or a target no longer exists:
+
+```bash
+node tools/build-runtime-explorer.mjs --check
+```
 
 ## Run Locally
 
@@ -556,7 +625,7 @@ music, Cinema, Food, Games and Study.
 
 ## Stripe Test-Mode Setup
 
-Kindlelise expects one recurring price configured as GBP £4.99 per year.
+Kindelise expects one recurring price configured as GBP £4.99 per year.
 
 1. Create or select the Stripe test-mode Product and yearly Price.
 2. Put the test secret key and Price ID in `.env`.
@@ -670,7 +739,7 @@ Stripe and Ollama, inspect logs for unexpected failures and document rollback.
 - Stripe webhook signatures use the exact raw body; unique receipts and provider
   times prevent duplicate or older events from rewriting access.
 - Stripe ownership comes from immutable local IDs and linked provider IDs, never
-  email. Kindlelise stores no card or bank details.
+  email. Kindelise stores no card or bank details.
 - Ollama receives only the bounded unsent draft, fixed instruction and model. It
   receives no profile, recipient, report, plan or previous conversation content.
 - Provider errors are quiet, suggestions are not persisted and neither provider
@@ -736,7 +805,7 @@ Ruff checks stable Python syntax, import and undefined-name rules. Bandit scans
 application code for common security mistakes; generated migrations are excluded.
 Coverage.py measures statements and branches and enforces the 80% project minimum
 configured in `pyproject.toml`. pip-audit compares installed dependencies with the
-Python Packaging Advisory Database. The editable Kindlelise package itself is
+Python Packaging Advisory Database. The editable Kindelise package itself is
 reported as skipped because it is local source rather than a published package;
 its installed third-party dependencies are still audited.
 
@@ -813,7 +882,7 @@ suite. The separate live Ollama smoke check uses synthetic non-personal text.
 
 ## Assessment Fit
 
-Kindlelise demonstrates the expected full-stack outcomes:
+Kindelise demonstrates the expected full-stack outcomes:
 
 - Django project configuration, URL routing, views, forms and templates;
 - authentication, sessions, permissions, ownership and staff administration;
@@ -852,6 +921,9 @@ approve a plan, grant Premium or make a safety decision.
 | [`README.md`](README.md) | Main setup, product, architecture, testing and assessment handoff. |
 | [`docs/VERTICAL_SLICE.md`](docs/VERTICAL_SLICE.md) | Authoritative MVP behavior and implementation boundary. |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Architecture decisions, alternatives and consequences. |
+| [`docs/MANUAL_TESTING.md`](docs/MANUAL_TESTING.md) | End-to-end browser checks, errors found, fixes and final outcomes. |
+| [`docs/RUNTIME.md`](docs/RUNTIME.md) | Plain-language Mermaid maps of the application's main runtime flows. |
+| [`runtime-explorer.html`](runtime-explorer.html) | Generated one-page runtime map with clickable VS Code source links. |
 
 Completed build plans, progress evidence, superseded design material and README
 templates are retained under [`_achive/doc_old/`](_achive/doc_old/) for history.

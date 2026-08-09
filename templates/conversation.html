@@ -1,13 +1,22 @@
 {% extends "base.html" %}
-{% block title %}{{ other_profile.display_name }} · Messages · Kindlelise{% endblock %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Shows one private conversation and keeps sending, safety, and draft-editing controls together. #}
 
+{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
+{% block title %}{{ other_profile.display_name }} · Messages · Kindelise{% endblock %}
+
+{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
   <section class="conversation-page" aria-labelledby="conversation-title">
     <header class="conversation-page-header">
       <a class="back-link" href="{% url 'inbox' %}">← Messages</a>
       <div class="conversation-person">
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if other_profile.profile_image %}
           <img class="profile-image inbox-avatar" src="{% url 'profile_image' other_profile.pk %}" alt="">
+        {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
         {% else %}
           <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
         {% endif %}
@@ -21,6 +30,7 @@
         <div class="conversation-safety-panel">
           <a href="{% url 'report_create' other_profile.pk %}?context_type=conversation&amp;context_id={{ conversation.pk }}">Report this conversation privately</a>
           <p>Blocking removes both profiles from each other's discovery and stops direct messages. The other account is not notified.</p>
+          <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
           <form method="post" action="{% url 'profile_block_messages_and_discovery' other_profile.pk %}">
             {% csrf_token %}
             <button class="danger secondary" type="submit">Confirm block</button>
@@ -30,6 +40,7 @@
     </header>
 
     <ol class="conversation-thread" aria-label="Conversation messages">
+      {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
       {% for conversation_message in conversation_messages %}
         <li class="conversation-message{% if conversation_message.sender_id == user.pk %} is-own{% else %} is-other{% endif %}">
           <div class="conversation-bubble">
@@ -37,12 +48,14 @@
             <p>{{ conversation_message.body }}</p>
             <div class="conversation-message-meta">
               <time datetime="{{ conversation_message.sent_at|date:'c' }}">{{ conversation_message.sent_at|date:"j M, H:i" }}</time>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if conversation_message.sender_id != user.pk %}
               <a href="{% url 'report_create' other_profile.pk %}?context_type=message&amp;context_id={{ conversation_message.pk }}&amp;context_conversation_id={{ conversation.pk }}">Report this message</a>
             {% endif %}
             </div>
           </div>
         </li>
+      {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
       {% empty %}
         <li class="conversation-empty">
           <strong>No messages yet.</strong>
@@ -51,6 +64,7 @@
       {% endfor %}
     </ol>
 
+    <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
     <form id="message-composer" class="conversation-composer" method="post" action="{% url 'conversation_message_send' conversation.pk %}" novalidate>
       {% csrf_token %}
       {{ form.non_field_errors }}
@@ -63,7 +77,7 @@
       <details class="conversation-draft-tools">
         <summary>Edit this unsent draft</summary>
         <div>
-          <p class="state-label">Only this draft and your chosen editing goal go to Ollama Cloud. No profile or previous messages are included.</p>
+          <p class="state-label">Only this draft and your chosen editing goal go to Ollama. No profile or previous messages are included.</p>
           <div class="action-row">
             <button type="button" data-message-edit-goal="fix_grammar" data-conversation-id="{{ conversation.pk }}" aria-controls="message-edit-suggestion">Fix grammar</button>
             <button type="button" class="secondary" data-message-edit-goal="improve_clarity" data-conversation-id="{{ conversation.pk }}" aria-controls="message-edit-suggestion">Improve clarity</button>

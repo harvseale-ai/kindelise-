@@ -1,4 +1,4 @@
-# Kindlelise Student MVP Decision Log
+# Kindelise Student MVP Decision Log
 
 > **Authority:** `docs/VERTICAL_SLICE.md` is the implementation boundary. This
 > document records why that boundary exists; it does not add models, routes,
@@ -39,8 +39,8 @@ register or sign in
 → block or privately report
 ```
 
-Stripe provides one no-card 30-day Premium trial followed by a GBP 4.99 yearly
-subscription. Ollama Cloud edits one unsent message draft.
+Stripe provides one GBP 4.99 yearly Premium subscription through hosted Checkout.
+Ollama Cloud edits one unsent message draft.
 `docs/VERTICAL_SLICE.md` owns the exact files, functions, routes, states,
 constraints and tests.
 
@@ -105,13 +105,14 @@ may share `account.html`; plan list/create/edit/detail modes may share
 `plan.html`; the Premium comparison remains an account-page mode rather than a
 new route.
 
-`docs/IMPLEMENTATION_PLAN.md` is an explicitly approved supporting document
+`_achive/doc_old/IMPLEMENTATION_PLAN.md` was an explicitly approved supporting document
 outside the implementation-file count. It owns sequencing, completion gates and
 runtime evidence only; it cannot add implementation responsibility or product
-scope. The vertical slice and existing requirements were rejected as task-tracker
+scope. It is now retained as historical build evidence. The vertical slice and
+existing requirements were rejected as task-tracker
 owners because their contracts should remain stable while progress changes.
 
-## ADR-003: Use ten Kindlelise models plus Django User
+## ADR-003: Use ten Kindelise models plus Django User
 
 **Status:** Accepted  
 **Recorded:** 2026-07-18  
@@ -125,7 +126,7 @@ production model families previously proposed.
 
 ### Decision
 
-Use exactly these Kindlelise models:
+Use exactly these Kindelise models:
 
 ```text
 Profile
@@ -357,29 +358,25 @@ manual; the product must not claim to provide a full safeguarding service.
 
 Stripe is required, but custom billing, multiple products and local payment forms
 would distract from the social journey and increase payment-data exposure. The
-approved offer is one no-card-required 30-day trial followed by GBP 4.99 for one
-year of Premium.
+approved offer is GBP 4.99 for one year of Premium, collected immediately through
+hosted Checkout.
 
 ### Decision
 
 - Configure one Stripe product and one recurring GBP 499 yearly price.
-- Permit one 30-day trial per local account. A recorded Stripe customer or
-  subscription exhausts trial eligibility; cancellation cannot reset it.
-- For the first eligible Checkout, set `payment_method_collection=if_required`,
-  `trial_period_days=30` and missing-payment-method end behaviour to
-  `create_invoice`. A later eligible Checkout omits the trial, and an existing
-  active or trialing subscription is managed through the customer portal rather
-  than duplicated.
-- At trial end, let Stripe create and host the first GBP 4.99 annual invoice.
-  Use Stripe's hosted invoice/customer-portal surfaces for payment, and renew the
-  annual subscription unless the customer cancels it through the portal.
+- Collect the first GBP 4.99 annual payment through hosted Checkout without a
+  trial. An existing active or legacy trialing subscription is managed through
+  the customer portal rather than duplicated.
+- Use Stripe's hosted invoice/customer-portal surfaces for later payment-method
+  management, and renew yearly unless the customer cancels through the portal.
 - Use Stripe-hosted Checkout and customer portal.
 - Construct Checkout success/cancellation and portal-return URLs on the server from
   the named account route; never accept these destinations from browser input.
-- Pass the immutable Kindlelise user ID through `client_reference_id` and
+- Pass the immutable Kindelise user ID through `client_reference_id` and
   subscription metadata; never resolve ownership from email.
-- Accept only `checkout.session.completed`, `customer.subscription.updated`,
-  `invoice.paid` and `customer.subscription.deleted`.
+- Accept only `checkout.session.completed`, `customer.subscription.created`,
+  `customer.subscription.updated`, `invoice.paid` and
+  `customer.subscription.deleted`.
 - Let Checkout store identifiers only; it never grants premium access.
 - Grant trial access only from a verified `trialing` update with a future trial
   end. An `active` subscription update alone is not payment evidence.
@@ -418,7 +415,7 @@ year of Premium.
 
 ### Consequences
 
-Kindlelise stores no card or bank details. Premium expands configured discovery
+Kindelise stores no card or bank details. Premium expands configured discovery
 areas and interest-filter count only. Stripe owns the post-trial invoice and
 annual payment surfaces. Duplicate and older events cannot overwrite newer
 accepted state, and an unpaid invoice cannot create a free paid year.
@@ -470,7 +467,7 @@ or operational capabilities that are not implemented.
 ### Decision
 
 Use the historical data inventory and access boundaries in
-`doc_old/PRIVACY_MODEL.md` only as background. Keep
+`_achive/doc_old/PRIVACY_MODEL.md` only as background. Keep
 message bodies, report descriptions, passwords, secrets, raw webhook payloads and
 AI drafts out of logs. Use generic not-found responses where explaining a denial
 would reveal hidden state.
@@ -500,7 +497,7 @@ represented by empty scaffolding.
 ### Context
 
 The supplied screenshots provide useful mobile layout patterns, while their
-branding, content and several product behaviours do not belong to Kindlelise.
+branding, content and several product behaviours do not belong to Kindelise.
 
 ### Decision
 
@@ -510,7 +507,7 @@ features only where they are absent from the vertical slice.
 
 Use four destinations: Discover, Plans, Messages and Profile. The discovery grid
 contains verified profile cards only. The Premium comparison is an account-page
-mode. `doc_old/WIREFRAMES.md` may describe presentation but cannot create backend
+mode. `_achive/doc_old/WIREFRAMES.md` may describe presentation but cannot create backend
 requirements.
 
 ### Alternatives rejected
@@ -642,7 +639,7 @@ or supporting document to become an accidental second authority.
 
 ### Decision
 
-Add `docs/MASTER_INSTRUCTION_PROMPT.md` as a reusable pass-start instruction. It
+Add `_achive/doc_old/MASTER_INSTRUCTION_PROMPT.md` as a reusable pass-start instruction. It
 extracts the golden rule and high-value guardrails from the vertical slice,
 requires the complete vertical slice to be read, and provides placeholders for
 the current pass objective and deliverable.
@@ -687,9 +684,9 @@ contract change whenever progress is recorded.
 
 ### Decision
 
-Move the phase progress table to `docs/IMPLEMENTATION_PROGRESS.md`. The new
+Move the phase progress table to `_achive/doc_old/IMPLEMENTATION_PROGRESS.md`. The new
 document owns only the existing State and Evidence values for phases defined in
-`docs/IMPLEMENTATION_PLAN.md`. It cannot add an outcome, redefine or omit a phase,
+`_achive/doc_old/IMPLEMENTATION_PLAN.md`. It cannot add an outcome, redefine or omit a phase,
 weaken an exit gate, or use unevidenced completion status to change scope.
 
 The progress ledger is an explicitly approved supporting governance document

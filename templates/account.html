@@ -1,10 +1,19 @@
 {% extends "base.html" %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Builds account sign-up, sign-in, profile editing, and profile viewing from the chosen page mode. #}
 
+
+{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
 {% block title %}
-  {% if mode == "sign_up" %}Create an account{% elif mode == "sign_in" %}Sign in{% elif mode == "profile_edit" %}Edit profile{% elif mode == "public_profile" %}{{ profile.display_name }}{% else %}Profile{% endif %} · Kindlelise
+  {# # WHY: Shows the following part only when its stated page condition is true. #}
+  {% if mode == "sign_up" %}Create an account{% elif mode == "sign_in" %}Sign in{% elif mode == "profile_edit" %}Edit profile{% elif mode == "public_profile" %}{{ profile.display_name }}{% else %}Profile{% endif %} · Kindelise
 {% endblock %}
 
+{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if mode == "sign_up" %}
     <section class="profile-edit-page brand-form-page" aria-labelledby="sign-up-title">
       <header class="profile-edit-header">
@@ -13,13 +22,17 @@
       <div class="brand-form-intro">
         <p>Use your email address and a password. Staff verification is required before discovery, plans or messages become available.</p>
       </div>
+      <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
         {% csrf_token %}
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
         {{ form.non_field_errors }}
+        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for field in form %}
           <section class="profile-edit-field plan-form-field" aria-labelledby="{{ field.id_for_label }}-label">
             <h2 id="{{ field.id_for_label }}-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label></h2>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
             <div class="profile-field-panel">{{ field }}</div>
             {{ field.errors }}
@@ -30,20 +43,26 @@
       <p class="brand-form-footer">Already registered? <a href="{% url 'sign_in' %}">Sign in</a></p>
     </section>
 
+  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "sign_in" %}
     <section class="profile-edit-page brand-form-page" aria-labelledby="sign-in-title">
       <header class="profile-edit-header">
         <h1 id="sign-in-title">Sign in</h1>
       </header>
       <div class="brand-form-intro"><p class="eyebrow">Welcome back</p></div>
+      <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
         {% csrf_token %}
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if form.errors %}<p class="error-summary" role="alert">The sign-in details were not accepted. Check the labelled fields and try again.</p>{% endif %}
         {{ form.non_field_errors }}
+        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for field in form %}
           <section class="profile-edit-field plan-form-field" aria-labelledby="{{ field.id_for_label }}-label">
             <h2 id="{{ field.id_for_label }}-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label></h2>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
             <div class="profile-field-panel">{{ field }}</div>
             {{ field.errors }}
@@ -54,6 +73,7 @@
       <p class="brand-form-footer">Need an account? <a href="{% url 'sign_up' %}">Create one</a></p>
     </section>
 
+  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "profile_edit" %}
     <section class="profile-edit-page" aria-labelledby="edit-profile-title">
       <header class="profile-edit-header">
@@ -61,16 +81,20 @@
         <h1 id="edit-profile-title">Edit profile</h1>
       </header>
 
+      <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form" method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
 
         <section class="profile-edit-field profile-image-field" aria-labelledby="profile-image-label">
           <h2 id="profile-image-label">Profile image</h2>
           <div class="profile-image-panel">
             <div class="profile-image-preview">
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if profile.profile_image %}
                 <img src="{% url 'profile_image' profile.pk %}" alt="">
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% else %}
                 <span aria-hidden="true">◎</span>
               {% endif %}
@@ -78,6 +102,7 @@
             <div class="profile-image-input">
               <label class="profile-image-button" for="{{ form.profile_image.id_for_label }}">Choose profile image</label>
               {{ form.profile_image }}
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if form.profile_image.help_text %}<span class="helptext">{{ form.profile_image.help_text }}</span>{% endif %}
               {{ form.profile_image.errors }}
             </div>
@@ -114,6 +139,7 @@
 
         <fieldset class="profile-edit-field profile-interests-field">
           <legend>Interests</legend>
+          {# # WHY: Shows the following part only when its stated page condition is true. #}
           {% if form.interests.help_text %}<span class="helptext">{{ form.interests.help_text }}</span>{% endif %}
           {{ form.interests }}
           {{ form.interests.errors }}
@@ -123,6 +149,7 @@
           <legend>Broad areas</legend>
           <span class="helptext">Your broad areas help people discover you. Your exact location and distance are never shown.</span>
           <div class="profile-choice-list">
+            {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
             {% for value, label in form.broad_area.field.choices %}
               <label>
                 <span>{{ label }}</span>
@@ -152,6 +179,7 @@
             <div class="availability-choice-group">
               <span class="availability-choice-label">Available from</span>
               <div class="availability-choice-chips">
+                {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
                 {% for value, label in form.availability_start.field.choices %}
                   <label>
                     <input type="radio" name="{{ form.availability_start.html_name }}" value="{{ value }}"{% if form.availability_start.value == value %} checked{% elif not form.availability_start.value and not value %} checked{% endif %}>
@@ -160,6 +188,7 @@
                 {% endfor %}
               </div>
               <p class="availability-status-note">
+                {# # WHY: Shows the following part only when its stated page condition is true. #}
                 {% if form.free_now.value %}Free now is on. Availability starts immediately when saved.{% else %}Choose when your availability starts, or add it later.{% endif %}
               </p>
               {{ form.availability_start.errors }}
@@ -172,7 +201,7 @@
           <div class="verification-panel">
             <span class="verification-icon" aria-hidden="true">{% if profile.is_verified %}✓{% else %}…{% endif %}</span>
             <div>
-              <strong>{% if profile.is_verified %}Staff access approved for the current Kindlelise product.{% else %}Staff access review pending.{% endif %}</strong>
+              <strong>{% if profile.is_verified %}Staff access approved for the current Kindelise product.{% else %}Staff access review pending.{% endif %}</strong>
               <p>This is an access gate, not proof of identity, age, character or safety.</p>
             </div>
           </div>
@@ -182,12 +211,15 @@
       </form>
     </section>
 
+  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "public_profile" %}
     <article class="private-profile-page" aria-labelledby="public-profile-title">
       <div class="private-profile-hero">
         <a class="private-profile-back" href="{% url 'discover' %}" aria-label="Back to Discover"></a>
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if profile.profile_image %}
           <img src="{% url 'profile_image' profile.pk %}" alt="">
+        {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
         {% else %}
           <div class="private-profile-placeholder" aria-hidden="true"><span></span></div>
         {% endif %}
@@ -208,10 +240,13 @@
               {{ broad_area_label }}
             </span>
             <span>
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if is_available_now %}
                 Free now
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif profile.available_from %}
                 Available from {{ profile.available_from|date:"j M, H:i" }}
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% else %}
                 Availability not set
               {% endif %}
@@ -222,8 +257,10 @@
         <section class="private-profile-section" aria-labelledby="public-interests-title">
           <h2 id="public-interests-title">Interests</h2>
           <ul class="private-profile-chips">
+            {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
             {% for interest in profile.interests.all %}
               <li>{{ interest.name }}</li>
+            {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
             {% empty %}
               <li>No interests selected</li>
             {% endfor %}
@@ -241,10 +278,13 @@
             <div>
               <dt>Status</dt>
               <dd>
+                {# # WHY: Shows the following part only when its stated page condition is true. #}
                 {% if is_available_now %}
                   Free now · {{ profile.get_availability_start_display }}
+                {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                 {% elif profile.available_from %}
                   Starts {{ profile.available_from|date:"j M Y, H:i" }}
+                {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                 {% else %}
                   Not set
                 {% endif %}
@@ -256,6 +296,7 @@
         <section class="private-profile-section" aria-labelledby="public-plans-title">
           <h2 id="public-plans-title">My plans</h2>
           <ul class="private-profile-plans private-profile-plan-links">
+            {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
             {% for plan in plans %}
               <li>
                 <a href="{% url 'plan_detail' plan.pk %}">
@@ -263,12 +304,14 @@
                   <span class="private-plan-state private-plan-state--approved">Available</span>
                 </a>
               </li>
+            {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
             {% empty %}
               <li class="private-profile-plan-empty"><span>No available plans.</span></li>
             {% endfor %}
           </ul>
         </section>
 
+        <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
         <form class="public-profile-message" method="post" action="{% url 'direct_conversation_start' profile.pk %}">
           {% csrf_token %}
           <button type="submit">Send Message</button>
@@ -281,6 +324,7 @@
             <details class="public-profile-block">
               <summary>Block this profile</summary>
               <p>Blocking removes both profiles from each other's discovery and stops direct messages. The other account is not notified.</p>
+              <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
               <form method="post" action="{% url 'profile_block_messages_and_discovery' profile.pk %}">
                 {% csrf_token %}
                 <button class="danger secondary" type="submit">Confirm block</button>
@@ -291,6 +335,7 @@
       </div>
     </article>
 
+  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% else %}
     <article class="private-profile-page" aria-labelledby="profile-page-title">
       <header class="plans-page-header">
@@ -299,8 +344,10 @@
       </header>
 
       <div class="private-profile-hero">
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if summary.profile.profile_image %}
           <img src="{% url 'profile_image' summary.profile.pk %}" alt="">
+        {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
         {% else %}
           <div class="private-profile-placeholder" aria-hidden="true"><span></span></div>
         {% endif %}
@@ -311,6 +358,7 @@
           <div class="private-profile-identity-heading">
             <div class="private-profile-name">
               <h1 id="profile-title">{{ summary.profile.display_name|default:"Profile incomplete" }}</h1>
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if summary.profile.is_verified %}<span class="private-profile-status-dot{% if is_available_now %} is-online{% endif %}" role="img" aria-label="{% if is_available_now %}Free now{% else %}Availability not active{% endif %}"></span>{% endif %}
             </div>
             <a class="private-profile-identity-edit" href="{% url 'profile_edit' %}">Edit</a>
@@ -322,10 +370,13 @@
               {{ broad_area_label }}
             </span>
             <span>
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if is_available_now %}
                 Free now
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif summary.profile.available_from %}
                 Available from {{ summary.profile.available_from|date:"j M, H:i" }}
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% else %}
                 Availability not set
               {% endif %}
@@ -333,6 +384,7 @@
           </div>
         </header>
 
+        {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if not summary.profile.is_verified %}
           <div class="private-profile-notice" role="status">
             <strong>Your profile is waiting for staff verification.</strong>
@@ -343,8 +395,10 @@
         <section class="private-profile-section" aria-labelledby="interests-title">
           <h2 id="interests-title">Interests</h2>
           <ul class="private-profile-chips">
+            {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
             {% for interest in summary.profile.interests.all %}
               <li>{{ interest.name }}</li>
+            {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
             {% empty %}
               <li>No interests selected</li>
             {% endfor %}
@@ -362,10 +416,13 @@
             <div>
               <dt>Status</dt>
               <dd>
+                {# # WHY: Shows the following part only when its stated page condition is true. #}
                 {% if is_available_now %}
                   Free now · {{ summary.profile.get_availability_start_display }}
+                {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                 {% elif summary.profile.available_from %}
                   Starts {{ summary.profile.available_from|date:"j M Y, H:i" }}
+                {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                 {% else %}
                   Not set
                 {% endif %}
@@ -377,6 +434,7 @@
         <section class="private-profile-section" aria-labelledby="plans-title">
           <h2 id="plans-title">My plans</h2>
           <ul class="private-profile-plans private-profile-plan-links">
+            {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
             {% for plan in summary.plans %}
               <li>
                 <a href="{% url 'plan_detail' plan.pk %}">
@@ -384,6 +442,7 @@
                   <span class="private-plan-state private-plan-state--{{ plan.status }}">{% if plan.status == plan.Status.APPROVED %}Available{% else %}{{ plan.get_status_display }}{% endif %}</span>
                 </a>
               </li>
+            {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
             {% empty %}
               <li class="private-profile-plan-empty"><span>No plans yet.</span></li>
             {% endfor %}
@@ -397,28 +456,39 @@
             <p>Explore nearby broad areas and use up to five interest filters.</p>
             <p>£4.99 yearly.<span class="visually-hidden"> Payment is collected securely by Stripe and the subscription renews yearly unless you cancel it through Stripe.</span></p>
             <p class="private-premium-status visually-hidden">
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if summary.subscription.has_premium_access and summary.subscription.status == "trialing" %}
                 Trial active
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif summary.subscription.has_premium_access %}
                 Premium active
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif not summary.subscription.has_stripe_history %}
                 Free access
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif summary.subscription.status == "past_due" or summary.subscription.status == "unpaid" or summary.subscription.status == "incomplete" or summary.subscription.status == "incomplete_expired" or summary.subscription.status == "paused" %}
                 Payment due
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif summary.subscription.status == "cancelled" or summary.subscription.status == "canceled" %}
                 Subscription cancelled
+              {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% else %}
                 Waiting for Stripe confirmation
               {% endif %}
+              {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if summary.subscription.access_until %} · Access until {{ summary.subscription.access_until|date:"j F Y" }}{% endif %}
             </p>
           </div>
+          {# # WHY: Shows the following part only when its stated page condition is true. #}
           {% if summary.subscription.customer_portal_available %}
+            <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
             <form method="post" action="{% url 'premium_subscription_portal' %}">
               {% csrf_token %}
               <button type="submit" aria-label="{% if summary.subscription.has_premium_access %}Manage subscription{% else %}Pay £4.99 or manage subscription{% endif %}">Explore</button>
             </form>
+          {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
           {% elif summary.subscription.checkout_available %}
+            <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
             <form method="post" action="{% url 'premium_subscription_checkout' %}">
               {% csrf_token %}
               <button type="submit" aria-label="Pay £4.99 for one year">Explore</button>
@@ -426,6 +496,7 @@
           {% endif %}
         </section>
 
+        <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
         <form class="private-profile-sign-out" method="post" action="{% url 'sign_out' %}">
           {% csrf_token %}
           <button type="submit">Sign out</button>

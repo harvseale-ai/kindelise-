@@ -1,7 +1,14 @@
 {% extends "base.html" %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
+{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
+{# # WHY: Lists the permitted private conversations and links each person to the full conversation. #}
 
-{% block title %}Messages · Kindlelise{% endblock %}
 
+{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
+{% block title %}Messages · Kindelise{% endblock %}
+
+{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
   <section class="inbox-page" aria-labelledby="inbox-title">
     <header class="plans-page-header">
@@ -11,6 +18,7 @@
 
     <div class="inbox-intro">
       <ul class="chips inbox-interest-strip" aria-label="Filter conversations by interest">
+        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for label, is_selected in interest_filters %}
           <li{% if is_selected %} class="is-active"{% endif %}>
             <a href="{% url 'inbox' %}{% if not is_selected %}?interest={{ label|urlencode }}{% endif %}"{% if is_selected %} aria-current="true" aria-label="Clear {{ label }} filter"{% endif %}>{{ label }}</a>
@@ -22,11 +30,14 @@
 
     {% now "Y-m-d" as today %}
     <ul class="inbox-conversation-list" aria-label="Recent direct conversations">
+      {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
       {% for row in conversation_rows %}
         <li>
           <a class="inbox-conversation-row" href="{% url 'conversation_detail' row.conversation.pk %}">
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if row.other_profile.profile_image %}
               <img class="profile-image inbox-avatar" src="{% url 'profile_image' row.other_profile.pk %}" alt="">
+            {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
             {% else %}
               <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
             {% endif %}
@@ -37,13 +48,16 @@
             <time datetime="{{ row.conversation.updated_at|date:'c' }}">{% if row.conversation.updated_at|date:"Y-m-d" == today %}{{ row.conversation.updated_at|date:"H:i" }}{% else %}{{ row.conversation.updated_at|date:"j M" }}{% endif %}</time>
           </a>
         </li>
+      {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
       {% empty %}
         <li class="empty-state">
           <div>
+            {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if selected_interest %}
               <strong>No conversations match {{ selected_interest }}.</strong>
               <p class="state-label">Choose another interest or clear the current filter.</p>
               <a class="button secondary" href="{% url 'inbox' %}">Show all conversations</a>
+            {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
             {% else %}
               <strong>No direct conversations yet.</strong>
               <p class="state-label">Open a verified profile to start a direct conversation.</p>

@@ -1,11 +1,15 @@
 # Kindlelise Student MVP Implementation and Runtime Completion Plan
 
+> **Archived:** retained as historical build-planning evidence. The current
+> implementation and assessment handoff are documented in `README.md`; the active
+> scope authority is `docs/VERTICAL_SLICE.md`.
+
 ## 1. Purpose and authority
 
 This document turns the approved Kindlelise vertical slice into an ordered build,
 verification and demonstration plan.
 
-[`docs/VERTICAL_SLICE.md`](VERTICAL_SLICE.md) remains the implementation authority.
+[`docs/VERTICAL_SLICE.md`](../../docs/VERTICAL_SLICE.md) remains the implementation authority.
 This plan does not add or redefine a model, field, function, route, template,
 provider behaviour or product rule. If the documents disagree, the vertical slice
 wins.
@@ -909,17 +913,17 @@ tests/test_vertical_slice.py
 1. Configure one recurring Stripe price for GBP 499 (£4.99) per year and place
    only that test/live environment's price ID in `STRIPE_PRICE_ID`.
 2. Implement `start_stripe_subscription_checkout()` to create one hosted Checkout
-   session. For an account without recorded Stripe history, apply exactly 30
-   trial days, `payment_method_collection=if_required` and missing-payment-method
-   end behaviour `create_invoice`; for any later eligible Checkout, omit the
-   trial. Refuse a duplicate active or trialing subscription.
+   session that collects the configured annual payment immediately. Reuse a
+   recorded Stripe customer and refuse a duplicate active or legacy trialing
+   subscription.
 3. Put the immutable local user ID in `client_reference_id` and subscription
    metadata.
 4. Construct Checkout success/cancellation and portal-return URLs on the server
    from the named account route.
 5. Verify the webhook signature against the exact raw request body.
-6. Accept only `checkout.session.completed`, `customer.subscription.updated`,
-   `invoice.paid` and `customer.subscription.deleted`.
+6. Accept only `checkout.session.completed`, `customer.subscription.created`,
+   `customer.subscription.updated`, `invoice.paid` and
+   `customer.subscription.deleted`.
 7. Implement `update_premium_access_from_verified_stripe_event()` to apply receipt
    and subscription projection changes atomically and in provider time order.
 8. Grant trial access only from `trialing` with a future trial end. Grant a paid
@@ -932,10 +936,8 @@ tests/test_vertical_slice.py
 ### Provider tests
 
 - Checkout and browser return never grant access.
-- First eligible Checkout uses GBP 499 per year, exactly 30 trial days, no
-  required upfront payment method and post-trial invoice creation.
-- A local account cannot receive a second trial or duplicate an active/trialing
-  subscription; any later eligible Checkout uses no trial.
+- Checkout uses GBP 499 per year and collects payment immediately.
+- A local account cannot duplicate an active or legacy trialing subscription.
 - Ownership never comes from email.
 - Conflicting Stripe identifiers are rejected rather than reassigned.
 - Unsupported signed events create no receipt or subscription change.
@@ -1130,13 +1132,12 @@ through the boundary-change procedure before adding it.
 
 ```text
 [ ] The configured test-mode Price is GBP 4.99 recurring yearly.
-[ ] A first Checkout uses server-built local return URLs, grants 30 trial days
-    and does not require payment details upfront.
-[ ] A second trial is refused; an active/trialing subscription is not duplicated.
+[ ] Checkout uses server-built local return URLs and collects GBP 4.99 immediately.
+[ ] An active or legacy trialing subscription is not duplicated.
 [ ] Checkout return remains Free before the authoritative update.
 [ ] A signed trialing update grants only bounded trial access.
-[ ] At trial end Stripe creates the GBP 4.99 invoice and its hosted payment
-    surface is reachable from the owning account.
+[ ] Stripe creates the GBP 4.99 paid invoice and its hosted management surface is
+    reachable from the owning account.
 [ ] Active status without payment does not extend access; a signed paid invoice
     grants one bounded annual Premium period.
 [ ] Duplicate, old, equal-time, unsupported and invalid events return the

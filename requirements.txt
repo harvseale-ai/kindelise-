@@ -1,4 +1,4 @@
-# Production dependencies; keep synchronized with pyproject.toml.
+# WHY: Lists the exact live-site packages Heroku installs; keep it matched with pyproject.toml.
 certifi==2026.7.22
 cloudinary==1.45.0
 Django==5.2.16

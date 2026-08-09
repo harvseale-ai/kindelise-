@@ -1,7 +1,12 @@
 {% extends "admin/change_form.html" %}
+{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
+{# # KEYWORD: block.super — keeps the normal staff buttons before adding the button below. #}
+{# # WHY: Adds one clear verification button to the existing staff profile form without replacing it. #}
 
+{# # WHY: Supplies the extra staff action beside the normal save buttons. #}
 {% block submit_buttons_bottom %}
   {{ block.super }}
+  {# # WHY: Offers verification only for a saved profile that has not already been verified. #}
   {% if original and not original.is_verified %}
     <div class="submit-row">
       <input type="submit" name="_verify_profile" value="Yes — verify profile">

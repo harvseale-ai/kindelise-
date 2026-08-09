@@ -1,13 +1,17 @@
+# KEYWORD: migration — a numbered database change applied in the same order everywhere the site runs.
+
 from django.db import migrations, models
 from django.db.models import Q
 
 
+# WHY: Removes expiry values in a deliberate, repeatable way.
 def clear_expiry_values(apps, schema_editor):
     """Prevent old expiry timestamps from becoming misleading start signals."""
     profile_model = apps.get_model("kindlelise", "Profile")
     profile_model.objects.update(available_until=None)
 
 
+# WHY: Records this numbered database change so every copy of the site applies it in the same order.
 class Migration(migrations.Migration):
     dependencies = [("kindlelise", "0002_seed_initial_interests")]
 
