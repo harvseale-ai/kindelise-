@@ -47,7 +47,7 @@
             <span class="conversation-sender">{% if conversation_message.sender_id == user.pk %}You{% else %}{{ other_profile.display_name }}{% endif %}</span>
             <p>{{ conversation_message.body }}</p>
             <div class="conversation-message-meta">
-              <time datetime="{{ conversation_message.sent_at|date:'c' }}">{{ conversation_message.sent_at|date:"j M, H:i" }}</time>
+              <time datetime="{{ conversation_message.sent_at|date:'Y-m-d\TH:i:s' }}">{{ conversation_message.sent_at|date:"j M, H:i" }}</time>
             {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if conversation_message.sender_id != user.pk %}
               <a href="{% url 'report_create' other_profile.pk %}?context_type=message&amp;context_id={{ conversation_message.pk }}&amp;context_conversation_id={{ conversation.pk }}">Report this message</a>

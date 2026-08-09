@@ -48,10 +48,14 @@ class PlanStartDateTimeWidget(forms.MultiWidget):
                 },
                 format="%Y-%m-%d",
             ),
-            forms.Select(choices=time_choices),
+            forms.Select(attrs={"aria-label": "Start time"}, choices=time_choices),
         )
         # WHY: Lets Django perform the standard combined-widget setup after these two controls are prepared.
         super().__init__(widgets, attrs)
+
+    # WHY: Connects the visible Starts label to the first real control instead of producing an empty label target.
+    def id_for_label(self, id_):
+        return f"{id_}_0" if id_ else ""
 
     # WHY: Keeps the decompress steps in one named place so they can be understood, checked, and reused.
     def decompress(self, value):

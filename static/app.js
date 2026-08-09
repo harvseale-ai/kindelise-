@@ -228,7 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const clearFetchedMetadata = () => {
       metadataToken.value = "";
       metadataPreview.hidden = true;
-      metadataPreview.removeAttribute("src");
       metadataStatus.textContent = "Add the URL, then fetch its public place and image.";
     };
     // # WHY: Clears the preview as soon as the visitor edits its source address.
@@ -266,7 +265,6 @@ document.addEventListener("DOMContentLoaded", () => {
           metadataPreview.hidden = false;
         } else {
           metadataPreview.hidden = true;
-          metadataPreview.removeAttribute("src");
         }
         if (metadata.public_place && metadata.thumbnail_preview) {
           metadataStatus.textContent = "Public place and image found. You can edit the place.";
@@ -277,7 +275,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       } catch (error) {
         metadataPreview.hidden = true;
-        metadataPreview.removeAttribute("src");
         metadataStatus.textContent = "Details could not be fetched. You can enter the place manually.";
       } finally {
         // # KEYWORD: finally — runs cleanup whether the attempted request worked or failed.

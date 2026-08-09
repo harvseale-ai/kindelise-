@@ -45,7 +45,7 @@
                 <span class="plan-card-description">{{ plan.description }}</span>
                 <span class="plan-card-detail">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4.5 9.5h15M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2Zm3 9a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/></svg>
-                  <time datetime="{{ plan.starts_at|date:'c' }}">{{ plan.starts_at|date:"j M" }} · {{ plan.starts_at|date:"H:i" }}</time>
+                  <time datetime="{{ plan.starts_at|date:'Y-m-d\TH:i:s' }}">{{ plan.starts_at|date:"j M" }} · {{ plan.starts_at|date:"H:i" }}</time>
                 </span>
                 <span class="plan-card-detail">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v18H8zM5 8h3v13H5zm11 4h3v9h-3M11 7h2m-2 4h2m-2 4h2m-2 4h2"/></svg>
@@ -74,7 +74,8 @@
                   {% else %}
                     <span class="plan-state">Cancelled</span>
                   {% endif %}
-                  <span class="plan-capacity" aria-label="Capacity: {{ plan.capacity }} people">
+                  <span class="plan-capacity">
+                    <span class="visually-hidden">Capacity:</span>
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-1a2.5 2.5 0 1 0 0-5M3.5 19v-2a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4v2M15 13h1.5a4 4 0 0 1 4 4v2"/></svg>
                     {{ plan.capacity }}
                   </span>
@@ -137,7 +138,7 @@
                 <button class="secondary" type="button" data-plan-metadata-fetch data-fetch-url="{% url 'plan_metadata_fetch' %}">Fetch details</button>
                 <span class="helptext" data-plan-metadata-status role="status" aria-live="polite">Add the URL, then fetch its public place and image.</span>
               </div>
-              <img class="plan-metadata-preview" data-plan-metadata-preview alt="" hidden>
+              <img class="plan-metadata-preview" data-plan-metadata-preview src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" hidden>
               <input type="hidden" name="fetched_metadata" value="{{ request.POST.fetched_metadata|default:'' }}" data-plan-metadata-token>
             {% endif %}
             {{ field.errors }}

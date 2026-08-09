@@ -45,7 +45,7 @@
               <strong>{{ row.other_profile.display_name }}</strong>
               <span class="state-label">Direct conversation</span>
             </span>
-            <time datetime="{{ row.conversation.updated_at|date:'c' }}">{% if row.conversation.updated_at|date:"Y-m-d" == today %}{{ row.conversation.updated_at|date:"H:i" }}{% else %}{{ row.conversation.updated_at|date:"j M" }}{% endif %}</time>
+            <time datetime="{{ row.conversation.updated_at|date:'Y-m-d\TH:i:s' }}">{% if row.conversation.updated_at|date:"Y-m-d" == today %}{{ row.conversation.updated_at|date:"H:i" }}{% else %}{{ row.conversation.updated_at|date:"j M" }}{% endif %}</time>
           </a>
         </li>
       {# # WHY: Shows a clear fallback when the repeated list contains no items. #}

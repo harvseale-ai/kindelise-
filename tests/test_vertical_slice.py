@@ -2071,6 +2071,8 @@ def test_plan_http_list_gates_access_and_preserves_owner_only_states():
         assert visible_plan.title.encode() in response.content
     for hidden_plan in (hidden_pending, hidden_rejected, hidden_past):
         assert hidden_plan.title.encode() not in response.content
+    assert b'aria-label="Capacity:' not in response.content
+    assert b'<span class="visually-hidden">Capacity:</span>' in response.content
     assert client.post(reverse("plan_list")).status_code == 405
 
     anonymous_response = Client().get(reverse("plan_list"))
@@ -2167,9 +2169,14 @@ def test_plan_http_creation_is_immediately_available_and_preserves_invalid_form(
     assert get_response.status_code == 200
     assert b'type="date"' in get_response.content
     assert b'name="starts_at_0"' in get_response.content
+    assert b'<label for="id_starts_at_0">Starts at</label>' in get_response.content
+    assert b'aria-label="Start time"' in get_response.content
+    assert b'<label for="">Starts at</label>' not in get_response.content
     assert b'this.showPicker()' in get_response.content
     assert b'<select name="starts_at_1"' in get_response.content
     assert b'<option value="09:00">09:00</option>' in get_response.content
+    assert b'data-plan-metadata-preview' in get_response.content
+    assert b'src="data:image/gif;base64,' in get_response.content
     assert tuple(get_response.context["form"].fields) == (
         "title",
         "description",
@@ -3381,6 +3388,10 @@ def test_inbox_http_orders_only_permitted_pairs_without_message_previews():
     assert b"Hidden inbox name" not in response.content
     assert b"Private blocked inbox text" not in response.content
     assert b"Unrelated one" not in response.content
+    expected_updated_at = timezone.localtime(
+        current_time - timezone.timedelta(hours=1)
+    ).strftime("%Y-%m-%dT%H:%M:%S")
+    assert f'datetime="{expected_updated_at}"'.encode() in response.content
     older_profile.interests.add(Interest.objects.get(name="Coffee"))
     filtered_response = client.get(reverse("inbox"), {"interest": "Coffee"})
     assert b"Older inbox name" in filtered_response.content
@@ -3431,6 +3442,10 @@ def test_conversation_http_escapes_ordered_messages_and_shares_one_hidden_404():
     assert response.content.find(escaped_first) < response.content.find(
         second_message.body.encode()
     )
+    expected_sent_at = timezone.localtime(first_message.sent_at).strftime(
+        "%Y-%m-%dT%H:%M:%S"
+    )
+    assert f'datetime="{expected_sent_at}"'.encode() in response.content
     assert b"Conversation peer" in response.content
     assert client.post(
         reverse("conversation_detail", args=[conversation.pk])
