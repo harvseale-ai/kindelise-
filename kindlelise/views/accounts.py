@@ -184,6 +184,15 @@ def account_page(request):
     Refuses: anonymous callers through Django and missing/inactive profiles safely.
     Privacy: uses the authorised selector and exposes no reports or provider IDs.
     """
+    # WHY: Turns Stripe's server-chosen return marker into the existing pop-out message, then removes it from the address.
+    payment_result = request.GET.get("premium_payment")
+    if payment_result == "success":
+        messages.success(request, "Payment successful. Premium access will update shortly.")
+        return redirect("account")
+    if payment_result == "cancelled":
+        messages.error(request, "Payment cancelled. No charge was made.")
+        return redirect("account")
+
     # WHY: Uses an owner-only selector rather than accepting an account or profile ID from the address.
     summary = get_signed_in_user_account_summary(request.user)
     if summary is None:

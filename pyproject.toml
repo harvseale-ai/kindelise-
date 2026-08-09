@@ -36,7 +36,6 @@ test = [
 # WHY: Limits package discovery to the active configuration and application folders.
 [tool.setuptools.packages.find]
 include = ["config*", "kindlelise*"]
-exclude = ["_achive*"]
 
 # WHY: Tells the test runner which Django settings and test folder to use.
 [tool.pytest.ini_options]
@@ -44,9 +43,9 @@ DJANGO_SETTINGS_MODULE = "config.settings"
 addopts = "-ra"
 testpaths = ["tests"]
 
-# WHY: Keeps generated, archived, and numbered database-change files out of style checks.
+# WHY: Keeps generated and numbered database-change files out of style checks.
 [tool.ruff]
-exclude = ["_achive", "kindlelise/migrations", "staticfiles"]
+exclude = ["kindlelise/migrations", "staticfiles"]
 
 # WHY: Restricts style checks to errors that can hide broken or unused code.
 [tool.ruff.lint]

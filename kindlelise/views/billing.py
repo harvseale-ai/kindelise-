@@ -38,8 +38,8 @@ def start_premium_subscription_checkout(request):
     try:
         checkout_url = start_stripe_subscription_checkout(
             request.user,
-            account_url,
-            account_url,
+            f"{account_url}?premium_payment=success",
+            f"{account_url}?premium_payment=cancelled",
         )
     # WHY: Gives visitors one quiet retry message for permission, configuration, URL, or Stripe failures.
     except (PermissionDenied, stripe.StripeError, ValueError):

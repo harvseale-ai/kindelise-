@@ -246,6 +246,45 @@ flowchart LR
   click M "kindlelise/views/plans.py#Splan_detail_page" "Open plan detail view"
 ```
 
+## Saving and showing profile or plan pictures
+
+Pictures are saved on the computer during local development and in Cloudinary on
+the live site. Kindelise checks access before sending any saved picture.
+
+```mermaid
+flowchart LR
+  A["Upload profile picture"] --> B["Check picture file"]
+  B --> C["Save profile picture"]
+  C --> D["Link picture to profile"]
+  E["Picture found for plan"] --> F["Save plan picture"]
+  F --> G["Link picture to plan"]
+  D --> H{"Where should it be saved?"}
+  G --> H
+  H -->|Production| I["Cloudinary"]
+  H -->|Development| J["Local picture folder"]
+  D --> K["Request profile picture"]
+  K --> L["Check profile can be viewed"]
+  G --> M["Request plan picture"]
+  M --> N["Check plan can be viewed"]
+  L --> O["Send allowed picture"]
+  N --> O
+  click A "kindlelise/views/accounts.py#Sedit_profile_page" "Open profile upload endpoint"
+  click B "kindlelise/forms.py#SProfileDetailsForm" "Open image validation"
+  click C "kindlelise/services/accounts.py#Supdate_signed_in_user_profile" "Open image replacement service"
+  click D "kindlelise/models.py#SProfile" "Open profile image field"
+  click E "kindlelise/plan_metadata.py#Sthumbnail_from_metadata_token" "Open plan thumbnail creation"
+  click F "kindlelise/services/plans.py#Screate_available_plan" "Open plan image storage"
+  click G "kindlelise/models.py#SPlan" "Open plan thumbnail field"
+  click H "config/settings.py#L1" "Open storage selection"
+  click I "config/settings.py#L1" "Open Cloudinary storage configuration"
+  click J "config/settings.py#L1" "Open local media configuration"
+  click K "kindlelise/views/accounts.py#Sprofile_image_file" "Open profile image delivery"
+  click L "kindlelise/selectors.py#Sget_profile_image_if_viewer_is_allowed" "Open image visibility selector"
+  click M "kindlelise/views/plans.py#Splan_thumbnail_file" "Open plan image delivery"
+  click N "kindlelise/selectors.py#Sget_plan_page_if_viewer_is_allowed" "Open plan visibility selector"
+  click O "kindlelise/views/accounts.py#Sprofile_image_file" "Open protected file response"
+```
+
 ## Joining, leaving or cancelling a plan
 
 Each action checks the latest plan details first. Joining updates the space
@@ -451,43 +490,4 @@ flowchart LR
   click K "kindlelise/services/stripe_events.py#Supdate_premium_access_from_verified_stripe_event" "Open webhook projection"
   click L "kindlelise/models.py#SStripeWebhookReceipt" "Open idempotency receipt model"
   click M "kindlelise/policies.py#Sget_allowed_discovery_areas_and_interest_limit" "Open Premium effects"
-```
-
-## Saving and showing profile or plan pictures
-
-Pictures are saved on the computer during local development and in Cloudinary on
-the live site. Kindelise checks access before sending any saved picture.
-
-```mermaid
-flowchart LR
-  A["Upload profile picture"] --> B["Check picture file"]
-  B --> C["Save profile picture"]
-  C --> D["Link picture to profile"]
-  E["Picture found for plan"] --> F["Save plan picture"]
-  F --> G["Link picture to plan"]
-  D --> H{"Where should it be saved?"}
-  G --> H
-  H -->|Production| I["Cloudinary"]
-  H -->|Development| J["Local picture folder"]
-  D --> K["Request profile picture"]
-  K --> L["Check profile can be viewed"]
-  G --> M["Request plan picture"]
-  M --> N["Check plan can be viewed"]
-  L --> O["Send allowed picture"]
-  N --> O
-  click A "kindlelise/views/accounts.py#Sedit_profile_page" "Open profile upload endpoint"
-  click B "kindlelise/forms.py#SProfileDetailsForm" "Open image validation"
-  click C "kindlelise/services/accounts.py#Supdate_signed_in_user_profile" "Open image replacement service"
-  click D "kindlelise/models.py#SProfile" "Open profile image field"
-  click E "kindlelise/plan_metadata.py#Sthumbnail_from_metadata_token" "Open plan thumbnail creation"
-  click F "kindlelise/services/plans.py#Screate_available_plan" "Open plan image storage"
-  click G "kindlelise/models.py#SPlan" "Open plan thumbnail field"
-  click H "config/settings.py#L1" "Open storage selection"
-  click I "config/settings.py#L1" "Open Cloudinary storage configuration"
-  click J "config/settings.py#L1" "Open local media configuration"
-  click K "kindlelise/views/accounts.py#Sprofile_image_file" "Open profile image delivery"
-  click L "kindlelise/selectors.py#Sget_profile_image_if_viewer_is_allowed" "Open image visibility selector"
-  click M "kindlelise/views/plans.py#Splan_thumbnail_file" "Open plan image delivery"
-  click N "kindlelise/selectors.py#Sget_plan_page_if_viewer_is_allowed" "Open plan visibility selector"
-  click O "kindlelise/views/accounts.py#Sprofile_image_file" "Open protected file response"
 ```

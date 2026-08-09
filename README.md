@@ -1,65 +1,171 @@
 # Kindelise
 
-Kindelise is a focused, server-rendered Django application for meeting
-people around shared interests and arranging activities at established public
-places. It combines staff-gated profiles, broad-area discovery, public plans,
-direct messaging, private safety controls, Stripe Premium and an optional
-Ollama-assisted draft editor in one deliberately small application.
+[Open the live Kindelise application](https://kindelise-767f8e2065ed.herokuapp.com/discover/)
 
-> **Assessment boundary:** Kindelise is designed for supervised test accounts.
-> Staff verification controls access to product features; it is not proof of
-> identity, age, character or safety. The MVP is not ready for unrestricted
-> public use.
+Kindelise is a server-rendered Django application for meeting people through
+shared interests and arranging activities at established public places. It
+includes verified profiles, broad-area discovery, public plans, direct
+messages, notifications, private safety controls, Stripe Premium and an
+optional Ollama writing assistant.
+
+Kindelise is currently intended for supervised accounts. Staff verification
+controls access to its social features, but it is not proof of identity, age or
+safety.
+
+Repository: [github.com/harvseale-ai/kindelise-](https://github.com/harvseale-ai/kindelise-)
 
 ## Contents
 
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Current Status And Deployment](#current-status-and-deployment)
-- [Problem Statement](#problem-statement)
-- [User Stories](#user-stories)
-- [Current Solution](#current-solution)
-- [Plain-Language Terms](#plain-language-terms)
-- [Product Pages](#product-pages)
-- [Architecture](#architecture)
-- [Django Project And Application Structure](#django-project-and-application-structure)
-- [Key Technical Decisions](#key-technical-decisions)
-- [Data Structure And Flow](#data-structure-and-flow)
-- [Key Features](#key-features)
-- [Application Runtime And Routes](#application-runtime-and-routes)
-- [Run Locally](#run-locally)
-- [Environment Variables](#environment-variables)
-- [Staff And Demonstration Setup](#staff-and-demonstration-setup)
-- [Stripe Test-Mode Setup](#stripe-test-mode-setup)
-- [Ollama Setup](#ollama-setup)
-- [Deployment Guidance](#deployment-guidance)
-- [Security And Privacy](#security-and-privacy)
-- [Known Limitations](#known-limitations)
-- [Verification And Test Coverage](#verification-and-test-coverage)
-- [Assessment Fit](#assessment-fit)
-- [AI Assistance](#ai-assistance)
-- [Documentation Map](#documentation-map)
-- [Submission Scope](#submission-scope)
+- [Main features](#main-features)
+- [User stories](#user-stories)
+- [Screenshots](#screenshots)
+- [Technical design](#technical-design)
+- [Run locally](#run-locally)
+- [Environment variables](#environment-variables)
+- [Staff setup](#staff-setup)
+- [Stripe and Ollama](#stripe-and-ollama)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Security and limitations](#security-and-limitations)
+- [Further development](#further-development)
+- [Project documentation](#project-documentation)
 
-## Prerequisites
+## Main features
 
-Install the following before running the project:
+- Email and password registration using Django authentication.
+- Owner-editable profiles with images, broad areas, interests and availability.
+- Staff verification before discovery, plans and messaging become available.
+- Profile discovery using broad-area, interest and **Free now** filters.
+- Public-place plans with time, capacity, participation and image metadata.
+- Safe join, leave, rejoin and owner cancellation actions.
+- One private direct conversation between each permitted pair of users.
+- Notifications for new messages and people joining an owned plan.
+- Private blocking and reporting controls.
+- Stripe-hosted yearly Premium payment and account management.
+- Ollama grammar and clarity suggestions for an unsent message draft.
+- Responsive, accessible pages with several optional colour themes.
 
-- Python 3.12. The package explicitly supports `>=3.12,<3.13`.
-- PostgreSQL. Kindelise intentionally has no SQLite fallback.
-- Git for cloning and version control.
-- A modern browser for the responsive interface.
-- Stripe CLI only for a real local test-mode webhook walkthrough.
-- An Ollama API key only for the live Cloud-backed draft-editing feature.
+The main journey is:
 
-Node.js, npm, a JavaScript framework and a local AI model are not required to
-run the Django application.
+```text
+register → complete profile → staff verification → discover people
+→ create or join plans → send messages → receive notifications
+```
 
-## Quick Start
+## User stories
 
-From the project root:
+| # | As a user, I want to... | Main result |
+| ---: | --- | --- |
+| 1 | Register and sign in securely | Django password checking and a unique lowercase email. |
+| 2 | Create and edit my profile | Only the owner can change profile details and availability. |
+| 3 | Be verified by authorised staff | Incomplete profiles cannot receive product access. |
+| 4 | Find people with shared interests | Discovery respects areas, filters and blocks. |
+| 5 | Create a plan at a public place | Plans require a future time, capacity and public HTTPS evidence. |
+| 6 | Join, leave or rejoin a plan | Capacity and participation history remain correct. |
+| 7 | Message another eligible person | Each pair has one private plain-text conversation. |
+| 8 | Block or privately report someone | Contact stops immediately while staff can receive private context. |
+| 9 | Purchase optional Premium access | Stripe manages payment and Kindelise applies verified subscription events. |
+| 10 | Improve an unsent message | The user compares both drafts and must still press **Send** manually. |
+
+## Screenshots
+
+### Discover profiles
+
+![Kindelise Discover page showing profile cards and discovery filters](docs/images/discover-page.png)
+
+### Browse plans
+
+![Kindelise Plans page showing plan filters and image-backed plan cards](docs/images/plans-page.png)
+
+### View a public profile
+
+![Kindelise public profile showing profile information, plans and the Send Message action](docs/images/public-profile-page.png)
+
+## Technical design
+
+Kindelise contains one Django project and one custom Django app:
+
+- `config/` contains settings, the main URL map and the WSGI/ASGI startup files.
+- `kindlelise/` contains the product models, forms, views and business rules.
+- `templates/` contains server-rendered HTML.
+- `static/` contains the shared CSS and small JavaScript enhancements.
+- `tests/` contains the automated pytest suite.
+
+One custom app is suitable because profiles, discovery, plans, messages,
+notifications and safety all depend on the same users and permission rules. The
+larger view and service files are still split by feature so the code remains
+easy to find.
+
+### Request flow
+
+```text
+Browser request
+    → URL route
+    → view
+    → form and policy checks
+    → selector read or service change
+    → PostgreSQL model
+    → HTML template response
+```
+
+| Part | Responsibility |
+| --- | --- |
+| Views | Handle web requests, sessions, redirects and responses. |
+| Forms | Clean and validate user-controlled information. |
+| Policies | Answer permission and visibility questions. |
+| Selectors | Read only the database information a user may see. |
+| Services | Make important database changes inside clear workflows. |
+| Models | Define stored data, relationships and database constraints. |
+| Templates | Render escaped, server-owned information as HTML. |
+
+### Main data
+
+The core models are `Profile`, `Interest`, `Plan`, `Participation`,
+`Conversation`, `Message`, `Notification`, `Block`, `Report`,
+`PlatformSubscription` and `StripeWebhookReceipt`. They use PostgreSQL
+relationships and constraints to support the checks made in Python.
+
+Important examples include one profile per account, one participation per
+person and plan, one conversation per account pair, positive plan capacity and
+unique Stripe event receipts. Plan joining also locks the current database row
+before checking capacity so simultaneous joins cannot overfill a plan.
+
+### Main technical choices
+
+| Area | Choice and reason |
+| --- | --- |
+| Interface | Server-rendered Django keeps permissions and private data on the server. |
+| Database | PostgreSQL supports the required constraints, arrays and row locking. |
+| Discovery | Broad named areas provide useful matching without exact locations. |
+| Messaging | Plain-text server-rendered messages keep the first version understandable and safe. |
+| Payments | Stripe Checkout and Customer Portal prevent card details entering Kindelise. |
+| AI editing | Ollama receives only the unsent draft and one fixed editing goal. |
+| Images | Files are checked and re-encoded; Cloudinary provides durable hosted storage when configured. |
+| Static files | WhiteNoise serves compressed versioned CSS and JavaScript on Heroku. |
+
+Detailed file explanations and design reasoning are kept in the linked project
+documents rather than repeated throughout this README.
+
+## Run locally
+
+### Requirements
+
+- Python 3.12
+- PostgreSQL
+- Git
+- A modern browser
+- Stripe CLI only when testing real webhook delivery
+- An Ollama API key only when testing the remote writing assistant
+
+Node.js is not required to run the Django website. It is used only to rebuild
+the optional local runtime explorer.
+
+### 1. Install the project
 
 ```bash
+git clone https://github.com/harvseale-ai/kindelise-.git
+cd kindelise-
+
 python3.12 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -67,9 +173,32 @@ python -m pip install -e '.[test]'
 cp .env.example .env
 ```
 
-Create a PostgreSQL database and account that match the `POSTGRES_*` values in
-`.env`. Replace every `replace_me` value, then load the environment and start
-the application:
+### 2. Create PostgreSQL settings
+
+Create a PostgreSQL database and user, then place the matching values in `.env`:
+
+```text
+POSTGRES_DB=kindlelise
+POSTGRES_USER=kindlelise
+POSTGRES_PASSWORD=<local-password>
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+```
+
+`DATABASE_URL` takes priority when supplied and must point to PostgreSQL.
+
+### 3. Add a Django secret
+
+Generate a local key:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+Copy the result into `DJANGO_SECRET_KEY` in `.env`. Replace every other
+`replace_me` value for any optional feature you intend to use.
+
+### 4. Start Django
 
 ```bash
 set -a
@@ -81,577 +210,68 @@ python manage.py check
 python manage.py runserver
 ```
 
-Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/). The first migration
-sequence creates the schema and seeds the controlled interest list.
+Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
 
-## Current Status And Deployment
+## Environment variables
 
-The complete approved user journey runs locally against PostgreSQL:
+Never commit `.env` or place real secrets in `.env.example`.
 
-```text
-register or sign in
-    -> complete a profile
-    -> receive staff verification
-    -> discover eligible profiles
-    -> create, join or leave a public-place plan
-    -> exchange direct messages
-    -> block or privately report another account
-    -> optionally manage Premium and edit an unsent draft
-```
-
-Repository: [github.com/harvseale-ai/kindelise-](https://github.com/harvseale-ai/kindelise-)
-
-No public deployment URL or deployment process file is committed at the time of
-this README update. The code includes Gunicorn, WhiteNoise, PostgreSQL
-`DATABASE_URL` support and production security settings, but a deployed
-assessment instance must still record its URL, process definition, managed
-database, durable media choice and completed runtime checklist. This README does
-not present a local server as a live deployment.
-
-## Problem Statement
-
-Meeting new people through an online service creates a difficult balance. Users
-need enough information to find shared interests and organise an activity, but
-an MVP should not collect precise location history, expose private participant
-lists or pretend that automated checks prove identity or safety.
-
-Kindelise addresses that problem with a deliberately bounded interaction:
-
-1. People create a small profile using broad named areas and controlled
-   interests rather than coordinates.
-2. Staff approve access only after the minimum profile details are complete.
-3. Verified users discover one another and arrange activities at established
-   public places.
-4. Plans show public-place evidence, time and capacity without revealing a
-   private attendee directory.
-5. Direct messaging, blocking and private reporting provide a small interaction
-   and safety loop.
-6. Stripe and Ollama are narrow external integrations; neither service gains
-   control over unrelated account, safety or messaging decisions.
-
-Success means the supervised journey works, ownership is enforced on the server,
-private data remains bounded and every important state change can be explained
-and tested. It does not mean the service guarantees a venue, person or event is
-safe.
-
-## User Stories
-
-| # | User story | Acceptance focus |
-| ---: | --- | --- |
-| 1 | As a new user, I want to register with my email and password so that I can create one account. | Canonical lowercase email, Django password validation and an initially unverified profile. |
-| 2 | As a user, I want to edit my profile so that others can understand my interests and general availability. | Owner-only display name, title statement, biography, broad areas, interests, availability and protected image. |
-| 3 | As staff, I want to verify only complete profiles so that social features have a clear access gate. | Permission-checked Admin actions, reviewer and timestamp, with safe withdrawal. |
-| 4 | As a verified user, I want to filter profiles so that I can find people with compatible areas, interests and availability. | Broad-area, controlled-interest and Free now filters with block exclusion and Free/Premium limits. |
-| 5 | As a verified user, I want to create a public-place plan so that others can decide whether to join. | Future time, positive capacity, HTTPS public evidence and optional explicitly fetched metadata. |
-| 6 | As a participant, I want to join, leave and rejoin safely so that capacity and history remain correct. | Atomic capacity check, one participation row and a permanent first-join edit lock. |
-| 7 | As a verified user, I want one direct conversation with another eligible user so that we can coordinate privately. | One unordered account pair, plain-text messages, current membership and mutual block checks. |
-| 8 | As a user, I want to block or privately report another account so that I can close interaction and give staff relevant context. | Immediate mutual exclusion, private reports and at most one trusted plan/conversation/message reference. |
-| 9 | As a user, I want optional Premium access so that I can use wider discovery filters. | Stripe-hosted annual payment and portal, webhook-authoritative bounded access, no local card form. |
-| 10 | As a user, I want help editing an unsent message so that I can correct grammar or improve clarity without sending automatically. | Only draft plus fixed goal sent, original and suggestion compared, explicit acceptance and manual Send. |
-
-## Current Solution
-
-Kindelise is one Django project with one application and a PostgreSQL database.
-Django renders the HTML, validates forms, enforces authentication and CSRF,
-applies policy checks, coordinates state changes through services and stores the
-durable records through its ORM.
-
-The browser receives semantic HTML and local CSS. A small local JavaScript file
-handles colour themes, filter-panel interaction, plan metadata requests, the
-Ollama suggestion comparison, connectivity feedback and five-second notification
-dismissal. JavaScript never owns authentication, permissions, subscriptions or
-message sending.
-
-External services are limited to:
-
-- Stripe Checkout and Customer Portal for the single £4.99 yearly product.
-- Signed Stripe webhooks for the local Premium projection.
-- Ollama for one explicit grammar or clarity edit of an unsent draft.
-- An explicitly requested public HTTPS page for bounded plan place/thumbnail
-  metadata.
-
-## Plain-Language Terms
-
-- **Broad area:** a configured label such as Central or North. It is not a
-  coordinate, exact address or distance.
-- **Staff verification:** a current permission to use discovery, plans and
-  messaging after minimum profile review. It is not identity or age proof.
-- **Available plan:** an approved future plan that may still accept participants.
-- **First-join lock:** once anybody successfully joins, the owner can no longer
-  edit the plan details, although the plan can still be cancelled.
-- **Participation:** the retained joined/left state linking one account to one
-  plan. Leaving does not delete its history.
-- **Direct conversation:** the one private plain-text conversation permitted for
-  an unordered pair of eligible accounts.
-- **Block:** one user's instruction that closes discovery and direct messaging
-  between both accounts. It does not stop private reporting.
-- **Private report:** the reporter's statement for authorised staff. Submission
-  does not prove wrongdoing or automatically impose a sanction.
-- **Premium projection:** Kindelise's minimal local record of verified Stripe
-  state. Browser return pages never grant access.
-- **Ollama suggestion:** a temporary edited version of an unsent draft. It is not
-  stored or sent unless the user chooses it and later presses Send.
-
-## Product Pages
-
-The final interface is intentionally consistent across desktop and mobile. It
-uses a sticky top bar, fixed icon navigation, black/grey surfaces, colour themes,
-semantic forms, protected profile/plan images and notification pop-outs.
-
-| Page | Route | Purpose |
+| Variable | When needed | Purpose |
 | --- | --- | --- |
-| How to use Kindelise | `/guide/` | One-page explanation of profiles, discovery, plans, messages, safety and Premium. |
-| Create account / sign in | `/sign-up/`, `/sign-in/` | Email/password authentication and supervised-use explanation. |
-| Private profile | `/profile/` | Owner profile, plans, availability, Premium action and sign out. |
-| Edit profile | `/account/profile/edit/` | Profile image and owner-editable profile fields. |
-| Discover | `/discover/` | Square profile cards and bounded discovery filters. |
-| Public profile | `/profiles/<id>/` | Eligible profile details, plans, Send Message and collapsed safety actions. |
-| Plans | `/plans/` | Filterable plan cards with state, capacity and optional thumbnail. |
-| Create/edit plan | `/plans/create/`, `/plans/<id>/edit/` | Branded plan form and explicit Fetch details action. |
-| Plan detail | `/plans/<id>/` | Place, time, owner, capacity, participation and owner controls. |
-| Messages | `/messages/` | Current permitted direct conversations. |
-| Conversation | `/conversations/<id>/` | Plain-text thread, composer, safety controls and optional Ollama draft editor. |
-| Private report | `/profiles/<id>/report/` | Bounded report form with trusted optional context. |
-
-Current screenshots should be captured from the final deployed assessment
-revision, not copied from design wireframes or another project. No screenshot or
-Lighthouse asset is claimed by this README because none is currently committed.
-
-## Architecture
-
-```text
-Browser
-   |
-   | HTTPS form submissions and page requests
-   v
-Django views  -> translate HTTP, build server-owned identities and URLs
-   |
-   +-> Forms      -> validate untrusted browser input
-   +-> Policies   -> answer access questions
-   +-> Selectors  -> return privacy-minimised read models
-   +-> Services   -> own atomic workflows and provider calls
-   +-> Models     -> enforce durable PostgreSQL truth
-   |
-   +-> Stripe hosted pages and signed webhooks
-   +-> Ollama generate API for explicit unsent-draft edits
-   +-> bounded HTTPS metadata fetch after explicit user action
-```
-
-Responsibility remains separated even though the project is small:
-
-```text
-Templates/CSS/JS = presentation and optional browser enhancement
-Views            = HTTP methods, sessions, redirects and response types
-Forms            = user-controlled value validation
-Policies         = permission decisions
-Selectors        = scoped database reads
-Services         = transactions and external-provider workflows
-Models           = constraints, indexes and durable state
-Admin            = staff-only verification and review controls
-```
-
-## Django Project And Application Structure
-
-Kindelise has one custom Django application, named `kindlelise`, inside one
-Django project. The main parts are:
-
-- `config/` — Django project configuration, including settings, main URLs,
-  WSGI and ASGI.
-- `kindlelise/` — the custom application containing models, views, forms and
-  the product's main logic.
-- `django.contrib.*` — Django's built-in applications for authentication,
-  Admin, sessions, messages and static files.
-- `cloudinary*` — installed third-party applications used for uploaded-media
-  storage.
-
-One custom application is used because Kindelise is one closely connected
-product. Profiles, discovery, plans, conversations, reports, notifications and
-Premium access depend heavily on one another. Keeping them together provides:
-
-- One clear place for the product code.
-- Fewer imports and configuration steps between separate applications.
-- Simpler database migrations.
-- Easier navigation when reading and explaining the code.
-- Shared permission and privacy rules without duplication.
-- Less risk of splitting connected workflows too early.
-
-Multiple custom applications would become useful if areas such as payments,
-messaging or moderation grew into genuinely separate systems, were maintained
-independently, or needed to be reused by another project. Using one application
-at the current size is therefore an intentional organisational choice, not a
-Django limitation.
-
-## Key Technical Decisions
-
-| Decision | Choice | Reason |
-| --- | --- | --- |
-| Application shape | One server-rendered Django app | The assessed journey is forms, permissions and relational state; a separate API or SPA would duplicate work. |
-| Accounts | Django `User`, with canonical email stored as username and email | Retains Django authentication and uniqueness without a custom user model/backend. |
-| Database | PostgreSQL only | Array-backed profile areas, relational constraints, row locking and production parity are part of the design. |
-| Location | Configured broad areas | Supports useful discovery without exact coordinates, geolocation or location history. |
-| Verification | Manual current staff state | Keeps the access decision explicit without claiming automated identity proof. |
-| Plans | Established public place and HTTPS evidence URL | Gives users reviewable public context while avoiding private-address or map-pin workflows. |
-| Plan publishing | Eligible verified owners create immediately available plans | Matches the current lightweight product; legacy pending/rejected states remain safely handled. |
-| Plan capacity | Transactional join with `select_for_update` | Prevents concurrent joins from exceeding capacity. |
-| Messaging | Refreshed server-rendered plain text | Avoids sockets, media and read-state complexity while preserving the core coordination journey. |
-| Safety | Immediate block plus separate private report | Blocking closes interaction; reporting remains available and does not become a public accusation. |
-| Billing | Stripe-hosted Checkout/Portal and signed webhooks | Card data never enters Kindelise, and browser redirects cannot grant Premium. |
-| AI editing | Explicit bounded Ollama request | Only a current unsent draft and fixed editing goal leave the application; no history or automatic send. |
-| Static files | WhiteNoise compressed manifest storage | Supports a small production deployment without a separate static service. |
-| Images | Normalised protected application files | Removes embedded metadata and checks access, while documenting the need for durable production storage. |
-
-The rationale and rejected alternatives are recorded in
-[`docs/DECISIONS.md`](docs/DECISIONS.md).
-
-## Data Structure And Flow
-
-### Core Data Structures
-
-Kindelise defines eleven application models plus Django's existing `User` model.
-
-| Model | Important fields | Responsibility |
-| --- | --- | --- |
-| `Profile` | user, image, display name, title statement, biography, broad areas, interests, availability, verification | One public/product profile for one account. |
-| `Interest` | unique name | Staff-seeded controlled discovery vocabulary. |
-| `Plan` | owner, place, public URL, thumbnail, time, capacity, status, approval and lock fields | One future public-place activity. |
-| `Participation` | plan, user, joined/left state and timestamps | Current and historical membership without attendee-directory exposure. |
-| `Conversation` | ordered first/second user and activity time | The unique unordered account-pair relationship. |
-| `Message` | conversation, sender, body and sent time | One bounded plain-text message. |
-| `Notification` | recipient, message/plan-join context, created time and read time | One private alert for an incoming message or activity on an owned plan. |
-| `Block` | blocker and blocked user | One directional record treated as mutual exclusion by policy. |
-| `Report` | reporter, target, category, description, optional context and status | One private, non-adjudicative staff report. |
-| `PlatformSubscription` | user, Stripe IDs/status, access end and event ordering | Minimal webhook-owned Premium projection. |
-| `StripeWebhookReceipt` | event ID/type, provider time and processed time | Idempotency and successful-processing record. |
-
-Important database rules include one profile/subscription per user, positive plan
-capacity, consistent verification and approval fields, one participation per
-user/plan, one ordered conversation per pair, no self-block/report, at most one
-report context, notification context matching its type and unique Stripe
-identifiers/events.
-
-### Account And Discovery Flow
-
-```text
-AccountSignUpForm validates canonical email + Django password rules
-    -> service creates User and empty unverified Profile atomically
-    -> owner completes permitted profile fields
-    -> authorised staff verifies a complete profile
-    -> policy grants discovery/plans/messages access
-    -> DiscoveryFiltersForm applies server-calculated area/interest limits
-    -> selector excludes inactive, unverified and either-direction-blocked users
-    -> template renders only the scoped profile cards
-```
-
-Free accounts can use their saved broad areas and up to two interest filters.
-Premium accounts may include explicitly configured nearby areas and up to five
-interest filters. Premium never bypasses verification or a block.
-
-### Plan And Participation Flow
-
-```text
-verified owner submits future plan details
-    -> PlanDetailsForm validates bounds and normal HTTPS URL
-    -> optional Fetch details performs one bounded protected metadata request
-    -> service creates an immediately available plan
-    -> another verified user opens the privacy-minimised detail
-    -> transactional join locks the plan row and rechecks capacity
-    -> first successful join permanently locks owner edits
-    -> leave/rejoin updates the same Participation row
-    -> owner cancellation is terminal and preserves history
-```
-
-Metadata fetching resolves only public/global HTTPS destinations, limits response
-sizes/types and redirects, normalises a thumbnail and stores no fetched page.
-The suggested place remains editable and the public page remains the source the
-user should check.
-
-### Messaging, Blocking And Reporting Flow
-
-```text
-eligible profile -> POST start conversation
-    -> service sorts account IDs and returns/creates one pair
-    -> GET conversation selects messages only for a current permitted member
-    -> MessageDraftForm validates one non-empty plain-text body
-    -> service rechecks eligibility and stores message + activity atomically
-
-POST block -> directional Block row -> both accounts disappear from discovery/messages
-GET/POST report -> trusted target/context resolution -> private Report row for staff
-```
-
-The reported account is not notified and cannot see the report. Blocking never
-removes the reporter's ability to submit a private report.
-
-### Stripe Flow
-
-```text
-POST account/premium/checkout
-    -> server builds account return URLs
-    -> Stripe-hosted annual subscription Checkout
-    -> browser return changes no access
-    -> POST stripe/webhook verifies the exact body and signature
-    -> service resolves immutable account/customer/subscription identity
-    -> unique receipt + ordered subscription projection commit atomically
-    -> eligible paid invoice grants access until its verified period end
-
-POST account/premium/portal
-    -> owning account's stored customer ID
-    -> validated Stripe-hosted portal URL
-```
-
-### Ollama Draft-Editing Flow
-
-```text
-authorised conversation + unsent draft
-    -> choose Fix grammar or Improve clarity
-    -> CSRF-protected conversation-bound POST
-    -> form accepts only draft + fixed goal
-    -> Ollama receives model, fixed instruction and draft
-    -> bounded suggestion appears beside the original
-    -> Keep original or Use suggestion
-    -> ordinary form validation and separate manual Send
-```
-
-“Fix grammar” preserves wording and order while correcting language mechanics.
-“Improve clarity” may restructure and remove repetition without inventing facts.
-
-## Key Features
-
-- Canonical email/password registration and sign-in using Django authentication.
-- One owner-editable profile with title statement, biography, multiple broad
-  areas, controlled interests and optional availability.
-- Protected JPEG/PNG/WebP profile images, limited to 5 MB and 4,096 pixels per
-  side, re-encoded without embedded metadata.
-- Staff verification and withdrawal through Django Admin.
-- Discovery filters with Free and Premium area/interest limits.
-- Public profile cards using protected profile imagery.
-- Immediately available future plans with capacity and participation states.
-- Explicit public-place metadata and thumbnail assistance.
-- Protected plan thumbnails and detailed plan pages.
-- Atomic join, leave, rejoin, cancellation and first-join locking.
-- One direct plain-text conversation per eligible account pair.
-- A private top-bar badge and notification centre for incoming messages and
-  joins on plans owned by the signed-in account.
-- Ollama grammar/clarity suggestions that never send automatically.
-- Immediate blocking and private contextual reporting.
-- Stripe-hosted annual Premium Checkout and customer portal.
-- Webhook idempotency, event ordering and bounded Premium access.
-- Responsive black/grey interface with optional blue, pink and green themes.
-- Accessible labels, focus styles, skip link, semantic status/error regions and
-  reduced-motion support.
-- Sticky navigation, offline feedback and five-second pop-out notifications.
-- One-page in-product guide at `/guide/`.
-
-## Application Runtime And Routes
-
-### Main Source Map
-
-| File | Responsibility |
-| --- | --- |
-| [`config/settings.py`](config/settings.py) | Environment configuration, PostgreSQL, security, areas, Stripe and Ollama settings. |
-| [`kindlelise/models.py`](kindlelise/models.py) | Ten durable entities, constraints, indexes and small state helpers. |
-| [`kindlelise/forms.py`](kindlelise/forms.py) | Authentication, profile, discovery, plan, message, AI and report input validation. |
-| [`kindlelise/policies.py`](kindlelise/policies.py) | Verification, visibility, plan, messaging and report permission decisions. |
-| [`kindlelise/selectors.py`](kindlelise/selectors.py) | Privacy-scoped profile, plan, inbox and conversation reads. |
-| [`kindlelise/services/`](kindlelise/services/) | State-changing workflows split by account, plan, message, safety and payment responsibility. |
-| [`kindlelise/services/accounts.py`](kindlelise/services/accounts.py) | Atomic account/profile changes and notification reading. |
-| [`kindlelise/services/plans.py`](kindlelise/services/plans.py) | Plan creation, editing, participation and cancellation transactions. |
-| [`kindlelise/services/messages.py`](kindlelise/services/messages.py) | Direct-conversation creation and message sending. |
-| [`kindlelise/services/safety.py`](kindlelise/services/safety.py) | Directional blocking and private reporting. |
-| [`kindlelise/services/billing.py`](kindlelise/services/billing.py) | Stripe Checkout and customer-portal session creation. |
-| [`kindlelise/services/stripe_events.py`](kindlelise/services/stripe_events.py) | Verified Stripe event parsing and Premium-access updates. |
-| [`kindlelise/plan_metadata.py`](kindlelise/plan_metadata.py) | Bounded HTTPS metadata fetch, SSRF controls and thumbnail normalisation. |
-| [`kindlelise/ai_message_editor.py`](kindlelise/ai_message_editor.py) | Bounded Ollama request and response validation. |
-| [`kindlelise/views/`](kindlelise/views/) | HTTP page coordination split by account, discovery, plan, message, safety and billing responsibility. |
-| [`kindlelise/views/accounts.py`](kindlelise/views/accounts.py) | Sign-up, sign-in, the private profile, profile images and notifications. |
-| [`kindlelise/views/discovery.py`](kindlelise/views/discovery.py) | Discovery results and public profile pages. |
-| [`kindlelise/views/plans.py`](kindlelise/views/plans.py) | Plan lists, creation, editing, images and participation. |
-| [`kindlelise/views/messages.py`](kindlelise/views/messages.py) | Inbox, direct conversations, sending and draft suggestions. |
-| [`kindlelise/views/safety.py`](kindlelise/views/safety.py) | Private blocking and reporting pages. |
-| [`kindlelise/views/billing.py`](kindlelise/views/billing.py) | Stripe Checkout, customer portal and webhook endpoints. |
-| [`kindlelise/views/common.py`](kindlelise/views/common.py) | Small display and safe-return helpers shared by page groups. |
-| [`kindlelise/admin.py`](kindlelise/admin.py) | Staff verification, legacy plan review and read-only sensitive records. |
-| [`templates/`](templates/) | Server-rendered semantic pages. |
-| [`static/app.css`](static/app.css) | Responsive design system and route-specific presentation. |
-| [`static/app.js`](static/app.js) | Optional themes, filters, notifications, metadata and AI suggestion interactions. |
-| [`tests/test_vertical_slice.py`](tests/test_vertical_slice.py) | End-to-end domain, HTTP, provider-boundary, security and performance tests. |
-
-### Route And Method Summary
-
-| Area | Routes | Methods and rules |
-| --- | --- | --- |
-| Public/auth | `/`, `/guide/`, `/sign-up/`, `/sign-in/` | Public GET; signup/sign-in accept validated POST. |
-| Sign out | `/sign-out/` | POST and CSRF only. |
-| Own profile | `/profile/`, `/account/`, `/account/profile/edit/` | Authenticated GET; profile edit accepts owner-only POST and image upload. |
-| Discovery | `/discover/`, `/profiles/<id>/`, `/profiles/<id>/image/` | Verified access and privacy-scoped GET. |
-| Plans | `/plans/`, `/plans/create/`, `/plans/<id>/`, `/plans/<id>/edit/` | Verified GET/POST with owner and state checks. |
-| Plan actions | `/plans/fetch-details/`, `/plans/<id>/join/`, `/leave/`, `/cancel/` | POST and CSRF only; service rechecks current state. |
-| Plan image | `/plans/<id>/image/` | Protected GET using the same plan visibility boundary. |
-| Messages | `/messages/`, `/conversations/<id>/` | Verified, unblocked, member-scoped GET. |
-| Message actions | profile conversation start, message send, suggestion endpoint | POST and CSRF only; no browser-supplied sender. |
-| Notifications | `/notifications/`, `/notifications/read/` | Authenticated private GET; marking all alerts read is POST and CSRF only. |
-| Safety | profile block and report routes | Block is POST-only; report uses GET/POST and server-resolved target/context. |
-| Premium | account checkout and portal | Authenticated POST, then validated Stripe-hosted redirect. |
-| Stripe | `/stripe/webhook/` | POST-only raw-body signature verification; no browser session required. |
-| Staff | `/admin/` | Django staff authentication and model permissions. |
-
-### Local Runtime Explorer
-
-The repository includes a developer-only runtime explorer for learning how the
-application fits together. It is not a Django route and is not part of the
-deployed product.
-
-Build the one-page explorer from the checked runtime guide:
-
-```bash
-node tools/build-runtime-explorer.mjs
-```
-
-Open [`runtime-explorer.html`](runtime-explorer.html) in a browser. Each complete
-flowchart block opens its owning source file and current line in VS Code. The
-page covers request routing, accounts, discovery, plans, messaging, Ollama,
-notifications, safety, Stripe, media and production startup.
-
-After changing a mapped function or diagram, rebuild the page. The check command
-fails when the generated page is stale or a target no longer exists:
-
-```bash
-node tools/build-runtime-explorer.mjs --check
-```
-
-## Run Locally
-
-### 1. Install The Project
-
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e '.[test]'
-```
-
-### 2. Configure PostgreSQL
-
-Create a database, role and password with PostgreSQL tools or a graphical client.
-Use the same values in `.env`:
-
-```text
-POSTGRES_DB=kindlelise
-POSTGRES_USER=kindlelise
-POSTGRES_PASSWORD=<local-password>
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-```
-
-`DATABASE_URL` takes precedence when it is non-empty. Do not set it to a SQLite
-URL; settings reject every non-PostgreSQL scheme.
-
-### 3. Configure The Environment
-
-```bash
-cp .env.example .env
-python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-```
-
-Put the generated value in `DJANGO_SECRET_KEY`. Keep `.env` local and ignored by
-Git. Use test-mode Stripe credentials and a revocable Ollama key for assessment.
-
-### 4. Migrate And Start
-
-```bash
-set -a
-source .env
-set +a
-
-python manage.py migrate
-python manage.py createsuperuser  # required only for staff/admin review
-python manage.py runserver 127.0.0.1:8000
-```
-
-### 5. Run The Verification Suite
-
-```bash
-set -a
-source .env
-set +a
-
-python manage.py check
-python manage.py makemigrations --check --dry-run
-pytest -q
-python manage.py collectstatic --dry-run --noinput --verbosity 0
-```
-
-## Environment Variables
-
-Copy [`.env.example`](.env.example) and populate `.env`. Never place real
-credentials in `.env.example`, source code, screenshots, commits or logs.
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `DJANGO_SECRET_KEY` | Yes | Signs sessions and security-sensitive Django values. Use a long unique value. |
-| `DJANGO_DEBUG` | Yes | `true` locally; `false` in a deployed environment. Invalid booleans fail startup. |
-| `DJANGO_ALLOWED_HOSTS` | Yes | Comma-separated hostnames Django may serve. |
-| `DJANGO_CSRF_TRUSTED_ORIGINS` | Deployment | Comma-separated full trusted origins such as `https://example.com`. |
-| `DATABASE_URL` | Deployment/optional locally | PostgreSQL URL; takes precedence over individual PostgreSQL fields. |
-| `POSTGRES_DB` | Local without `DATABASE_URL` | Local PostgreSQL database name. |
-| `POSTGRES_USER` | Local without `DATABASE_URL` | Local PostgreSQL role. |
-| `POSTGRES_PASSWORD` | Local without `DATABASE_URL` | Local PostgreSQL password. |
-| `POSTGRES_HOST` | Local without `DATABASE_URL` | PostgreSQL host, normally `localhost`. |
-| `POSTGRES_PORT` | Local without `DATABASE_URL` | PostgreSQL port, normally `5432`. |
-| `STRIPE_SECRET_KEY` | Premium | Server-side Stripe test/live key. |
-| `STRIPE_WEBHOOK_SECRET` | Premium | Verifies the exact webhook body and Stripe signature. |
-| `STRIPE_PRICE_ID` | Premium | The one configured recurring GBP £4.99 yearly price. |
-| `OLLAMA_API_URL` | AI editor | Full Generate endpoint; example uses `https://ollama.com/api/generate`. |
-| `OLLAMA_API_KEY` | Remote AI editor | Bearer credential for the Ollama Cloud endpoint. |
-| `OLLAMA_MODEL` | AI editor | One pinned model name; example uses `gpt-oss:20b`. |
-| `OLLAMA_TIMEOUT_SECONDS` | AI editor | Positive whole-number request timeout; defaults to 10 seconds. |
-
-When `DJANGO_DEBUG=false`, settings automatically enable secure cookies, HTTPS
-redirect, HSTS, forwarded-protocol handling, `nosniff`, same-origin referrer
-policy and frame denial.
-
-## Staff And Demonstration Setup
-
-1. Create a superuser with `python manage.py createsuperuser`.
-2. Register at least two normal supervised accounts through `/sign-up/`.
-3. Complete each profile's display name and one or more configured broad areas.
-4. Open `/admin/auth/user/<id>/change/` and use **Profile verified** in the
-   Permissions section, or select profiles in Admin and run the verification
-   action.
-5. Keep staff accounts separate from demonstration users where possible.
-6. Use the second account to prove discovery, join capacity, messaging, block and
-   report behavior rather than editing database rows manually.
-
-The controlled interests seeded by migration are Coffee, Walking, Museums, Live
-music, Cinema, Food, Games and Study.
-
-## Stripe Test-Mode Setup
-
-Kindelise expects one recurring price configured as GBP £4.99 per year.
-
-1. Create or select the Stripe test-mode Product and yearly Price.
-2. Put the test secret key and Price ID in `.env`.
-3. Start Django, then run the Stripe CLI in another terminal:
+| `DJANGO_SECRET_KEY` | Always | Signs Django sessions and protected values. |
+| `DJANGO_DEBUG` | Always | `true` locally and `false` when deployed. |
+| `DJANGO_ALLOWED_HOSTS` | Always | Hostnames Django may serve. |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` | Deployment | Full HTTPS origins trusted for form submissions. |
+| `DATABASE_URL` | Deployment or optional locally | Complete PostgreSQL connection URL. |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT` | Local without `DATABASE_URL` | Separate local PostgreSQL connection values. |
+| `CLOUDINARY_URL` | Durable hosted images | Cloudinary account URL used for profile and plan images. |
+| `STRIPE_SECRET_KEY` | Premium | Server-side Stripe key. |
+| `STRIPE_WEBHOOK_SECRET` | Premium | Verifies Stripe webhook signatures. |
+| `STRIPE_PRICE_ID` | Premium | Recurring yearly price identifier. |
+| `OLLAMA_API_URL` | AI editing | Ollama Generate endpoint. |
+| `OLLAMA_API_KEY` | Remote AI editing | Ollama Cloud bearer key. |
+| `OLLAMA_MODEL` | AI editing | Pinned model name. |
+| `OLLAMA_TIMEOUT_SECONDS` | AI editing | Positive request timeout. |
+
+Production mode also enables secure cookies, HTTPS redirect, HSTS, proxy HTTPS
+handling, frame denial and other Django security settings.
+
+## Staff setup
+
+1. Create a staff account:
+
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+2. Register normal accounts through `/sign-up/` and complete their profiles.
+3. Open `/admin/`, choose a profile and use the verification control.
+4. Use separate normal accounts to demonstrate discovery, plans, messaging,
+   notifications, blocking and reporting.
+
+The seeded interests are Coffee, Walking, Museums, Live music, Cinema, Food,
+Games and Study.
+
+## Stripe and Ollama
+
+### Stripe test mode
+
+Kindelise expects one recurring GBP £4.99 yearly price. Add the test secret key
+and Price ID to `.env`, start Django and run:
 
 ```bash
 stripe login
 stripe listen --forward-to 127.0.0.1:8000/stripe/webhook/
 ```
 
-4. Copy the listener's `whsec_...` signing secret into
-   `STRIPE_WEBHOOK_SECRET` and restart Django so the environment is reloaded.
-5. Use **Explore** on `/profile/`; payment occurs on Stripe's hosted page.
-6. Confirm that the browser return alone grants nothing and the signed supported
-   events update `PlatformSubscription` and `StripeWebhookReceipt`.
-7. Use the profile action again to open the hosted Customer Portal after a Stripe
-   customer is linked.
+Copy the displayed `whsec_...` value into `STRIPE_WEBHOOK_SECRET`, then restart
+Django. Checkout and subscription management take place on Stripe's hosted
+pages. Premium access is changed only by a correctly signed webhook, never by
+the browser returning from Checkout.
 
-Handled events are `checkout.session.completed`,
-`customer.subscription.created`, `customer.subscription.updated`, `invoice.paid`
-and `customer.subscription.deleted`. Unsupported events return success without
-changing access. Never use production card data for assessment testing.
+### Ollama writing assistant
 
-## Ollama Setup
-
-The default example uses Ollama Cloud's Generate API:
+The example configuration is:
 
 ```text
 OLLAMA_API_URL=https://ollama.com/api/generate
@@ -660,123 +280,14 @@ OLLAMA_MODEL=gpt-oss:20b
 OLLAMA_TIMEOUT_SECONDS=10
 ```
 
-Restart Django after changing `.env`. Open a permitted conversation, write an
-unsent draft, expand **Edit this unsent draft**, then choose **Fix grammar** or
-**Improve clarity**. The comparison panel shows the original and suggestion;
-the text box changes only after **Use suggestion**, and the message is still not
-sent until **Send** is pressed.
+After restarting Django, open a permitted conversation and expand **Edit this
+unsent draft**. **Fix grammar** preserves the original structure, while
+**Improve clarity** may reorganise it. The user must choose **Use suggestion**
+and then press **Send**; Ollama cannot send a message itself.
 
-The adapter also permits unauthenticated HTTP only for loopback hosts
-(`127.0.0.1`, `localhost` or `::1`) so a local Ollama installation can be used
-during development. Every remote host requires HTTPS and an API key. The project
-uses its pinned `certifi` CA bundle for provider certificate validation.
+## Testing
 
-## Deployment Guidance
-
-The repository includes Heroku-compatible `requirements.txt`, `.python-version`
-and `Procfile` files. Heroku installs the pinned production dependencies with
-pip, uses the latest supported Python 3.12 patch, runs migrations during the
-release phase and starts Gunicorn as the web process. A live URL is not committed.
-
-### Required Production Configuration
-
-```text
-DJANGO_SECRET_KEY=<unique-production-secret>
-DJANGO_DEBUG=false
-DJANGO_ALLOWED_HOSTS=<deployed-hostname>
-DJANGO_CSRF_TRUSTED_ORIGINS=https://<deployed-hostname>
-DATABASE_URL=<managed-postgresql-url>
-STRIPE_SECRET_KEY=<matching-environment-key>
-STRIPE_WEBHOOK_SECRET=<deployed-endpoint-secret>
-STRIPE_PRICE_ID=<matching-environment-price>
-OLLAMA_API_URL=https://ollama.com/api/generate
-OLLAMA_API_KEY=<revocable-production-key>
-OLLAMA_MODEL=<pinned-supported-model>
-```
-
-The `Procfile` web command is:
-
-```bash
-gunicorn config.wsgi --log-file - --access-logfile -
-```
-
-The `Procfile` release phase runs:
-
-```bash
-python manage.py migrate --noinput
-```
-
-Heroku runs `python manage.py collectstatic --noinput` during the Python build.
-Run `python manage.py check --deploy` as a separate pre-deployment verification
-gate with the production environment values configured.
-
-WhiteNoise serves static assets. Uploaded profile and plan images currently use
-the local filesystem; Heroku-style ephemeral storage is not durable. A real
-deployment therefore needs an approved durable private media backend before
-image retention can be promised. Add the media decision through the documented
-boundary-change process rather than silently claiming durable uploads exist.
-
-After deployment, record the URL and immutable revision, run a home-route smoke
-request, verify Admin, repeat the supervised user journey, exercise test-mode
-Stripe and Ollama, inspect logs for unexpected failures and document rollback.
-
-## Security And Privacy
-
-- Django authentication hashes passwords and session/CSRF middleware protects
-  account actions.
-- Mutation routes use POST and CSRF; views never trust browser-supplied owner,
-  sender, verification, approval or subscription identity.
-- Policies fail closed when an account is inactive, incomplete, unverified or
-  blocked.
-- Selectors return the same generic hidden response for missing and forbidden
-  private objects where existence would leak information.
-- Templates use Django escaping and messages are stored/rendered as plain text.
-- Profile images are type/size/dimension checked and re-encoded without metadata.
-- Plan metadata uses explicit user action, global-address checks, pinned HTTPS
-  connections, bounded content and signed short-lived thumbnail tokens.
-- Capacity, uniqueness and state consistency are enforced by PostgreSQL as well
-  as application code.
-- Stripe webhook signatures use the exact raw body; unique receipts and provider
-  times prevent duplicate or older events from rewriting access.
-- Stripe ownership comes from immutable local IDs and linked provider IDs, never
-  email. Kindelise stores no card or bank details.
-- Ollama receives only the bounded unsent draft, fixed instruction and model. It
-  receives no profile, recipient, report, plan or previous conversation content.
-- Provider errors are quiet, suggestions are not persisted and neither provider
-  secrets nor private text should enter application logs.
-- `.env` is ignored by Git; `.env.example` contains placeholders only.
-
-## Known Limitations
-
-- The project is for supervised assessment accounts and has no age-verification
-  or production identity-proof system.
-- Staff verification is an access gate, not a personal or venue safety guarantee.
-- Broad areas intentionally replace precise distance/location behavior.
-- Plan metadata can become outdated and does not prove an external venue is safe
-  or legitimate; users must check the linked public page.
-- Uploaded media uses local filesystem storage and lacks production retention,
-  moderation and durable object storage.
-- Messaging refreshes through normal page requests; there are no WebSockets,
-  read receipts, typing indicators, group chats, reactions or attachments.
-- Reports are statements for staff review, not findings, sanctions, appeals or an
-  emergency-response system.
-- Premium is one annual product. There is no tier catalogue, usage billing or
-  local payment/cancellation form.
-- Provider-backed features need reachable Stripe/Ollama services and correctly
-  scoped credentials. Provider failure preserves safe local state but cannot
-  supply the external feature.
-- There is no background worker, automated reconciliation service, production
-  alerting or long-term metrics pipeline.
-- A public deployment URL, process file, durable media backend, final signed-in
-  accessibility audit and current screenshot set are not yet committed.
-- The archived production-scale material under `_achive/` is reference history,
-  not part of the running application.
-
-## Verification And Test Coverage
-
-### Reproduce The Current Gates
-
-From the project root with the test PostgreSQL database available:
+Load `.env`, then run the normal checks:
 
 ```bash
 set -a
@@ -790,7 +301,7 @@ python manage.py collectstatic --dry-run --noinput --verbosity 0
 python -m pip check
 ```
 
-Run the independent Python ecosystem quality gates with:
+Additional quality and security checks:
 
 ```bash
 ruff check config kindlelise tests
@@ -801,143 +312,129 @@ coverage report
 pip-audit --local --skip-editable
 ```
 
-Ruff checks stable Python syntax, import and undefined-name rules. Bandit scans
-application code for common security mistakes; generated migrations are excluded.
-Coverage.py measures statements and branches and enforces the 80% project minimum
-configured in `pyproject.toml`. pip-audit compares installed dependencies with the
-Python Packaging Advisory Database. The editable Kindelise package itself is
-reported as skipped because it is local source rather than a published package;
-its installed third-party dependencies are still audited.
+### Recorded results
 
-For the production settings audit without changing `.env`:
+| Check | Result |
+| --- | --- |
+| Django system and deployment checks | Passed with 0 issues |
+| Migration drift check | Passed |
+| PostgreSQL pytest suite | **120 tests passed** |
+| Branch-aware Coverage.py report | **83%**, above the configured 80% minimum |
+| Ruff | Passed |
+| Bandit | Passed with no unsuppressed findings |
+| pip-audit | No known vulnerabilities found in installed dependencies |
+| Static collection and dependency consistency | Passed |
+| W3C CSS Validator | **Pass** |
+| HTML Checker | **Pass** |
+| Lighthouse | Performance **94**, Accessibility **100**, Best Practices **100**, SEO **90** |
 
-```bash
-set -a
-source .env
-set +a
+[View screenshots of the HTML, CSS and Lighthouse results](https://docs.google.com/document/d/1JyWivhJncSulWrqepOKu2DkVEdx2hoze0tvE9_bE7eY/edit?tab=t.0).
 
-DJANGO_DEBUG=false \
-DJANGO_ALLOWED_HOSTS=example.test \
-DJANGO_CSRF_TRUSTED_ORIGINS=https://example.test \
-python manage.py check --deploy
+The automated suite covers authentication, profile ownership, staff
+verification, discovery limits, images, plan capacity, participation,
+messaging, notifications, blocks, reports, Stripe events, Ollama boundaries,
+CSRF, privacy responses and stable database-query counts. External provider
+calls use controlled replacements during automated tests.
+
+Manual browser results are recorded in
+[`docs/MANUAL_TESTING.md`](docs/MANUAL_TESTING.md).
+
+## Deployment
+
+The repository contains the files Heroku needs:
+
+- `requirements.txt` for production Python packages.
+- `.python-version` for Python 3.12.
+- `Procfile` for database migrations and Gunicorn.
+- WhiteNoise configuration for collected static files.
+- PostgreSQL `DATABASE_URL` support.
+- Cloudinary storage when `CLOUDINARY_URL` is configured.
+
+Required Heroku Config Vars are:
+
+```text
+DJANGO_SECRET_KEY=<unique-production-secret>
+DJANGO_DEBUG=false
+DJANGO_ALLOWED_HOSTS=<deployed-hostname>
+DJANGO_CSRF_TRUSTED_ORIGINS=https://<deployed-hostname>
+DATABASE_URL=<managed-postgresql-url>
+CLOUDINARY_URL=<cloudinary-account-url>
+STRIPE_SECRET_KEY=<matching-environment-key>
+STRIPE_WEBHOOK_SECRET=<deployed-endpoint-secret>
+STRIPE_PRICE_ID=<matching-environment-price>
+OLLAMA_API_URL=https://ollama.com/api/generate
+OLLAMA_API_KEY=<revocable-key>
+OLLAMA_MODEL=<pinned-model>
 ```
 
-Latest verified local results on **8 August 2026**:
+The release process runs migrations and the web process starts Gunicorn:
 
-| Gate | Result |
-| --- | --- |
-| Django system check | Passed with 0 issues |
-| Django production deployment check | Passed with 0 issues using temporary production host settings |
-| Migration drift check | Passed; no model changes detected |
-| PostgreSQL pytest suite under Coverage.py | **117 tests passed in 88.36 seconds** |
-| Coverage.py 7.15.4 | **83%** combined branch-aware report; passed the 80% minimum |
-| Ruff 0.16.2 | Passed with no remaining findings in the configured rule set |
-| Bandit 1.9.4 | Passed with no unsuppressed findings |
-| pip-audit 2.10.1 | Passed; no known vulnerabilities found in installed dependencies |
-| Static collection dry run | Passed |
-| Python dependency consistency | Passed; no broken requirements found |
-| Git whitespace check | Passed |
-| Live Ollama Cloud synthetic grammar request | Passed and returned a bounded suggestion |
-| Conversation-bound suggestion endpoint | Passed with HTTP 200 and a non-empty suggestion |
+```text
+release: python manage.py migrate --noinput
+web: gunicorn config.wsgi --log-file - --access-logfile -
+```
 
-Passing tests prove the behaviors covered by the suite on the recorded
-environment. They do not replace a final deployed browser, Stripe test-mode,
-accessibility, media-persistence or rollback walkthrough.
+Before deployment, run `python manage.py check --deploy` with production-style
+settings. After deployment, check the main pages, Admin, uploaded images,
+Stripe test mode, Ollama and application logs.
 
-The first dependency audit identified advisories against the previous Django,
-pytest and pip versions. The verified environment now uses Django 5.2.16,
-pytest 9.0.3 and pip 26.2.1, and the repeat audit reports no known
-vulnerabilities. Three narrow Bandit false positives are documented beside the
-relevant lines: a URL opened only after scheme/host/credential validation, a
-public signing namespace, and an empty non-authentication sentinel.
+## Security and limitations
 
-### Test Coverage By Domain
+### Main protections
 
-The single vertical-slice suite covers:
+- Django hashes passwords and provides session, CSRF and template-escaping
+  protection.
+- State-changing actions use POST and server-owned user identities.
+- Policies fail closed for inactive, incomplete, unverified or blocked users.
+- Database constraints and transactions support the Python checks.
+- Uploaded images are checked, resized and stripped of embedded metadata.
+- Public-place fetching permits bounded public HTTPS resources only.
+- Stripe signatures, unique receipts and event ordering protect Premium state.
+- Ollama receives no profile details, earlier messages or automatic-send power.
+- Secrets remain in environment variables and `.env` is ignored by Git.
 
-- schema migrations, seeded interests, exact model inventory, constraints,
-  indexes and deletion behavior;
-- canonical email registration, sign-in/out, redirects, CSRF and transactional
-  account/profile creation;
-- profile field ownership, multiple areas, availability calculations and image
-  normalisation/protection;
-- staff permissions, profile verification/withdrawal and legacy plan review;
-- Free/Premium discovery limits, filters, block exclusion and privacy-minimised
-  public profiles;
-- plan list/detail visibility, immediate creation, bounded metadata fetching,
-  protected thumbnails, owner edits, joins, capacity, first-join locking, leave,
-  rejoin and terminal cancellation;
-- one direct conversation per pair, chronological escaped messages, no inbox
-  previews, current permission checks and transactional message activity;
-- immediate idempotent blocking and private report target/context validation;
-- Stripe Checkout/Portal request shape, immutable ownership, exact webhook
-  verification, idempotency, ordering, paid/trial/cancelled states and rollback;
-- Ollama payload minimisation, separate grammar/clarity instructions,
-  authorization, CSRF, timeout/malformed-output handling and manual send;
-- accessible navigation/error associations and constant discovery, plan-list and
-  inbox query counts from five to fifty visible rows.
+### Current limitations
 
-External provider calls are replaced with controlled fakes in the automated
-suite. The separate live Ollama smoke check uses synthetic non-personal text.
+- Staff verification is an access gate, not an identity or safety guarantee.
+- Broad areas intentionally replace exact location and distance tracking.
+- Public-place metadata can become outdated and must be checked by the user.
+- Messaging uses page refreshes rather than live sockets or read receipts.
+- Reports support staff review but are not an emergency-response service.
+- Premium currently has one yearly product.
+- Provider-backed features depend on Stripe, Ollama and Cloudinary availability.
+- There is no background worker, production monitoring or automated payment
+  reconciliation process.
 
-## Assessment Fit
+## Further development
 
-Kindelise demonstrates the expected full-stack outcomes:
+The main planned feature is owner-approved plan membership. Instead of joining
+immediately, a user would send a request and the owner would accept or decline
+it. Capacity would change only after approval, and both people would receive a
+notification when the request changes state.
 
-- Django project configuration, URL routing, views, forms and templates;
-- authentication, sessions, permissions, ownership and staff administration;
-- PostgreSQL models, migrations, relationships, constraints, indexes and
-  transactional concurrency controls;
-- CRUD-style profile/plan workflows and retained state transitions;
-- responsive, accessible and progressively enhanced frontend code;
-- secure environment-based configuration and production-mode settings;
-- two narrow third-party integrations with tested failure boundaries;
-- automated tests covering normal journeys, invalid input, privacy, security,
-  concurrency, provider behavior and performance query shape;
-- documented setup, architecture, deployment requirements, limitations and
-  verification evidence.
+## Project documentation
 
-The strongest assessment claim is not that the MVP is production-complete. It is
-that the approved product journey is intentionally bounded, implemented in a
-small readable codebase and supported by reproducible evidence.
+- [`docs/DJANGO_REVISION_GUIDE.md`](docs/DJANGO_REVISION_GUIDE.md) — concise
+  presentation revision guide explaining the Django files and design.
+- [`docs/DECISIONS.md`](docs/DECISIONS.md) — important technical decisions and
+  their reasons.
+- [`docs/MANUAL_TESTING.md`](docs/MANUAL_TESTING.md) — browser tests, findings
+  and outcomes.
+- [`docs/RUNTIME.md`](docs/RUNTIME.md) — source for the application flowcharts.
+- [`runtime-explorer.html`](runtime-explorer.html) — clickable local flowchart
+  explorer generated from `docs/RUNTIME.md`.
 
-## AI Assistance
+Rebuild or check the explorer with:
 
-AI tools were used as a development assistant for code review, test suggestions,
-documentation structure, debugging external integrations, accessibility checks
-and wording improvements. Changes were inspected in the repository and verified
-with the commands recorded above rather than accepted only because an AI tool
-suggested them.
+```bash
+node tools/build-runtime-explorer.mjs
+node tools/build-runtime-explorer.mjs --check
+```
 
-Ollama is also a visible product feature, but its authority is deliberately
-small: it may suggest a grammar or clarity edit for one unsent draft. It cannot
-read prior messages, choose a recipient, send a message, verify a profile,
-approve a plan, grant Premium or make a safety decision.
+## AI assistance
 
-## Documentation Map
-
-| Document | Role |
-| --- | --- |
-| [`README.md`](README.md) | Main setup, product, architecture, testing and assessment handoff. |
-| [`docs/VERTICAL_SLICE.md`](docs/VERTICAL_SLICE.md) | Authoritative MVP behavior and implementation boundary. |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Architecture decisions, alternatives and consequences. |
-| [`docs/MANUAL_TESTING.md`](docs/MANUAL_TESTING.md) | End-to-end browser checks, errors found, fixes and final outcomes. |
-| [`docs/RUNTIME.md`](docs/RUNTIME.md) | Plain-language Mermaid maps of the application's main runtime flows. |
-| [`runtime-explorer.html`](runtime-explorer.html) | Generated one-page runtime map with clickable VS Code source links. |
-
-Completed build plans, progress evidence, superseded design material and README
-templates are retained under [`_achive/doc_old/`](_achive/doc_old/) for history.
-They are not implementation authorities for the running MVP.
-
-## Submission Scope
-
-This README is the main project handoff for the submitted repository. The
-running submission is the root Django project, `kindlelise` application,
-templates, static assets, migrations and tests listed above. Secrets, local
-`.env`, local database contents, generated static output, uploaded media, design
-wireframes and archived production-scale experiments are not product source.
-
-Before final submission, add the actual deployed URL and revision, capture
-current screenshots from that revision, complete the deployed Stripe/Ollama and
-accessibility walkthroughs, confirm durable media handling, and update the
-verification evidence without weakening this README's stated limitations.
+AI tools supported code review, debugging, test ideas, accessibility checks and
+documentation structure. Changes were reviewed in the repository and checked
+with the commands recorded above. Ollama is also a deliberately limited product
+feature: it can suggest wording for one unsent draft but cannot read previous
+messages, send content, verify users, approve plans or grant Premium.

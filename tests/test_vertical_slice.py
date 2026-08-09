@@ -5286,12 +5286,34 @@ def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
     )
     assert checkout_response.status_code == 302
     assert checkout_response.url.startswith("https://checkout.stripe.com/")
-    assert checkout_values["success_url"] == "http://testserver/account/"
-    assert checkout_values["cancel_url"] == "http://testserver/account/"
+    assert (
+        checkout_values["success_url"]
+        == "http://testserver/account/?premium_payment=success"
+    )
+    assert (
+        checkout_values["cancel_url"]
+        == "http://testserver/account/?premium_payment=cancelled"
+    )
     assert checkout_values["client_reference_id"] == str(account.pk)
     assert checkout_values.get("customer") is None
 
-    PlatformSubscription.objects.create(
+    successful_return = client.get(
+        reverse("account"),
+        {"premium_payment": "success"},
+        follow=True,
+    )
+    assert b"Payment successful. Premium access will update shortly." in successful_return.content
+    assert successful_return.redirect_chain == [(reverse("account"), 302)]
+
+    cancelled_return = client.get(
+        reverse("account"),
+        {"premium_payment": "cancelled"},
+        follow=True,
+    )
+    assert b"Payment cancelled. No charge was made." in cancelled_return.content
+    assert cancelled_return.redirect_chain == [(reverse("account"), 302)]
+
+    subscription = PlatformSubscription.objects.create(
         user=account,
         stripe_customer_id="cus_test_http_portal",
         stripe_subscription_id="sub_test_http_portal",
@@ -5325,6 +5347,13 @@ def test_premium_http_uses_csrf_server_urls_and_safe_account_presentation(
     assert portal_response.url.startswith("https://billing.stripe.com/")
     assert portal_values["customer"] == "cus_test_http_portal"
     assert portal_values["return_url"] == "http://testserver/account/"
+
+    subscription.stripe_status = "active"
+    subscription.access_until = timezone.now() + timezone.timedelta(days=365)
+    subscription.save(update_fields=["stripe_status", "access_until"])
+    active_account_response = client.get(reverse("account"))
+    assert b">Cancel Premium</button>" in active_account_response.content
+    assert b"Cancel Premium through Stripe" in active_account_response.content
 
 
 # WHY: Checks that ollama editor sends only bounded draft and each fixed goal so a future change cannot quietly break it.

@@ -484,7 +484,7 @@
             <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
             <form method="post" action="{% url 'premium_subscription_portal' %}">
               {% csrf_token %}
-              <button type="submit" aria-label="{% if summary.subscription.has_premium_access %}Manage subscription{% else %}Pay £4.99 or manage subscription{% endif %}">Explore</button>
+              <button type="submit" aria-label="{% if summary.subscription.has_premium_access %}Cancel Premium through Stripe{% else %}Pay £4.99 or manage subscription{% endif %}">{% if summary.subscription.has_premium_access %}Cancel Premium{% else %}Explore{% endif %}</button>
             </form>
           {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
           {% elif summary.subscription.checkout_available %}

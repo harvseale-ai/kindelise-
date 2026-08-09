@@ -416,7 +416,7 @@ function buildHtml(diagrams) {
         section.id = "flow-" + slugify(diagram.title);
 
         const heading = document.createElement("h2");
-        heading.textContent = diagram.title;
+        heading.textContent = (index + 1) + ". " + diagram.title;
         const description = document.createElement("p");
         description.className = "flow-description";
         description.textContent = diagram.description;
@@ -432,7 +432,7 @@ function buildHtml(diagrams) {
         contentsItem.dataset.diagramIndex = String(index);
         const contentsLink = document.createElement("a");
         contentsLink.href = "#" + section.id;
-        contentsLink.textContent = diagram.title;
+        contentsLink.textContent = (index + 1) + ". " + diagram.title;
         contentsItem.append(contentsLink);
         contents.append(contentsItem);
       }
