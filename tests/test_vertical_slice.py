@@ -4829,6 +4829,7 @@ def test_stripe_trialing_creation_grants_only_trial_and_ineligible_updates_deny_
 # WHY: Checks that stripe paid invoice for configured gbp price grants only annual period so a future change cannot quietly break it.
 def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
     settings,
+    monkeypatch,
 ):
     account = create_test_user()
     settings.STRIPE_SECRET_KEY = "sk_test_synthetic"
@@ -4841,6 +4842,15 @@ def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
         stripe_subscription_id="sub_test_paid",
         stripe_status="active",
         latest_provider_event_at=now - timezone.timedelta(seconds=1),
+    )
+    # WHY: Mirrors the object returned by the installed Stripe library when an invoice only includes an ID.
+    monkeypatch.setattr(
+        stripe.Subscription,
+        "retrieve",
+        lambda *args, **kwargs: SimpleNamespace(
+            id="sub_test_paid",
+            status="active",
+        ),
     )
     paid_event = build_stripe_test_event(
         "invoice.paid",
@@ -4855,7 +4865,7 @@ def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
             "parent": {
                 "type": "subscription_details",
                 "subscription_details": {
-                    "subscription": {"id": "sub_test_paid", "status": "active"},
+                    "subscription": "sub_test_paid",
                     "metadata": {"kindlelise_user_id": str(account.pk)},
                 },
             },

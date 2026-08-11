@@ -25,10 +25,13 @@ def _as_mapping(value):
 
 # WHY: Keeps the stripe identifier steps in one named place so they can be understood, checked, and reused.
 def _stripe_identifier(value):
-    # WHY: Accepts either an expanded Stripe object or its plain ID using one bounded rule.
+    # WHY: Accepts a dictionary, Stripe library object or plain ID using one bounded rule.
     if isinstance(value, Mapping):
         # WHY: Expanded Stripe objects carry their usable identifier under the same `id` key.
         value = value.get("id")
+    elif not isinstance(value, str):
+        # WHY: Current Stripe library objects expose the same identifier as an `id` attribute.
+        value = getattr(value, "id", None)
     if not isinstance(value, str) or not value or len(value) > 255:
         # WHY: Missing, wrongly shaped or unusually long identifiers must never be used in database lookups.
         return None
@@ -204,7 +207,10 @@ def _active_invoice_subscription_status(stripe_object, subscription_id):
     if _stripe_identifier(provider_subscription) != subscription_id:
         raise ValueError("Stripe returned another subscription")
     # WHY: Only the current status is needed to decide whether a paid invoice may grant access.
-    return provider_subscription.get("status")
+    if isinstance(provider_subscription, Mapping):
+        return provider_subscription.get("status")
+    # WHY: Current Stripe library objects expose their status as an attribute, not a dictionary key.
+    return getattr(provider_subscription, "status", None)
 
 # WHY: Keeps the store processed receipt steps in one named place so they can be understood, checked, and reused.
 def _store_processed_receipt(receipt):
