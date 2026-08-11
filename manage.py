@@ -2,7 +2,7 @@
 """Provide Django's standard management-command entry point."""
 
 # KEYWORD: command line — the words typed after Python to choose a task, such as runserver or test.
-
+# It does not contain the website’s main features; it provides the entry point for managing and running them.
 
 import os
 import sys
