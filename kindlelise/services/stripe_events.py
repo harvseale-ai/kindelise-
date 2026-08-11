@@ -324,10 +324,11 @@ def update_premium_access_from_verified_stripe_event(stripe_event):
                 # WHY: An older status notice must not undo a newer cancellation, trial or active state.
                 _store_processed_receipt(receipt)
                 return False
-            if provider_created_at == latest_event_at and event_type != (
-                "customer.subscription.deleted"
-            ):
-                # WHY: Equal-time ordinary notices add no newer information; deletion remains the safest final state.
+            if provider_created_at == latest_event_at and event_type not in {
+                "customer.subscription.deleted",
+                "invoice.paid",
+            }:
+                # WHY: Equal-time ordinary notices add nothing; deletion and paid access still carry distinct facts.
                 _store_processed_receipt(receipt)
                 return False
 

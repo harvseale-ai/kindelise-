@@ -4841,7 +4841,8 @@ def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
         stripe_customer_id="cus_test_paid",
         stripe_subscription_id="sub_test_paid",
         stripe_status="active",
-        latest_provider_event_at=now - timezone.timedelta(seconds=1),
+        # WHY: Stripe may create the active subscription and paid invoice within the same second.
+        latest_provider_event_at=now,
     )
     # WHY: Mirrors the object returned by the installed Stripe library when an invoice only includes an ID.
     monkeypatch.setattr(
