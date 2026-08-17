@@ -14,6 +14,10 @@ from kindlelise.models import (
     Profile,
 )
 
+# =============================================================================
+# SHARED SOCIAL ACCESS
+# Checks the account gate used by discovery, plans, and direct messages.
+# =============================================================================
 
 # WHY: Answers whether access discovery plans and messages so every page follows the same permission rule.
 def can_access_discovery_plans_and_messages(user):
@@ -36,6 +40,11 @@ def can_access_discovery_plans_and_messages(user):
         profile__is_verified=True,
     ).exists()
 
+
+# =============================================================================
+# DISCOVERY REACH
+# Calculates the areas and interest limit available to this account.
+# =============================================================================
 
 # WHY: Finds the allowed discovery areas and interest limit information in one place so callers receive the same result.
 def get_allowed_discovery_areas_and_interest_limit(user):
@@ -98,6 +107,11 @@ def get_allowed_discovery_areas_and_interest_limit(user):
     return allowed_areas, 5
 
 
+# =============================================================================
+# PROFILE VISIBILITY
+# Checks whether another person's profile may appear or be opened.
+# =============================================================================
+
 # WHY: Answers whether view profile page so every page follows the same permission rule.
 def can_view_profile_page(viewer, profile):
     """Return true only when both accounts may interact and neither has blocked.
@@ -148,6 +162,11 @@ def can_show_profile_in_discovery_grid(viewer, profile):
     return bool(set(profile_areas).intersection(allowed_areas))
 
 
+# =============================================================================
+# PLAN PERMISSIONS
+# Checks whether the current account may create or join a plan.
+# =============================================================================
+
 # WHY: Answers whether create plan so every page follows the same permission rule.
 def can_create_plan(user):
     """Return true only when the account may create a public-place plan.
@@ -188,6 +207,11 @@ def can_join_approved_plan(user, plan, at_time):
     ).exists()
 
 
+# =============================================================================
+# MESSAGE PERMISSIONS
+# Checks whether two accounts may start or continue a direct conversation.
+# =============================================================================
+
 # WHY: Answers whether start or continue direct messages so every page follows the same permission rule.
 def can_start_or_continue_direct_messages(sender, recipient):
     """Return true only when two eligible accounts may message each other.
@@ -213,6 +237,11 @@ def can_start_or_continue_direct_messages(sender, recipient):
         | Q(blocker=recipient, blocked_user=sender)
     ).exists()
 
+
+# =============================================================================
+# REPORTING PERMISSION
+# Checks that a signed-in person is reporting a different account.
+# =============================================================================
 
 # WHY: Answers whether report another user so every page follows the same permission rule.
 def can_report_another_user(reporter, reported_user):

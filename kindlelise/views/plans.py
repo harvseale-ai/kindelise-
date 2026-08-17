@@ -28,6 +28,10 @@ from kindlelise.services.plans import (
     update_owned_plan_before_first_join,
 )
 
+# =============================================================================
+# SHARED PLAN ACCESS
+# Applies the common account gate used by every plan page.
+# =============================================================================
 
 # WHY: Keeps the plan access redirect steps in one named place so they can be understood, checked, and reused.
 def _plan_access_redirect(request):
@@ -41,6 +45,11 @@ def _plan_access_redirect(request):
         "Complete your profile and wait for staff verification to use plans.",
     )
     return redirect("account")
+
+# =============================================================================
+# PLAN LIST
+# Loads and filters the plan cards shown on the Plans page.
+# =============================================================================
 
 # WHY: Keeps the plan list page steps in one named place so they can be understood, checked, and reused.
 @require_GET
@@ -89,6 +98,11 @@ def plan_list_page(request):
         },
     )
 
+# =============================================================================
+# PUBLIC PLACE DETAILS
+# Fetches optional place text and image suggestions from a submitted public URL.
+# =============================================================================
+
 # WHY: Keeps the request plan metadata steps in one named place so they can be understood, checked, and reused.
 @require_POST
 @login_required
@@ -114,6 +128,11 @@ def request_plan_metadata(request):
     if metadata is None:
         return JsonResponse({"error": "Details could not be fetched from that page."}, status=422)
     return JsonResponse(metadata)
+
+# =============================================================================
+# CREATE PLAN
+# Validates and saves a new plan.
+# =============================================================================
 
 # WHY: Builds plan page with all required starting values and checks applied.
 @require_http_methods(["GET", "POST"])
@@ -165,6 +184,11 @@ def create_plan_page(request):
         {"mode": "create", "form": form},
     )
 
+# =============================================================================
+# PROTECTED PLAN IMAGE
+# Checks plan visibility before streaming its thumbnail.
+# =============================================================================
+
 # WHY: Keeps the plan thumbnail file steps in one named place so they can be understood, checked, and reused.
 @require_GET
 @login_required
@@ -185,6 +209,11 @@ def plan_thumbnail_file(request, plan_id):
         content_type="image/jpeg",
         filename="plan-thumbnail.jpg",
     )
+
+# =============================================================================
+# PLAN DETAIL
+# Prepares one visible plan and the actions available to this visitor.
+# =============================================================================
 
 # WHY: Keeps the plan detail page steps in one named place so they can be understood, checked, and reused.
 @require_GET
@@ -232,6 +261,11 @@ def plan_detail_page(request, plan_id):
             "can_join": can_join_approved_plan(request.user, plan, current_time),
         },
     )
+
+# =============================================================================
+# EDIT PLAN
+# Validates owner changes before the first person joins.
+# =============================================================================
 
 # WHY: Keeps the edit plan page steps in one named place so they can be understood, checked, and reused.
 @require_http_methods(["GET", "POST"])
@@ -304,6 +338,11 @@ def edit_plan_page(request, plan_id):
         "plan.html",
         {"mode": "edit", "form": form, "plan": plan},
     )
+
+# =============================================================================
+# PLAN PARTICIPATION AND CANCELLATION
+# Handles joining, leaving, and owner cancellation actions.
+# =============================================================================
 
 # WHY: Keeps the join plan steps in one named place so they can be understood, checked, and reused.
 @require_POST

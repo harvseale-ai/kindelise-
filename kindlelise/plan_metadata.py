@@ -23,6 +23,11 @@ from django.core import signing
 from django.core.files.base import ContentFile
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+# =============================================================================
+# FETCHING LIMITS AND TOKEN SETTINGS
+# Defines the boundaries applied to public pages, images, redirects, and proof.
+# =============================================================================
+
 # WHY: Bounds public pages, source images, and saved thumbnails at each separate stage of fetching.
 PAGE_BYTES_LIMIT = 1 * 1024 * 1024
 SOURCE_IMAGE_BYTES_LIMIT = 5 * 1024 * 1024
@@ -43,6 +48,11 @@ REDIRECT_LIMIT = 2
 class PlanMetadataUnavailable(Exception):
     """Hide provider, parsing and network detail behind one quiet failure."""
 
+
+# =============================================================================
+# SAFE PUBLIC HTTPS FETCHING
+# Checks public addresses and downloads bounded page or image bytes.
+# =============================================================================
 
 # WHY: Keeps the normalise public https url steps in one named place so they can be understood, checked, and reused.
 def normalise_public_https_url(value):
@@ -205,6 +215,11 @@ def _fetch_https_bytes(url, allowed_content_types, maximum_bytes):
             raise PlanMetadataUnavailable from last_error
     raise PlanMetadataUnavailable
 
+
+# =============================================================================
+# PUBLIC PAGE METADATA READING
+# Reads supported place names and image addresses from bounded public HTML.
+# =============================================================================
 
 # WHY: Keeps the MetadataParser information and its rules together so they stay consistent.
 class _MetadataParser(HTMLParser):
@@ -370,6 +385,11 @@ def _extract_metadata(html_bytes, document_url):
     return place_name, image_url
 
 
+# =============================================================================
+# PLAN IMAGE PREPARATION
+# Converts a checked source image into the bounded JPEG stored for plan cards.
+# =============================================================================
+
 # WHY: Keeps the normalise thumbnail steps in one named place so they can be understood, checked, and reused.
 def _normalise_thumbnail(source_bytes):
     """Return a bounded JPEG suitable for a decorative plan-card background."""
@@ -400,6 +420,11 @@ def _normalise_thumbnail(source_bytes):
         raise PlanMetadataUnavailable
     return image_bytes
 
+
+# =============================================================================
+# PLAN METADATA RESULT
+# Combines the place suggestion and optional image proof returned to the form.
+# =============================================================================
 
 # WHY: Loads plan metadata while applying the same safety limits each time.
 def fetch_plan_metadata(public_url, user_id):
@@ -459,6 +484,11 @@ def fetch_plan_metadata(public_url, user_id):
         "metadata_token": token,
     }
 
+
+# =============================================================================
+# SAVED THUMBNAIL PROOF
+# Checks the signed form token before returning image bytes for a saved plan.
+# =============================================================================
 
 # WHY: Keeps the thumbnail from metadata token steps in one named place so they can be understood, checked, and reused.
 def thumbnail_from_metadata_token(token, user_id, public_url):

@@ -13,6 +13,11 @@
 
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# ============================================================================= #}
+  {# PLAN LIST PAGE #}
+  {# Displays plan filters, matching cards, and the public-place reminder. #}
+  {# ============================================================================= #}
+
   {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if mode == "list" %}
     <section class="plans-page" aria-labelledby="plans-title">
@@ -20,6 +25,11 @@
         <h1 id="plans-title">Plans</h1>
         <a class="button secondary plans-create-button" href="{% url 'plan_create' %}">Create plan <span aria-hidden="true">+</span></a>
       </header>
+
+      {# --------------------------------------------------------------------------- #}
+      {# PLAN FILTERS AND INTRODUCTION #}
+      {# Selects which plan state is shown and explains what each card contains. #}
+      {# --------------------------------------------------------------------------- #}
 
       <div class="plans-intro">
         <nav class="plans-filter-strip" aria-label="Filter plans">
@@ -32,6 +42,11 @@
         </nav>
         <p>Future plans are available as soon as they are created. Open a plan to see its public place, start time and full details.</p>
       </div>
+
+      {# --------------------------------------------------------------------------- #}
+      {# PLAN CARDS #}
+      {# Lists each matching plan with its image, place, time, state, and capacity. #}
+      {# --------------------------------------------------------------------------- #}
 
       <section aria-labelledby="plan-list-title">
         <h2 class="visually-hidden" id="plan-list-title">Plans</h2>
@@ -94,11 +109,21 @@
         </ul>
       </section>
 
+      {# --------------------------------------------------------------------------- #}
+      {# PUBLIC-PLACE SAFETY NOTE #}
+      {# Reminds visitors to check the linked venue information before attending. #}
+      {# --------------------------------------------------------------------------- #}
+
       <footer class="plans-safety-note">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9h.01"/></svg>
         <p>Kindelise does not verify venues or guarantee that linked public-place information remains accurate. Check the details before attending.</p>
       </footer>
     </section>
+
+  {# ============================================================================= #}
+  {# CREATE OR EDIT PLAN PAGE #}
+  {# Collects the plan details used for a new plan or an allowed owner update. #}
+  {# ============================================================================= #}
 
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "create" or mode == "edit" %}
@@ -107,6 +132,11 @@
         <a class="private-profile-back" href="{% url 'plan_list' %}" aria-label="Back to plans"></a>
         <h1 id="plan-form-title">{% if mode == "edit" %}Edit plan{% else %}Create plan{% endif %}</h1>
       </header>
+
+      {# --------------------------------------------------------------------------- #}
+      {# PLAN FORM #}
+      {# Groups plan fields, public-place fetching, errors, and the save action. #}
+      {# --------------------------------------------------------------------------- #}
 
       <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
@@ -149,9 +179,19 @@
       </form>
     </section>
 
+  {# ============================================================================= #}
+  {# PLAN DETAIL PAGE #}
+  {# Displays one permitted plan and the actions available to this visitor. #}
+  {# ============================================================================= #}
+
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% else %}
     <article class="private-profile-page" aria-labelledby="plan-title">
+      {# --------------------------------------------------------------------------- #}
+      {# PLAN IMAGE #}
+      {# Displays the protected image found from the plan's public information page. #}
+      {# --------------------------------------------------------------------------- #}
+
       <div class="private-profile-hero">
         <a class="private-profile-back" href="{% url 'plan_list' %}" aria-label="Back to plans"></a>
         {# # WHY: Shows the following part only when its stated page condition is true. #}
@@ -159,6 +199,11 @@
       </div>
 
       <div class="private-profile-content">
+        {# --------------------------------------------------------------------------- #}
+        {# PLAN SUMMARY #}
+        {# Shows the title, state, owner, public place, start time, and edit action. #}
+        {# --------------------------------------------------------------------------- #}
+
         <header class="private-profile-identity">
           <div class="private-profile-identity-heading">
             <div class="private-profile-name private-plan-name">
@@ -178,6 +223,11 @@
           </div>
         </header>
 
+        {# --------------------------------------------------------------------------- #}
+        {# PLAN INFORMATION #}
+        {# Groups the description, ownership, timing, capacity, and participation facts. #}
+        {# --------------------------------------------------------------------------- #}
+
         <section class="private-profile-section" aria-labelledby="plan-about-title">
           <h2 id="plan-about-title">About</h2>
           <p class="private-profile-about">{{ summary.plan.description }}</p>
@@ -193,6 +243,11 @@
             <li><span>Your participation</span><span>{{ summary.viewer_participation_status|default:"Not joined"|title }}</span></li>
           </ul>
         </section>
+
+        {# --------------------------------------------------------------------------- #}
+        {# PUBLIC-PLACE EVIDENCE #}
+        {# Shows the external information link and its checking reminder. #}
+        {# --------------------------------------------------------------------------- #}
 
         <section class="private-profile-section" aria-labelledby="public-place-title">
           <h2 id="public-place-title">Public place</h2>
@@ -213,6 +268,11 @@
         {% if summary.plan.meeting_details_locked_at %}
           <div class="private-profile-notice" role="status"><strong>This plan can no longer be edited because someone has joined.</strong></div>
         {% endif %}
+
+        {# --------------------------------------------------------------------------- #}
+        {# PARTICIPATION, CONTACT, AND SAFETY ACTIONS #}
+        {# Groups joining, leaving, messaging the owner, and private reporting. #}
+        {# --------------------------------------------------------------------------- #}
 
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if can_join or summary.viewer_participation_status == "joined" or not is_owner %}
@@ -246,6 +306,11 @@
             </div>
           </section>
         {% endif %}
+
+        {# --------------------------------------------------------------------------- #}
+        {# PLAN CANCELLATION #}
+        {# Keeps the owner's terminal cancellation action separate from ordinary edits. #}
+        {# --------------------------------------------------------------------------- #}
 
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if can_cancel %}

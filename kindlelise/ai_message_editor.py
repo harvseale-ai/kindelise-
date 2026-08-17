@@ -13,6 +13,11 @@ from urllib.request import Request, urlopen
 import certifi
 from django.conf import settings
 
+# =============================================================================
+# DRAFT AND RESPONSE LIMITS
+# Defines the fixed boundaries and two permitted wording goals.
+# =============================================================================
+
 # WHY: Keeps both sent and returned wording within the same limit as an ordinary message.
 _MAX_MESSAGE_LENGTH = 1_000
 
@@ -35,6 +40,11 @@ _EDITING_INSTRUCTIONS = {
     ),
 }
 
+
+# =============================================================================
+# OLLAMA DRAFT SUGGESTION
+# Sends one bounded unsent draft and returns one suggestion for review.
+# =============================================================================
 
 # WHY: Finds the edited message draft suggestion information in one place so callers receive the same result.
 def get_edited_message_draft_suggestion(draft, editing_goal):

@@ -16,6 +16,10 @@ from django.utils import timezone
 
 from kindlelise.models import PlatformSubscription, StripeWebhookReceipt
 
+# =============================================================================
+# SAFE STRIPE VALUE READING
+# Turns Stripe values into bounded local values used by later payment checks.
+# =============================================================================
 
 # WHY: Keeps the as mapping steps in one named place so they can be understood, checked, and reused.
 def _as_mapping(value):
@@ -70,6 +74,11 @@ def _positive_local_user_id(*values):
         raise ValueError("Stripe account metadata conflicts")
     # WHY: Returns the one agreed account ID, or no ID when every optional location was empty.
     return next(iter(local_user_ids), None)
+
+# =============================================================================
+# SUBSCRIPTION OWNERSHIP
+# Extracts and cross-checks account, customer, and subscription identities.
+# =============================================================================
 
 # WHY: Keeps the stripe event identity steps in one named place so they can be understood, checked, and reused.
 def _stripe_event_identity(event_type, stripe_object):
@@ -139,6 +148,11 @@ def _resolve_stripe_event_user_id(
         raise ValueError("Stripe event has no trusted local account")
     # WHY: From this point onward every change is tied to a real local account.
     return resolved_user_id
+
+# =============================================================================
+# PAID INVOICE CHECKS
+# Confirms the paid price, billing period, and active subscription state.
+# =============================================================================
 
 # WHY: Keeps the paid invoice period end steps in one named place so they can be understood, checked, and reused.
 def _paid_invoice_period_end(stripe_object, subscription_id):
@@ -212,11 +226,21 @@ def _active_invoice_subscription_status(stripe_object, subscription_id):
     # WHY: Current Stripe library objects expose their status as an attribute, not a dictionary key.
     return getattr(provider_subscription, "status", None)
 
+# -----------------------------------------------------------------------------
+# PROCESSED EVENT RECEIPTS
+# Records provider events so repeated notices cannot be applied twice.
+# -----------------------------------------------------------------------------
+
 # WHY: Keeps the store processed receipt steps in one named place so they can be understood, checked, and reused.
 def _store_processed_receipt(receipt):
     # WHY: Marks the signed notice complete so a retry can return safely without applying it twice.
     receipt.processed_at = timezone.now()
     receipt.save(update_fields=["processed_at"])
+
+# =============================================================================
+# APPLY A VERIFIED STRIPE EVENT
+# Orders, records, and applies one signed event to local Premium access.
+# =============================================================================
 
 # WHY: Changes premium access from verified stripe event in one controlled place so linked values stay correct.
 def update_premium_access_from_verified_stripe_event(stripe_event):

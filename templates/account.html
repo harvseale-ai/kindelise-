@@ -13,6 +13,11 @@
 
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# ============================================================================= #}
+  {# CREATE ACCOUNT PAGE #}
+  {# Collects the details used to create a new account and starting profile. #}
+  {# ============================================================================= #}
+
   {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if mode == "sign_up" %}
     <section class="profile-edit-page brand-form-page" aria-labelledby="sign-up-title">
@@ -42,6 +47,11 @@
       </form>
       <p class="brand-form-footer">Already registered? <a href="{% url 'sign_in' %}">Sign in</a></p>
     </section>
+
+  {# ============================================================================= #}
+  {# SIGN-IN PAGE #}
+  {# Collects existing account details and returns the visitor safely afterward. #}
+  {# ============================================================================= #}
 
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "sign_in" %}
@@ -73,6 +83,11 @@
       <p class="brand-form-footer">Need an account? <a href="{% url 'sign_up' %}">Create one</a></p>
     </section>
 
+  {# ============================================================================= #}
+  {# EDIT PROFILE PAGE #}
+  {# Groups the controls used to update the signed-in person's profile. #}
+  {# ============================================================================= #}
+
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "profile_edit" %}
     <section class="profile-edit-page" aria-labelledby="edit-profile-title">
@@ -86,6 +101,11 @@
         {% csrf_token %}
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
+
+        {# --------------------------------------------------------------------------- #}
+        {# PROFILE IMAGE #}
+        {# Shows the current picture and the control used to replace it. #}
+        {# --------------------------------------------------------------------------- #}
 
         <section class="profile-edit-field profile-image-field" aria-labelledby="profile-image-label">
           <h2 id="profile-image-label">Profile image</h2>
@@ -108,6 +128,11 @@
             </div>
           </div>
         </section>
+
+        {# --------------------------------------------------------------------------- #}
+        {# PUBLIC PROFILE TEXT #}
+        {# Collects the name, title statement, and biography shown to other people. #}
+        {# --------------------------------------------------------------------------- #}
 
         <section class="profile-edit-field" aria-labelledby="display-name-label">
           <h2 id="display-name-label">Display name</h2>
@@ -137,6 +162,11 @@
           </div>
         </section>
 
+        {# --------------------------------------------------------------------------- #}
+        {# DISCOVERY INFORMATION #}
+        {# Collects the interests and broad areas used to help people find this profile. #}
+        {# --------------------------------------------------------------------------- #}
+
         <fieldset class="profile-edit-field profile-interests-field">
           <legend>Interests</legend>
           {# # WHY: Shows the following part only when its stated page condition is true. #}
@@ -159,6 +189,11 @@
           </div>
           {{ form.broad_area.errors }}
         </fieldset>
+
+        {# --------------------------------------------------------------------------- #}
+        {# AVAILABILITY #}
+        {# Controls whether availability starts now, later, or remains unset. #}
+        {# --------------------------------------------------------------------------- #}
 
         <fieldset class="profile-edit-field profile-availability-field">
           <legend>Availability</legend>
@@ -196,6 +231,11 @@
           </div>
         </fieldset>
 
+        {# --------------------------------------------------------------------------- #}
+        {# STAFF VERIFICATION #}
+        {# Displays the access-review state separately from editable profile details. #}
+        {# --------------------------------------------------------------------------- #}
+
         <section class="profile-edit-field verification-field" aria-labelledby="verification-title">
           <h2 id="verification-title">Staff verification</h2>
           <div class="verification-panel">
@@ -211,9 +251,19 @@
       </form>
     </section>
 
+  {# ============================================================================= #}
+  {# OTHER PERSON'S PROFILE PAGE #}
+  {# Displays one permitted public profile, plans, and contact actions. #}
+  {# ============================================================================= #}
+
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "public_profile" %}
     <article class="private-profile-page" aria-labelledby="public-profile-title">
+      {# --------------------------------------------------------------------------- #}
+      {# PROFILE IMAGE #}
+      {# Displays the person's protected picture or the neutral placeholder. #}
+      {# --------------------------------------------------------------------------- #}
+
       <div class="private-profile-hero">
         <a class="private-profile-back" href="{% url 'discover' %}" aria-label="Back to Discover"></a>
         {# # WHY: Shows the following part only when its stated page condition is true. #}
@@ -226,6 +276,11 @@
       </div>
 
       <div class="private-profile-content">
+        {# --------------------------------------------------------------------------- #}
+        {# PROFILE SUMMARY #}
+        {# Shows the person's name, title statement, area, and current availability. #}
+        {# --------------------------------------------------------------------------- #}
+
         <header class="private-profile-identity">
           <div class="private-profile-identity-heading">
             <div class="private-profile-name">
@@ -253,6 +308,11 @@
             </span>
           </div>
         </header>
+
+        {# --------------------------------------------------------------------------- #}
+        {# PROFILE INFORMATION #}
+        {# Groups the person's interests, biography, and availability details. #}
+        {# --------------------------------------------------------------------------- #}
 
         <section class="private-profile-section" aria-labelledby="public-interests-title">
           <h2 id="public-interests-title">Interests</h2>
@@ -293,6 +353,11 @@
           </dl>
         </section>
 
+        {# --------------------------------------------------------------------------- #}
+        {# PUBLIC PLANS #}
+        {# Lists the person's future plans that this visitor may open. #}
+        {# --------------------------------------------------------------------------- #}
+
         <section class="private-profile-section" aria-labelledby="public-plans-title">
           <h2 id="public-plans-title">My plans</h2>
           <ul class="private-profile-plans private-profile-plan-links">
@@ -310,6 +375,11 @@
             {% endfor %}
           </ul>
         </section>
+
+        {# --------------------------------------------------------------------------- #}
+        {# CONTACT AND SAFETY ACTIONS #}
+        {# Keeps messaging, private reporting, and blocking controls together. #}
+        {# --------------------------------------------------------------------------- #}
 
         <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
         <form class="public-profile-message" method="post" action="{% url 'direct_conversation_start' profile.pk %}">
@@ -335,6 +405,11 @@
       </div>
     </article>
 
+  {# ============================================================================= #}
+  {# SIGNED-IN USER'S PROFILE PAGE #}
+  {# Displays the account owner's profile, plans, Premium state, and sign-out action. #}
+  {# ============================================================================= #}
+
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% else %}
     <article class="private-profile-page" aria-labelledby="profile-page-title">
@@ -342,6 +417,11 @@
         <h1 id="profile-page-title">Profile</h1>
         <a class="button secondary plans-create-button" href="{% url 'discover' %}">Discover</a>
       </header>
+
+      {# --------------------------------------------------------------------------- #}
+      {# PROFILE IMAGE #}
+      {# Displays the signed-in person's protected picture or placeholder. #}
+      {# --------------------------------------------------------------------------- #}
 
       <div class="private-profile-hero">
         {# # WHY: Shows the following part only when its stated page condition is true. #}
@@ -354,6 +434,11 @@
       </div>
 
       <div class="private-profile-content">
+        {# --------------------------------------------------------------------------- #}
+        {# ACCOUNT SUMMARY #}
+        {# Shows the signed-in person's public identity and profile-edit action. #}
+        {# --------------------------------------------------------------------------- #}
+
         <header class="private-profile-identity">
           <div class="private-profile-identity-heading">
             <div class="private-profile-name">
@@ -384,6 +469,11 @@
           </div>
         </header>
 
+        {# --------------------------------------------------------------------------- #}
+        {# VERIFICATION NOTICE #}
+        {# Explains when the profile is still waiting for staff access approval. #}
+        {# --------------------------------------------------------------------------- #}
+
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if not summary.profile.is_verified %}
           <div class="private-profile-notice" role="status">
@@ -391,6 +481,11 @@
             <p>Complete your display name and broad area first. This is an access gate, not proof of identity, age, character or safety.</p>
           </div>
         {% endif %}
+
+        {# --------------------------------------------------------------------------- #}
+        {# PROFILE INFORMATION #}
+        {# Groups the owner's interests, biography, and current availability. #}
+        {# --------------------------------------------------------------------------- #}
 
         <section class="private-profile-section" aria-labelledby="interests-title">
           <h2 id="interests-title">Interests</h2>
@@ -431,6 +526,11 @@
           </dl>
         </section>
 
+        {# --------------------------------------------------------------------------- #}
+        {# ACCOUNT PLANS #}
+        {# Lists every plan owned by the signed-in account and its current state. #}
+        {# --------------------------------------------------------------------------- #}
+
         <section class="private-profile-section" aria-labelledby="plans-title">
           <h2 id="plans-title">My plans</h2>
           <ul class="private-profile-plans private-profile-plan-links">
@@ -448,6 +548,11 @@
             {% endfor %}
           </ul>
         </section>
+
+        {# --------------------------------------------------------------------------- #}
+        {# PREMIUM ACCESS #}
+        {# Shows subscription state and the available Stripe-hosted action. #}
+        {# --------------------------------------------------------------------------- #}
 
         <section class="private-profile-premium" aria-labelledby="premium-title">
           <span class="private-premium-icon" aria-hidden="true"></span>
@@ -495,6 +600,11 @@
             </form>
           {% endif %}
         </section>
+
+        {# --------------------------------------------------------------------------- #}
+        {# ACCOUNT SIGN-OUT #}
+        {# Keeps the session-ending action separate from profile and payment controls. #}
+        {# --------------------------------------------------------------------------- #}
 
         <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
         <form class="private-profile-sign-out" method="post" action="{% url 'sign_out' %}">

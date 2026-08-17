@@ -11,6 +11,11 @@
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
   <section class="profile-edit-page brand-form-page" aria-labelledby="report-title">
+    {# ============================================================================= #}
+    {# REPORT CONFIRMATION #}
+    {# Confirms that an authorised staff report was received privately. #}
+    {# ============================================================================= #}
+
     {# # WHY: Shows the following part only when its stated page condition is true. #}
     {% if mode == "confirmation" %}
       <header class="profile-edit-header">
@@ -22,6 +27,11 @@
         <p>The reported account is not notified. Submission does not by itself prove wrongdoing or create a finding or sanction.</p>
       </div>
       <p class="brand-form-footer"><a class="button" href="{% url 'account' %}">Return to Profile</a></p>
+    {# ============================================================================= #}
+    {# PRIVATE REPORT FORM #}
+    {# Collects relevant report details and optional supporting page context. #}
+    {# ============================================================================= #}
+
     {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
     {% else %}
       <header class="profile-edit-header">
@@ -35,6 +45,11 @@
       </div>
       {# # WHY: Shows the following part only when its stated page condition is true. #}
       {% if context_label %}<p class="state-panel brand-form-state"><strong>Related item:</strong> {{ context_label }}</p>{% endif %}
+      {# --------------------------------------------------------------------------- #}
+      {# REPORT DETAILS #}
+      {# Groups the checked fields submitted to authorised staff. #}
+      {# --------------------------------------------------------------------------- #}
+
       <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
         {% csrf_token %}

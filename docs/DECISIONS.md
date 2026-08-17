@@ -28,7 +28,7 @@ more imports, settings and migrations without making this project clearer.
 - `kindlelise/` owns the product models, forms and behaviour.
 - `kindlelise/views/` translates web requests into page responses.
 - `kindlelise/services/` owns changes that must be saved safely.
-- `kindlelise/selectors.py` reads data for pages.
+- `kindlelise/selectors/` groups page reads by accounts, discovery, plans, messages, and safety.
 - `kindlelise/policies.py` answers permission questions.
 
 ## ADR-002: Use Django accounts with email sign-in

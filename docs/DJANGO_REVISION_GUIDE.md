@@ -46,7 +46,7 @@ The main request path is:
 | `kindlelise/models.py` | Defines the database structure for interests, profiles, plans, participation, conversations, messages, notifications, blocks, reports and subscriptions. Relationships and database constraints protect the data even if two requests happen together. |
 | `kindlelise/forms.py` | Checks and cleans sign-up, profile, discovery, plan, message and report input. Keeping validation here gives the user clear errors before a service attempts to save anything. |
 | `kindlelise/policies.py` | Holds yes-or-no permission rules for verification, discovery, profiles, plans, messages and reports. Central rules prevent pages from quietly making different privacy decisions. |
-| `kindlelise/selectors.py` | Contains the larger database reads. Each selector applies visibility and blocking rules before returning page data, making accidental private-data exposure less likely. |
+| `kindlelise/selectors/` | Groups the larger database reads by accounts, discovery, plans, messages, and safety. Each selector applies visibility and blocking rules before returning page data, making accidental private-data exposure less likely. |
 | `kindlelise/admin.py` | Configures Django Admin for authorised staff. Staff can verify profiles, review plans and reports, and inspect subscription records without building a second staff website. |
 | `kindlelise/context_processors.py` | Adds the unread-notification count to every rendered page, allowing the shared top bar to show one consistent badge. |
 | `kindlelise/plan_metadata.py` | Safely reads a public-place URL and extracts a place name and image. It limits addresses, redirects, content types and download size because the server is fetching an outside website. |
@@ -99,7 +99,12 @@ connected Django app while giving each workflow a clear home.
 
 | File | Why it exists |
 | --- | --- |
-| `tests/test_vertical_slice.py` | Exercises the connected user journeys, permission rules, database changes and outside-service boundaries. |
+| `tests/test_accounts.py` | Checks registration, sign-in, profiles and staff controls. |
+| `tests/test_discovery.py` | Checks discovery filters, visibility and profile access. |
+| `tests/test_plans.py` | Checks plan pages, editing, participation, capacity and metadata. |
+| `tests/test_messages.py` | Checks conversations, messages, notifications and draft suggestions. |
+| `tests/test_safety.py` | Checks blocking and private reports. |
+| `tests/test_billing.py` | Checks Stripe Checkout, webhooks and Premium access. |
 | `tests/conftest.py` | Shared pytest setup used before tests run. |
 | `README.md` | Main product, setup, architecture, testing and deployment guide. |
 | `docs/DECISIONS.md` | Records the reasons behind important technical choices. |

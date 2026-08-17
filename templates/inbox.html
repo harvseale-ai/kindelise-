@@ -10,11 +10,21 @@
 
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# ============================================================================= #}
+  {# MESSAGES PAGE #}
+  {# Groups the page heading, conversation filters, and permitted inbox rows. #}
+  {# ============================================================================= #}
+
   <section class="inbox-page" aria-labelledby="inbox-title">
     <header class="plans-page-header">
       <h1 id="inbox-title">Messages</h1>
       <a class="button secondary plans-create-button" href="{% url 'discover' %}">Discover</a>
     </header>
+
+    {# --------------------------------------------------------------------------- #}
+    {# CONVERSATION FILTERS #}
+    {# Narrows the inbox by interests shared with the other person. #}
+    {# --------------------------------------------------------------------------- #}
 
     <div class="inbox-intro">
       <ul class="chips inbox-interest-strip" aria-label="Filter conversations by interest">
@@ -27,6 +37,11 @@
       </ul>
       <p>Messages refresh when you open a conversation. Only permitted direct conversations appear here.</p>
     </div>
+
+    {# --------------------------------------------------------------------------- #}
+    {# CONVERSATION LIST #}
+    {# Shows each permitted conversation and its most recent activity time. #}
+    {# --------------------------------------------------------------------------- #}
 
     {% now "Y-m-d" as today %}
     <ul class="inbox-conversation-list" aria-label="Recent direct conversations">

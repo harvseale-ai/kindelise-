@@ -4,6 +4,10 @@
 from django.conf import settings
 from django.utils.http import url_has_allowed_host_and_scheme
 
+# =============================================================================
+# SHARED PAGE HELPERS
+# Provides small presentation and safe-return helpers used by several pages.
+# =============================================================================
 
 # WHY: Keeps the safe local redirect steps in one named place so they can be understood, checked, and reused.
 def _safe_local_redirect(request):

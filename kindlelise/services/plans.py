@@ -12,8 +12,12 @@ from kindlelise.policies import (
     can_join_approved_plan,
 )
 
-
 # KEYWORD: atomic — all database changes in the function are kept together or rolled back together.
+# =============================================================================
+# PLAN CREATION
+# Saves a complete new plan and its optional fetched image.
+# =============================================================================
+
 # WHY: Keeps every starting plan value together so a partly created plan cannot be shown.
 @transaction.atomic
 def create_available_plan(owner, plan_details):
@@ -53,6 +57,11 @@ def create_available_plan(owner, plan_details):
         meeting_details_locked_at=None,
         **values,
     )
+
+# =============================================================================
+# PLAN EDITING
+# Saves owner changes while meeting details are still editable.
+# =============================================================================
 
 # WHY: Keeps the plan edit and its renewed available state together as one database change.
 @transaction.atomic
@@ -133,6 +142,11 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
             )
     # WHY: Returns the locked current version, not the older plan object passed in by the page.
     return current_plan
+
+# =============================================================================
+# PLAN PARTICIPATION
+# Handles joining and leaving while preserving participation history.
+# =============================================================================
 
 # WHY: Keeps participation, the first-join lock and the owner's alert together so none is left half-finished.
 @transaction.atomic
@@ -227,6 +241,11 @@ def leave_plan_and_keep_participation_history(user, plan):
     participation.save(update_fields=["status", "left_at"])
     # WHY: Returns the preserved row so the page can show that participation is now finished.
     return participation
+
+# =============================================================================
+# PLAN CANCELLATION
+# Closes an owned plan and retains its participation history.
+# =============================================================================
 
 # WHY: Saves every cancellation value together so the plan cannot remain partly approved.
 @transaction.atomic

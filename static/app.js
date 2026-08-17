@@ -3,6 +3,11 @@
 // # KEYWORD: local storage — a small browser-owned place used here to remember the chosen colour.
 // # KEYWORD: fetch — asks one of this site's addresses for information without opening a new page.
 
+// =============================================================================
+// COLOUR THEME
+// Reads, applies, and remembers the visitor's chosen colour theme.
+// =============================================================================
+
 // # WHY: Keeps the permitted colour choices in one list so the button cannot select an unknown theme.
 const colourThemes = ["black", "blue", "pink", "green"];
 
@@ -29,6 +34,11 @@ function applyColourTheme(theme) {
 
 // # WHY: Applies the saved colour before the page is ready so the visitor does not see a colour flash.
 applyColourTheme(readSavedColourTheme());
+
+// =============================================================================
+// MESSAGE WRITING SUGGESTIONS
+// Requests and presents optional wording changes for an unsent message.
+// =============================================================================
 
 // # KEYWORD: async/await — pauses only this task while a page request finishes, without freezing the page.
 // # WHY: Preserves the original draft and returns a suggestion without ever sending the message.
@@ -93,6 +103,11 @@ function showMessageDraftEditSuggestion(originalDraft, suggestedDraft) {
   };
 }
 
+// =============================================================================
+// PLAN PUBLIC DETAILS
+// Requests the public place name and preview image used by plan forms.
+// =============================================================================
+
 // # WHY: Fetches public plan details only after the visitor asks and keeps every field editable.
 async function requestPlanMetadata(fetchUrl, publicUrl, csrfToken) {
   const response = await fetch(fetchUrl, {
@@ -118,8 +133,18 @@ async function requestPlanMetadata(fetchUrl, publicUrl, csrfToken) {
   return responseValues;
 }
 
+// =============================================================================
+// PAGE CONTROLS
+// Connects page controls only after the HTML is ready.
+// =============================================================================
+
 // # WHY: Waits until the page exists before finding controls and connecting their actions.
 document.addEventListener("DOMContentLoaded", () => {
+  // ---------------------------------------------------------------------------
+  // COLOUR THEME CONTROL
+  // Connects the top-bar button that cycles through the permitted themes.
+  // ---------------------------------------------------------------------------
+
   // # WHY: Finds the colour button once so pages without it can safely skip these steps.
   const themeButton = document.querySelector("[data-theme-toggle]");
   if (themeButton) {
@@ -140,6 +165,11 @@ document.addEventListener("DOMContentLoaded", () => {
       updateThemeButtonLabel();
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // TEMPORARY NOTICES AND CONNECTION STATUS
+  // Dismisses page notices and keeps the offline warning current.
+  // ---------------------------------------------------------------------------
 
   // # WHY: Finds temporary page messages so they can appear without pushing the main page downward.
   const notificationContainer = document.querySelector(".messages");
@@ -168,6 +198,11 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("offline", showConnectionState);
     showConnectionState();
   }
+
+  // ---------------------------------------------------------------------------
+  // DISCOVERY FILTERS
+  // Opens one discovery filter panel at a time and reveals form errors.
+  // ---------------------------------------------------------------------------
 
   // # WHY: Finds the discovery filters so other pages do not run discovery-only behaviour.
   const filterForm = document.querySelector(".discovery-filter-form");
@@ -208,6 +243,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterErrorPanel = filterForm.querySelector("[data-filter-errors]");
     showFilterPanel(filterErrorPanel ? filterErrorPanel.id : null);
   }
+
+  // ---------------------------------------------------------------------------
+  // PLAN DETAILS FETCHER
+  // Connects the public URL field to optional place and image suggestions.
+  // ---------------------------------------------------------------------------
 
   // # WHY: Collects the create-plan controls needed to fetch and preview public place details.
   const metadataButton = document.querySelector("[data-plan-metadata-fetch]");
@@ -283,6 +323,11 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // MESSAGE WRITING CONTROLS
+  // Connects draft wording buttons to the suggestion review panel.
+  // ---------------------------------------------------------------------------
 
   // # WHY: Collects the unsent-message controls used to request and review wording changes.
   const draftField = document.querySelector("#id_body");

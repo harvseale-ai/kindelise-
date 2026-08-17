@@ -21,6 +21,10 @@ from kindlelise.services.messages import (
     send_direct_message,
 )
 
+# =============================================================================
+# SHARED CONVERSATION HELPERS
+# Applies common message access and prepares the conversation page.
+# =============================================================================
 
 # WHY: Keeps the message access redirect steps in one named place so they can be understood, checked, and reused.
 def _message_access_redirect(request):
@@ -55,6 +59,11 @@ def _render_direct_conversation(request, page_data, form):
             "form": form,
         },
     )
+
+# =============================================================================
+# MESSAGE INBOX
+# Builds the permitted conversation list and interest filter.
+# =============================================================================
 
 # WHY: Keeps the inbox page steps in one named place so they can be understood, checked, and reused.
 @require_GET
@@ -105,6 +114,11 @@ def inbox_page(request):
         },
     )
 
+# =============================================================================
+# CONVERSATION PAGE
+# Loads one permitted conversation and its messages.
+# =============================================================================
+
 # WHY: Keeps the conversation page steps in one named place so they can be understood, checked, and reused.
 @require_GET
 @login_required
@@ -128,6 +142,11 @@ def conversation_page(request, conversation_id):
     if page_data is None:
         return HttpResponse("Conversation unavailable.", status=404)
     return _render_direct_conversation(request, page_data, MessageDraftForm())
+
+# =============================================================================
+# START A CONVERSATION
+# Finds or creates the one private conversation between two people.
+# =============================================================================
 
 # WHY: Keeps the start direct conversation steps in one named place so they can be understood, checked, and reused.
 @require_POST
@@ -157,6 +176,11 @@ def start_direct_conversation(request, profile_id):
     except PermissionDenied:
         return HttpResponse("Profile unavailable.", status=404)
     return redirect("conversation_detail", conversation_id=conversation.pk)
+
+# =============================================================================
+# SEND A MESSAGE
+# Validates and sends the current unsent draft.
+# =============================================================================
 
 # WHY: Sends conversation message only after the required account and content checks pass.
 @require_POST
@@ -197,6 +221,11 @@ def send_conversation_message(request, conversation_id):
     # WHY: Redirects after success so refreshing the conversation does not send the same message again.
     messages.success(request, "Message sent.")
     return redirect("conversation_detail", conversation_id=conversation_id)
+
+# =============================================================================
+# IMPROVE AN UNSENT DRAFT
+# Requests a wording suggestion without sending or storing the draft.
+# =============================================================================
 
 # WHY: Keeps the request conversation message edit suggestion steps in one named place so they can be understood, checked, and reused.
 @require_POST

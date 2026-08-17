@@ -20,6 +20,10 @@ from kindlelise.services.safety import (
     submit_private_report_about_user,
 )
 
+# =============================================================================
+# REPORT CONTEXT
+# Checks optional plan, conversation, or message evidence for a private report.
+# =============================================================================
 
 # WHY: Keeps the get private report context steps in one named place so they can be understood, checked, and reused.
 def _get_private_report_context(request, target_profile):
@@ -108,6 +112,11 @@ def _get_private_report_context(request, target_profile):
         "label": "A received message in this conversation",
     }
 
+# =============================================================================
+# BLOCK A PROFILE
+# Closes discovery and messaging contact with one profile.
+# =============================================================================
+
 # WHY: Keeps the block profile from discovery and messages steps in one named place so they can be understood, checked, and reused.
 @require_POST
 @login_required
@@ -131,6 +140,11 @@ def block_profile_from_discovery_and_messages(request, profile_id):
     # WHY: Confirms the private local effect without notifying the blocked account.
     messages.success(request, "Interaction closed. You can still submit a private report.")
     return redirect("discover")
+
+# =============================================================================
+# PRIVATE REPORT PAGE
+# Displays and submits a private report about another account.
+# =============================================================================
 
 # WHY: Keeps the report user page steps in one named place so they can be understood, checked, and reused.
 @require_http_methods(["GET", "POST"])

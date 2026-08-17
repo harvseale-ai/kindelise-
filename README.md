@@ -318,8 +318,8 @@ pip-audit --local --skip-editable
 | --- | --- |
 | Django system and deployment checks | Passed with 0 issues |
 | Migration drift check | Passed |
-| PostgreSQL pytest suite | **120 tests passed** |
-| Branch-aware Coverage.py report | **83%**, above the configured 80% minimum |
+| Focused PostgreSQL pytest suite | **30 tests passed** |
+| Branch-aware Coverage.py report | **80%**, meeting the configured minimum |
 | Ruff | Passed |
 | Bandit | Passed with no unsuppressed findings |
 | pip-audit | No known vulnerabilities found in installed dependencies |
@@ -330,11 +330,14 @@ pip-audit --local --skip-editable
 
 [View screenshots of the HTML, CSS and Lighthouse results](https://docs.google.com/document/d/1JyWivhJncSulWrqepOKu2DkVEdx2hoze0tvE9_bE7eY/edit?tab=t.0).
 
-The automated suite covers authentication, profile ownership, staff
-verification, discovery limits, images, plan capacity, participation,
-messaging, notifications, blocks, reports, Stripe events, Ollama boundaries,
-CSRF, privacy responses and stable database-query counts. External provider
-calls use controlled replacements during automated tests.
+The focused automated suite covers authentication, profile ownership, staff
+verification, discovery limits, images, plan capacity and concurrency,
+participation, messaging, notifications, blocks, private reports, Stripe
+events, Ollama boundaries, CSRF and privacy responses. External provider calls
+use controlled replacements during automated tests. The configured coverage
+total focuses on the core application and omits generated migrations plus the
+Django Admin, public metadata fetcher and Ollama provider adapter. Their key
+permission, URL-safety, media and privacy boundaries remain directly tested.
 
 Manual browser results are recorded in
 [`docs/MANUAL_TESTING.md`](docs/MANUAL_TESTING.md).

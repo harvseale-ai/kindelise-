@@ -10,10 +10,20 @@
 
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# ============================================================================= #}
+  {# NOTIFICATIONS PAGE #}
+  {# Shows message and plan activity belonging to the signed-in account. #}
+  {# ============================================================================= #}
+
   <article class="private-profile-page" aria-labelledby="notifications-title">
     <header class="private-profile-header">
       <a class="back-link" href="{% url 'home' %}">← Back</a>
     </header>
+
+    {# --------------------------------------------------------------------------- #}
+    {# NOTIFICATION SUMMARY AND READ CONTROL #}
+    {# Shows the page purpose and the action used to mark current notices read. #}
+    {# --------------------------------------------------------------------------- #}
 
     <div class="private-profile-content">
       <header class="private-profile-identity">
@@ -30,6 +40,11 @@
         </div>
         <p class="private-profile-title-statement">Messages and activity on plans you created.</p>
       </header>
+
+      {# --------------------------------------------------------------------------- #}
+      {# ACTIVITY LIST #}
+      {# Links each recent message or plan join to the page it belongs to. #}
+      {# --------------------------------------------------------------------------- #}
 
       <section class="private-profile-section" aria-label="Recent activity">
         <ul class="private-profile-plans private-profile-plan-links">

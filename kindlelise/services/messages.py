@@ -8,6 +8,10 @@ from django.utils import timezone
 from kindlelise.models import Conversation, Message, Notification
 from kindlelise.policies import can_start_or_continue_direct_messages
 
+# =============================================================================
+# CONVERSATION CREATION
+# Finds or creates the single permitted conversation between two accounts.
+# =============================================================================
 
 # WHY: Keeps the find or start direct conversation steps in one named place so they can be understood, checked, and reused.
 def find_or_start_direct_conversation(user, other_user):
@@ -43,6 +47,11 @@ def find_or_start_direct_conversation(user, other_user):
             raise
         # WHY: Both simultaneous callers now receive the same conversation instead of seeing an error.
         return conversation
+
+# =============================================================================
+# MESSAGE DELIVERY
+# Stores the message, updates inbox order, and creates its notification.
+# =============================================================================
 
 # WHY: Stores the message, inbox time and notification as one complete database change.
 @transaction.atomic

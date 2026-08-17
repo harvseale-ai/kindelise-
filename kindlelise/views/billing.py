@@ -20,6 +20,10 @@ from kindlelise.services.stripe_events import (
     update_premium_access_from_verified_stripe_event,
 )
 
+# =============================================================================
+# PREMIUM CHECKOUT
+# Starts the Stripe-hosted payment journey.
+# =============================================================================
 
 # WHY: Keeps the start premium subscription checkout steps in one named place so they can be understood, checked, and reused.
 @require_POST
@@ -48,6 +52,11 @@ def start_premium_subscription_checkout(request):
     # WHY: Redirects only to the exact Stripe Checkout host already verified by the service.
     return redirect(checkout_url)
 
+# =============================================================================
+# SUBSCRIPTION MANAGEMENT
+# Opens Stripe's hosted cancellation and account-management page.
+# =============================================================================
+
 # WHY: Keeps the open premium subscription portal steps in one named place so they can be understood, checked, and reused.
 @require_POST
 @login_required
@@ -69,6 +78,11 @@ def open_premium_subscription_portal(request):
         return redirect("account")
     # WHY: Redirects only to the exact Stripe billing host already verified by the service.
     return redirect(portal_url)
+
+# =============================================================================
+# PAYMENT UPDATES FROM STRIPE
+# Verifies signed Stripe notices before updating local Premium access.
+# =============================================================================
 
 # WHY: Keeps the receive and verify stripe webhook steps in one named place so they can be understood, checked, and reused.
 @csrf_exempt

@@ -24,7 +24,7 @@ flowchart TD
   G --> F
   F --> H["kindlelise/policies.py<br/>Checks allowed actions"]
   H --> F
-  F --> I["kindlelise/selectors.py<br/>Loads allowed information"]
+  F --> I["kindlelise/selectors/&lt;area&gt;.py<br/>Loads allowed information"]
   F --> J["kindlelise/services/&lt;area&gt;.py<br/>Saves requested changes"]
   I --> K["kindlelise/models.py<br/>Describes saved information"]
   J --> K
@@ -55,7 +55,7 @@ flowchart TD
   click Z "kindlelise/views/common.py#L1" "Open shared page helpers"
   click G "kindlelise/forms.py#L1" "Open kindlelise/forms.py"
   click H "kindlelise/policies.py#L1" "Open kindlelise/policies.py"
-  click I "kindlelise/selectors.py#L1" "Open kindlelise/selectors.py"
+  click I "kindlelise/selectors/__init__.py#L1" "Open the authorised-read package"
   click J "kindlelise/services/__init__.py#L1" "Open the saved-change package"
   click K "kindlelise/models.py#L1" "Open kindlelise/models.py"
   click L "config/settings.py#L1" "Open database setup"
@@ -137,7 +137,7 @@ flowchart LR
   click G "kindlelise/views/accounts.py#Shome_page" "Open a view entry point"
   click H "kindlelise/views/__init__.py#L1" "Open HTTP coordination"
   click I "kindlelise/forms.py#SProfileDetailsForm" "Open form validation"
-  click J "kindlelise/selectors.py#Sget_signed_in_user_account_summary" "Open an authorised read"
+  click J "kindlelise/selectors/accounts.py#Sget_signed_in_user_account_summary" "Open an authorised read"
   click K "kindlelise/policies.py#Scan_access_discovery_plans_and_messages" "Open an access decision"
   click L "kindlelise/services/accounts.py#Supdate_signed_in_user_profile" "Open a state-changing service"
   click M "kindlelise/models.py#SProfile" "Open the data model"
@@ -155,28 +155,30 @@ flowchart LR
   B --> C["Check account details"]
   C --> D["Create account and profile"]
   D --> E["Save account and profile"]
-  E --> F["Sign in and start session"]
-  F --> G["Show private profile"]
-  G --> H["Send profile changes"]
-  H --> I["Check profile details"]
-  I --> J["Save profile changes"]
-  J --> E
-  K["Staff chooses verification"] --> L["Update verification status"]
-  L --> E
-  E --> M["Show account page"]
+  E --> F["Show sign-in page"]
+  F --> G["Check sign-in and start session"]
+  G --> H["Show private profile"]
+  H --> I["Send profile changes"]
+  I --> J["Check profile details"]
+  J --> K["Save profile changes"]
+  K --> E
+  L["Staff chooses verification"] --> M["Update verification status"]
+  M --> E
+  E --> N["Show account page"]
   click A "kindlelise/urls.py#L1" "Open the account routes"
   click B "kindlelise/views/accounts.py#Ssign_up_page" "Open registration view"
   click C "kindlelise/forms.py#SAccountSignUpForm" "Open registration validation"
   click D "kindlelise/services/accounts.py#Screate_account_and_profile" "Open atomic account creation"
   click E "kindlelise/models.py#SProfile" "Open Profile model"
-  click F "kindlelise/views/accounts.py#Ssign_in_page" "Open sign-in and session start"
-  click G "kindlelise/views/accounts.py#Saccount_page" "Open private account view"
-  click H "kindlelise/views/accounts.py#Sedit_profile_page" "Open profile edit view"
-  click I "kindlelise/forms.py#SProfileDetailsForm" "Open profile validation"
-  click J "kindlelise/services/accounts.py#Supdate_signed_in_user_profile" "Open profile update transaction"
-  click K "kindlelise/admin.py#Sverify_selected_profiles_for_discovery_plans_and_messages" "Open staff verification action"
-  click L "kindlelise/admin.py#S_set_profile_verification" "Open verification state change"
-  click M "templates/account.html#L1" "Open account and profile template"
+  click F "kindlelise/views/accounts.py#Ssign_in_page" "Open the separate sign-in page"
+  click G "kindlelise/views/accounts.py#Ssign_in_page" "Open sign-in checks and session start"
+  click H "kindlelise/views/accounts.py#Saccount_page" "Open private account view"
+  click I "kindlelise/views/accounts.py#Sedit_profile_page" "Open profile edit view"
+  click J "kindlelise/forms.py#SProfileDetailsForm" "Open profile validation"
+  click K "kindlelise/services/accounts.py#Supdate_signed_in_user_profile" "Open profile update transaction"
+  click L "kindlelise/admin.py#Sverify_selected_profiles_for_discovery_plans_and_messages" "Open staff verification action"
+  click M "kindlelise/admin.py#S_set_profile_verification" "Open verification state change"
+  click N "templates/account.html#L1" "Open account and profile template"
 ```
 
 ## Finding and viewing other people
@@ -202,12 +204,12 @@ flowchart LR
   click C "kindlelise/policies.py#Scan_access_discovery_plans_and_messages" "Open the verification gate"
   click D "kindlelise/policies.py#Sget_allowed_discovery_areas_and_interest_limit" "Open Free and Premium limits"
   click E "kindlelise/forms.py#SDiscoveryFiltersForm" "Open filter validation"
-  click F "kindlelise/selectors.py#Sget_profiles_for_discovery_grid" "Open discovery query"
+  click F "kindlelise/selectors/discovery.py#Sget_profiles_for_discovery_grid" "Open discovery query"
   click G "kindlelise/models.py#SBlock" "Open the exclusion model"
   click H "templates/discover.html#L1" "Open discovery cards"
   click I "kindlelise/urls.py#L1" "Open public profile route"
   click J "kindlelise/views/discovery.py#Sprofile_page" "Open public profile view"
-  click K "kindlelise/selectors.py#Sget_profile_page_if_viewer_is_allowed" "Open profile visibility read"
+  click K "kindlelise/selectors/discovery.py#Sget_profile_page_if_viewer_is_allowed" "Open profile visibility read"
   click L "templates/account.html#L1" "Open public profile template mode"
 ```
 
@@ -279,9 +281,9 @@ flowchart LR
   click I "config/settings.py#L1" "Open Cloudinary storage configuration"
   click J "config/settings.py#L1" "Open local media configuration"
   click K "kindlelise/views/accounts.py#Sprofile_image_file" "Open profile image delivery"
-  click L "kindlelise/selectors.py#Sget_profile_image_if_viewer_is_allowed" "Open image visibility selector"
+  click L "kindlelise/selectors/discovery.py#Sget_profile_image_if_viewer_is_allowed" "Open image visibility selector"
   click M "kindlelise/views/plans.py#Splan_thumbnail_file" "Open plan image delivery"
-  click N "kindlelise/selectors.py#Sget_plan_page_if_viewer_is_allowed" "Open plan visibility selector"
+  click N "kindlelise/selectors/plans.py#Sget_plan_page_if_viewer_is_allowed" "Open plan visibility selector"
   click O "kindlelise/views/accounts.py#Sprofile_image_file" "Open protected file response"
 ```
 
@@ -308,7 +310,7 @@ flowchart LR
   M --> H
   H --> N["Show updated plan"]
   click A "kindlelise/urls.py#L1" "Open plan routes"
-  click B "kindlelise/selectors.py#Sget_plan_page_if_viewer_is_allowed" "Open plan visibility read"
+  click B "kindlelise/selectors/plans.py#Sget_plan_page_if_viewer_is_allowed" "Open plan visibility read"
   click C "kindlelise/views/plans.py#Splan_detail_page" "Open plan detail coordination"
   click D "templates/plan.html#L1" "Open plan action controls"
   click E "kindlelise/views/plans.py#Sjoin_plan" "Open join endpoint"
@@ -347,7 +349,7 @@ flowchart LR
   click C "kindlelise/services/messages.py#Sfind_or_start_direct_conversation" "Open unique pair service"
   click D "kindlelise/models.py#SConversation" "Open Conversation model"
   click E "kindlelise/views/messages.py#Sconversation_page" "Open conversation page"
-  click F "kindlelise/selectors.py#Sget_messages_if_user_can_open_conversation" "Open authorised message read"
+  click F "kindlelise/selectors/messages.py#Sget_messages_if_user_can_open_conversation" "Open authorised message read"
   click G "templates/conversation.html#L1" "Open conversation template"
   click H "kindlelise/forms.py#SMessageDraftForm" "Open draft validation"
   click I "kindlelise/views/messages.py#Ssend_conversation_message" "Open send endpoint"
@@ -380,7 +382,7 @@ flowchart LR
   click A "templates/conversation.html#L1" "Open AI editing controls"
   click B "static/app.js#SrequestMessageDraftEditSuggestion" "Open browser request"
   click C "kindlelise/views/messages.py#Srequest_conversation_message_edit_suggestion" "Open suggestion endpoint"
-  click D "kindlelise/selectors.py#Sget_messages_if_user_can_open_conversation" "Open conversation access check"
+  click D "kindlelise/selectors/messages.py#Sget_messages_if_user_can_open_conversation" "Open conversation access check"
   click E "kindlelise/forms.py#SMessageEditRequestForm" "Open AI request validation"
   click F "kindlelise/ai_message_editor.py#Sget_edited_message_draft_suggestion" "Open bounded Ollama client"
   click G "kindlelise/ai_message_editor.py#Sget_edited_message_draft_suggestion" "Open provider request boundary"
@@ -407,17 +409,17 @@ flowchart LR
   F --> G["Open notifications page"]
   G --> H["Load recent notifications"]
   H --> I["Show notification list"]
-  I --> J["Choose Mark as read"]
+  I --> J["Choose Mark all read"]
   J --> K["Mark all as read"]
   K --> C
   click A "kindlelise/services/messages.py#Ssend_direct_message" "Open message notification creation"
   click B "kindlelise/services/plans.py#Sjoin_approved_plan_and_lock_meeting_details" "Open plan-join notification creation"
   click C "kindlelise/models.py#SNotification" "Open Notification model"
   click D "kindlelise/context_processors.py#Snotification_badge" "Open shared context processor"
-  click E "kindlelise/selectors.py#Sget_unread_notification_count" "Open unread count query"
+  click E "kindlelise/selectors/accounts.py#Sget_unread_notification_count" "Open unread count query"
   click F "templates/base.html#L1" "Open the notification icon"
   click G "kindlelise/views/accounts.py#Snotifications_page" "Open notifications page"
-  click H "kindlelise/selectors.py#Sget_recent_notifications" "Open recent alerts query"
+  click H "kindlelise/selectors/accounts.py#Sget_recent_notifications" "Open recent alerts query"
   click I "templates/notifications.html#L1" "Open notifications template"
   click J "kindlelise/views/accounts.py#Smark_notifications_read" "Open mark-read endpoint"
   click K "kindlelise/services/accounts.py#Smark_all_notifications_read" "Open mark-read update"
@@ -450,7 +452,7 @@ flowchart LR
   click E "kindlelise/models.py#SBlock" "Open Block model"
   click F "kindlelise/policies.py#Scan_start_or_continue_direct_messages" "Open block-aware messaging policy"
   click G "kindlelise/views/safety.py#Sreport_user_page" "Open report page"
-  click H "kindlelise/selectors.py#Sget_report_target_profile_if_reporter_is_allowed" "Open report target selector"
+  click H "kindlelise/selectors/safety.py#Sget_report_target_profile_if_reporter_is_allowed" "Open report target selector"
   click I "kindlelise/views/safety.py#S_get_private_report_context" "Open context validation"
   click J "kindlelise/forms.py#SPrivateReportForm" "Open report form validation"
   click K "kindlelise/services/safety.py#Ssubmit_private_report_about_user" "Open report service"

@@ -9,6 +9,11 @@
 
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# ============================================================================= #}
+  {# CONVERSATION PAGE #}
+  {# Groups the other person's identity, message history, and sending controls. #}
+  {# ============================================================================= #}
+
   <section class="conversation-page" aria-labelledby="conversation-title">
     <header class="conversation-page-header">
       <a class="back-link" href="{% url 'inbox' %}">← Messages</a>
@@ -25,6 +30,11 @@
           <p class="eyebrow">direct conversation</p>
         </div>
       </div>
+      {# --------------------------------------------------------------------------- #}
+      {# SAFETY ACTIONS #}
+      {# Keeps private reporting and blocking controls together. #}
+      {# --------------------------------------------------------------------------- #}
+
       <details class="conversation-safety">
         <summary>Safety</summary>
         <div class="conversation-safety-panel">
@@ -38,6 +48,11 @@
         </div>
       </details>
     </header>
+
+    {# --------------------------------------------------------------------------- #}
+    {# MESSAGE HISTORY #}
+    {# Displays the permitted messages in their saved reading order. #}
+    {# --------------------------------------------------------------------------- #}
 
     <ol class="conversation-thread" aria-label="Conversation messages">
       {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
@@ -64,6 +79,11 @@
       {% endfor %}
     </ol>
 
+    {# ============================================================================= #}
+    {# MESSAGE COMPOSER #}
+    {# Groups the unsent draft, Send action, and optional wording assistance. #}
+    {# ============================================================================= #}
+
     <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
     <form id="message-composer" class="conversation-composer" method="post" action="{% url 'conversation_message_send' conversation.pk %}" novalidate>
       {% csrf_token %}
@@ -74,6 +94,11 @@
         <button type="submit">Send</button>
       </div>
       {{ form.body.errors }}
+      {# --------------------------------------------------------------------------- #}
+      {# DRAFT IMPROVEMENT TOOLS #}
+      {# Requests an optional grammar or clarity suggestion for the unsent draft. #}
+      {# --------------------------------------------------------------------------- #}
+
       <details class="conversation-draft-tools">
         <summary>Edit this unsent draft</summary>
         <div>
@@ -85,6 +110,11 @@
           <p id="message-edit-status" class="state-label" role="status" aria-live="polite"></p>
         </div>
       </details>
+      {# --------------------------------------------------------------------------- #}
+      {# SUGGESTION PREVIEW #}
+      {# Lets the visitor compare the original and suggested drafts before choosing. #}
+      {# --------------------------------------------------------------------------- #}
+
       <section id="message-edit-suggestion" class="state-panel" aria-labelledby="message-edit-title" aria-live="polite" hidden>
         <h2 id="message-edit-title">Edit unsent draft</h2>
         <p><strong>Original draft</strong></p>

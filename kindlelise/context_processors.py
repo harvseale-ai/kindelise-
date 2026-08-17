@@ -5,6 +5,10 @@
 
 from kindlelise.selectors import get_unread_notification_count
 
+# =============================================================================
+# SHARED NOTIFICATION BADGE
+# Makes the unread count available to the top bar on every page.
+# =============================================================================
 
 # WHY: Keeps the notification badge steps in one named place so they can be understood, checked, and reused.
 def notification_badge(request):

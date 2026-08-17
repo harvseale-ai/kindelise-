@@ -3,6 +3,11 @@
 {# # KEYWORD: block.super — keeps the normal staff buttons before adding the button below. #}
 {# # WHY: Adds one clear verification button to the existing staff profile form without replacing it. #}
 
+{# ============================================================================= #}
+{# STAFF PROFILE VERIFICATION ACTION #}
+{# Adds the verification control beneath Django Admin's normal profile actions. #}
+{# ============================================================================= #}
+
 {# # WHY: Supplies the extra staff action beside the normal save buttons. #}
 {% block submit_buttons_bottom %}
   {{ block.super }}

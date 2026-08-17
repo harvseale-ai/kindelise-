@@ -4,6 +4,11 @@
 {# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
 {# # WHY: Provides the shared heading, navigation, notices, and page space used across the site. #}
 
+{# ============================================================================= #}
+{# SHARED PAGE DOCUMENT #}
+{# Provides the common document frame used by every Kindelise page. #}
+{# ============================================================================= #}
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,6 +18,11 @@
   <link rel="stylesheet" href="{% static 'app.css' %}?v=20260809-apple-type">
 </head>
 <body{% if request.resolver_match.url_name == "profile_edit" or request.resolver_match.url_name == "sign_up" or request.resolver_match.url_name == "sign_in" or request.resolver_match.url_name == "report_create" %} class="profile-edit-route"{% elif request.resolver_match.url_name == "plan_create" or request.resolver_match.url_name == "plan_edit" %} class="profile-edit-route plan-form-route"{% elif request.resolver_match.url_name == "account" or request.resolver_match.url_name == "profile" or request.resolver_match.url_name == "profile_detail" or request.resolver_match.url_name == "plan_detail" or request.resolver_match.url_name == "guide" or request.resolver_match.url_name == "notifications" %} class="private-profile-route"{% elif request.resolver_match.url_name == "inbox" %} class="inbox-route"{% elif request.resolver_match.url_name == "conversation_detail" %} class="conversation-route"{% elif request.resolver_match.url_name == "plan_list" %} class="plans-route"{% elif request.resolver_match.url_name == "discover" %} class="discovery-route"{% endif %}>
+  {# --------------------------------------------------------------------------- #}
+  {# SITE HEADER AND SHORTCUTS #}
+  {# Shows the brand and shared colour, plan, guide, and notification controls. #}
+  {# --------------------------------------------------------------------------- #}
+
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="{% url 'home' %}">Kindelise</a>
@@ -24,6 +34,11 @@
       {% if user.is_authenticated %}<a class="site-notification-link" href="{% url 'notifications' %}" aria-label="Notifications{% if unread_notification_count %}: {{ unread_notification_count }} unread{% endif %}" title="Notifications"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.27 21a2 2 0 0 0 3.46 0"></path><path d="M3.26 15.33A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.67C19.41 13.96 18 12.5 18 8A6 6 0 0 0 6 8c0 4.5-1.41 5.96-2.74 7.33Z"></path></svg>{% if unread_notification_count %}<span class="site-notification-count" aria-hidden="true">{% if unread_notification_count > 99 %}99+{% else %}{{ unread_notification_count }}{% endif %}</span>{% endif %}</a>{% endif %}
     </span>
   </header>
+
+  {# --------------------------------------------------------------------------- #}
+  {# PRIMARY NAVIGATION #}
+  {# Links signed-in visitors to the four main areas of the application. #}
+  {# --------------------------------------------------------------------------- #}
 
   {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if user.is_authenticated %}
@@ -37,6 +52,11 @@
       </nav>
     {% endwith %}
   {% endif %}
+
+  {# --------------------------------------------------------------------------- #}
+  {# CONNECTION AND PAGE NOTICES #}
+  {# Displays offline information and short-lived feedback from page actions. #}
+  {# --------------------------------------------------------------------------- #}
 
   <p id="connection-status" class="connection-status" role="status" hidden>
     You appear to be offline. Keep this page open to preserve current form text, then retry when connected.
@@ -52,10 +72,20 @@
     </div>
   {% endif %}
 
+  {# --------------------------------------------------------------------------- #}
+  {# PAGE CONTENT #}
+  {# Provides the space where each individual page inserts its own content. #}
+  {# --------------------------------------------------------------------------- #}
+
   <main id="main-content" class="page-shell" tabindex="-1">
     {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
     {% block content %}{% endblock %}
   </main>
+
+  {# --------------------------------------------------------------------------- #}
+  {# SHARED PAGE SCRIPT #}
+  {# Loads the controls shared by page themes, forms, filters, and messages. #}
+  {# --------------------------------------------------------------------------- #}
 
   <script src="{% static 'app.js' %}?v=20260806-popup-messages" defer></script>
 </body>

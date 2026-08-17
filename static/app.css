@@ -22,6 +22,11 @@
    01. COLOURS AND PAGE FOUNDATIONS
    ========================================================================== */
 
+/* -----------------------------------------------------------------------------
+   SHARED COLOURS AND THEMES
+   Defines the reusable palette values used by every page and colour option.
+   ----------------------------------------------------------------------------- */
+
 /* # WHY: Defines the shared colours once so every page and selectable colour theme stays consistent. */
 :root {
   color-scheme: dark;
@@ -74,6 +79,11 @@
   --border: #53665a;
   --focus: #acd0b8;
 }
+
+/* -----------------------------------------------------------------------------
+   PAGE RESET AND ACCESSIBILITY
+   Establishes predictable sizing, typography, focus, and hidden-content rules.
+   ----------------------------------------------------------------------------- */
 
 /* # KEYWORD: universal selector (*) — matches every element on the page. */
 /* # WHY: Includes padding and borders inside declared widths so component measurements stay predictable. */
@@ -138,6 +148,11 @@ summary:focus-visible {
    02. SHARED HEADER, NAVIGATION AND PAGE FRAME
    ========================================================================== */
 
+/* -----------------------------------------------------------------------------
+   SITE HEADER AND SHORTCUTS
+   Keeps the brand and shared shortcut controls visible above scrolling pages.
+   ----------------------------------------------------------------------------- */
+
 /* # KEYWORD: env() — reads safe screen space reserved by a phone around controls such as its home indicator. */
 /* # WHY: Keeps the brand and useful shortcuts visible while the main page moves underneath them. */
 .site-header {
@@ -192,6 +207,11 @@ summary:focus-visible {
 }
 .back-link { font-weight: 700; }
 
+/* -----------------------------------------------------------------------------
+   PRIMARY NAVIGATION
+   Positions the four main page destinations as one fixed navigation group.
+   ----------------------------------------------------------------------------- */
+
 /* # WHY: Keeps the four main destinations within reach without changing their shape between pages. */
 .primary-navigation {
   position: fixed;
@@ -229,6 +249,11 @@ summary:focus-visible {
   color: var(--ink);
 }
 
+/* -----------------------------------------------------------------------------
+   PAGE WIDTH AND TEMPORARY STATUS
+   Controls shared page spacing, notices, and the loss-of-connection warning.
+   ----------------------------------------------------------------------------- */
+
 /* # WHY: Provides the shared page width, temporary notices, and connection warning. */
 .page-shell,
 .messages,
@@ -265,6 +290,11 @@ summary:focus-visible {
    03. SHARED CONTROLS, FORMS AND FEEDBACK
    ========================================================================== */
 
+/* -----------------------------------------------------------------------------
+   SHARED PANELS, IMAGES AND HEADINGS
+   Provides the common surfaces and text hierarchy used across page types.
+   ----------------------------------------------------------------------------- */
+
 /* # WHY: Gives ordinary panels and profile images the same surface, border, and corner treatment. */
 .card {
   min-width: 0;
@@ -294,6 +324,11 @@ summary:focus-visible {
 }
 h1 { margin: 0 0 1rem; font-size: clamp(1.8rem, 7vw, 2.5rem); line-height: 1.1; }
 h2 { margin: 1.75rem 0 .6rem; font-size: 1.15rem; }
+
+/* -----------------------------------------------------------------------------
+   BASE FORM CONTROLS
+   Gives all forms a consistent starting layout before page-specific styling.
+   ----------------------------------------------------------------------------- */
 
 /* # WHY: Gives every basic form a usable starting layout before a page adds specific styling. */
 form p { margin: 1rem 0; }

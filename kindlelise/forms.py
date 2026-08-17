@@ -14,12 +14,15 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.forms import UserCreationForm
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 from PIL import Image, ImageOps
 
 from kindlelise.models import Interest, Plan, Profile, Report
 from kindlelise.plan_metadata import normalise_public_https_url
 
+# =============================================================================
+# PLAN DATE AND TIME CONTROL
+# Combines separate date and time inputs into one saved plan start time.
+# =============================================================================
 
 # WHY: Keeps the PlanStartDateTimeWidget information and its rules together so they stay consistent.
 class PlanStartDateTimeWidget(forms.MultiWidget):
@@ -69,22 +72,10 @@ class PlanStartDateTimeWidget(forms.MultiWidget):
             value = timezone.localtime(value)
         return (value.date(), value.strftime("%H:%M"))
 
-    # WHY: Keeps the value from datadict steps in one named place so they can be understood, checked, and reused.
-    def value_from_datadict(self, data, files, name):
-        """Also accept the previous combined datetime value during transition."""
-        # WHY: First reads the new separate date and time controls in Django's normal way.
-        values = super().value_from_datadict(data, files, name)
-
-        # WHY: Prefers any newly submitted separate value over the older combined format.
-        if any(value not in (None, "") for value in values):
-            return values
-        # WHY: Temporarily accepts an older combined value so existing clients fail gracefully during transition.
-        combined_value = data.get(name)
-        parsed_value = parse_datetime(combined_value) if combined_value else None
-        if parsed_value is None:
-            return values
-        return (parsed_value.date().isoformat(), parsed_value.strftime("%H:%M"))
-
+# =============================================================================
+# ACCOUNT REGISTRATION FORM
+# Checks the details used to create a new Kindelise account.
+# =============================================================================
 
 # WHY: Keeps the AccountSignUpForm information and its rules together so they stay consistent.
 class AccountSignUpForm(UserCreationForm):
@@ -122,17 +113,10 @@ class AccountSignUpForm(UserCreationForm):
         return email
 
 
-# WHY: Keeps the FlexibleMultipleChoiceField information and its rules together so they stay consistent.
-class FlexibleMultipleChoiceField(forms.MultipleChoiceField):
-    """Accept one legacy scalar choice or a normal multi-value submission."""
-
-    # WHY: Checks and tidies the clean value before the site trusts or saves it.
-    def clean(self, value):
-        # WHY: Wraps one older single value in a list so it follows the same checks as modern multi-selection.
-        if isinstance(value, str):
-            value = [value]
-        return super().clean(value)
-
+# =============================================================================
+# PROFILE EDIT FORM
+# Checks public details, discovery choices, availability, and profile images.
+# =============================================================================
 
 # WHY: Keeps the ProfileDetailsForm information and its rules together so they stay consistent.
 class ProfileDetailsForm(forms.ModelForm):
@@ -154,8 +138,8 @@ class ProfileDetailsForm(forms.ModelForm):
         strip=True,
         label="Title statement",
     )
-    # WHY: Allows several broad areas while retaining support for the older single-area submission.
-    broad_area = FlexibleMultipleChoiceField(
+    # WHY: Allows several broad areas through the checkbox list shown on the current profile form.
+    broad_area = forms.MultipleChoiceField(
         choices=(),
         widget=forms.CheckboxSelectMultiple(),
     )
@@ -329,6 +313,11 @@ class ProfileDetailsForm(forms.ModelForm):
         return cleaned_data
 
 
+# =============================================================================
+# DISCOVERY FILTER FORM
+# Checks broad-area, interest, and availability filters for the current account.
+# =============================================================================
+
 # WHY: Keeps the DiscoveryFiltersForm information and its rules together so they stay consistent.
 class DiscoveryFiltersForm(forms.Form):
     """Validate discovery filters against server-calculated account limits."""
@@ -380,6 +369,11 @@ class DiscoveryFiltersForm(forms.Form):
             )
         return interests
 
+
+# =============================================================================
+# PLAN FORMS
+# Checks plan details and the public URL used to request optional place metadata.
+# =============================================================================
 
 # WHY: Keeps the PlanDetailsForm information and its rules together so they stay consistent.
 class PlanDetailsForm(forms.ModelForm):
@@ -444,6 +438,11 @@ class PlanMetadataRequestForm(forms.Form):
             raise forms.ValidationError(str(error)) from error
 
 
+# =============================================================================
+# MESSAGE FORMS
+# Checks an unsent message and the optional wording goal chosen for it.
+# =============================================================================
+
 # WHY: Keeps the MessageDraftForm information and its rules together so they stay consistent.
 class MessageDraftForm(forms.Form):
     """Validate one bounded non-empty plain-text message draft."""
@@ -466,6 +465,11 @@ class MessageEditRequestForm(forms.Form):
     draft = forms.CharField(max_length=1_000, strip=True)
     editing_goal = forms.ChoiceField(choices=EDITING_GOALS)
 
+
+# =============================================================================
+# PRIVATE REPORT FORM
+# Checks the category and factual description submitted to authorised staff.
+# =============================================================================
 
 # WHY: Keeps the PrivateReportForm information and its rules together so they stay consistent.
 class PrivateReportForm(forms.ModelForm):

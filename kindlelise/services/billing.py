@@ -9,6 +9,10 @@ from django.core.exceptions import PermissionDenied
 
 from kindlelise.models import PlatformSubscription
 
+# =============================================================================
+# CHECKOUT SAFETY CHECKS
+# Checks the account and return addresses used with Stripe-hosted pages.
+# =============================================================================
 
 # WHY: Keeps the require signed in active account steps in one named place so they can be understood, checked, and reused.
 def _require_signed_in_active_account(user):
@@ -45,6 +49,11 @@ def _require_stripe_hosted_url(url, expected_host):
         raise ValueError("Stripe did not return the expected hosted URL")
     # WHY: Returns the already-checked address unchanged for the view's browser redirect.
     return url
+
+# =============================================================================
+# START SUBSCRIPTION CHECKOUT
+# Creates a Stripe-hosted payment session for the signed-in account.
+# =============================================================================
 
 # WHY: Keeps the start stripe subscription checkout steps in one named place so they can be understood, checked, and reused.
 def start_stripe_subscription_checkout(user, success_url, cancel_url):
@@ -100,6 +109,11 @@ def start_stripe_subscription_checkout(user, success_url, cancel_url):
         getattr(checkout_session, "url", None),
         "checkout.stripe.com",
     )
+
+# =============================================================================
+# OPEN SUBSCRIPTION MANAGEMENT
+# Creates the Stripe-hosted page used to manage or cancel a subscription.
+# =============================================================================
 
 # WHY: Keeps the open stripe customer portal steps in one named place so they can be understood, checked, and reused.
 def open_stripe_customer_portal(user, return_url):

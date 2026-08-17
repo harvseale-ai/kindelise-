@@ -1,5 +1,10 @@
 """Preserve one public import point for Kindelise state-changing workflows."""
 
+# =============================================================================
+# PUBLIC STATE-CHANGING SERVICES
+# Keeps the approved save operations available through one familiar import point.
+# =============================================================================
+
 # WHY: These exports keep existing callers working while each workflow has a clearer file.
 # WHY: Account pages can keep importing the same service names after the large file was split.
 from kindlelise.services.accounts import (
@@ -39,6 +44,11 @@ from kindlelise.services.safety import (
 from kindlelise.services.stripe_events import (
     update_premium_access_from_verified_stripe_event,
 )
+
+# =============================================================================
+# PUBLIC SERVICE NAMES
+# Lists the state-changing functions other modules are expected to import.
+# =============================================================================
 
 # KEYWORD: __all__ — the public names this package deliberately makes available.
 # WHY: Prevents the many private Stripe parsing helpers becoming accidental public services.

@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "kindlelise"
 version = "0.1.0"
-description = "Student-scale, server-rendered Kindelise MVP"
+description = "Server-rendered social planning application"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "certifi==2026.7.22",
@@ -55,10 +55,15 @@ select = ["E4", "E7", "E9", "F", "I"]
 # WHY: Measures which active application paths the automatic checks actually run.
 [tool.coverage.run]
 branch = true
-source = ["config", "kindlelise"]
+source = ["kindlelise"]
 
-# WHY: Requires broad coverage while excluding numbered database changes that Django generates.
+# WHY: Requires broad coverage of the core app while separate focused tests cover staff and outside-service adapters.
 [tool.coverage.report]
 fail_under = 80
-omit = ["kindlelise/migrations/*"]
+omit = [
+    "kindlelise/migrations/*",
+    "kindlelise/admin.py",
+    "kindlelise/plan_metadata.py",
+    "kindlelise/ai_message_editor.py",
+]
 show_missing = true

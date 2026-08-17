@@ -10,6 +10,11 @@
 
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
+  {# ============================================================================= #}
+  {# DISCOVERY FILTERS #}
+  {# Groups the controls used to narrow the permitted profile results. #}
+  {# ============================================================================= #}
+
   <section class="discovery-controls" aria-labelledby="discover-title">
     <h1 class="visually-hidden" id="discover-title">Discover profiles</h1>
     <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
@@ -21,6 +26,11 @@
         <button class="filter-trigger" type="button" data-filter-target="interest-filter" aria-controls="interest-filter" aria-expanded="false">Interests</button>
         <button class="filter-trigger" type="button" data-filter-target="availability-filter" aria-controls="availability-filter" aria-expanded="false">Free now</button>
       </div>
+
+      {# --------------------------------------------------------------------------- #}
+      {# BROAD-AREA FILTER #}
+      {# Selects the permitted broad areas included in discovery. #}
+      {# --------------------------------------------------------------------------- #}
 
       <div class="discovery-filter-panel" id="broad-area-filter"{% if form.broad_area.errors %} data-filter-errors{% endif %}>
         <fieldset class="area-fieldset">
@@ -36,6 +46,11 @@
         </div>
       </div>
 
+      {# --------------------------------------------------------------------------- #}
+      {# INTEREST FILTER #}
+      {# Selects the shared interests used to narrow discovery. #}
+      {# --------------------------------------------------------------------------- #}
+
       <div class="discovery-filter-panel" id="interest-filter"{% if form.interests.errors %} data-filter-errors{% endif %}>
         <fieldset class="interest-fieldset">
           {{ form.interests.errors }}
@@ -49,6 +64,11 @@
           <button class="secondary" type="button" data-filter-close>Close</button>
         </div>
       </div>
+
+      {# --------------------------------------------------------------------------- #}
+      {# AVAILABILITY FILTER #}
+      {# Limits discovery to profiles whose Free now setting is active. #}
+      {# --------------------------------------------------------------------------- #}
 
       <div class="discovery-filter-panel" id="availability-filter"{% if form.available_now.errors %} data-filter-errors{% endif %}>
         <fieldset class="availability-filter-fieldset">
@@ -67,6 +87,11 @@
       </div>
     </form>
   </section>
+
+  {# ============================================================================= #}
+  {# PROFILE RESULTS #}
+  {# Displays the permitted people returned by the selected filters. #}
+  {# ============================================================================= #}
 
   <section aria-label="Profiles">
     <ul class="plain-list discovery-grid">

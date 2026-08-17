@@ -20,6 +20,10 @@ from kindlelise.selectors import (
 )
 from kindlelise.views.common import _profile_broad_area_label
 
+# =============================================================================
+# DISCOVERY GRID
+# Validates discovery filters and prepares the permitted profile cards.
+# =============================================================================
 
 # WHY: Keeps the discovery page steps in one named place so they can be understood, checked, and reused.
 @require_GET
@@ -89,6 +93,12 @@ def discovery_page(request):
             "is_premium": interest_limit == 5,
         },
     )
+
+
+# =============================================================================
+# PUBLIC PROFILE
+# Prepares another person's permitted profile details and available plans.
+# =============================================================================
 
 # WHY: Keeps the profile page steps in one named place so they can be understood, checked, and reused.
 @require_GET

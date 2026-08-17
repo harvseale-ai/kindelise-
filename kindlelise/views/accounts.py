@@ -27,6 +27,10 @@ from kindlelise.services.accounts import (
 )
 from kindlelise.views.common import _profile_broad_area_label, _safe_local_redirect
 
+# =============================================================================
+# ENTRY AND HELP PAGES
+# Directs visitors to the right starting page and provides the public guide.
+# =============================================================================
 
 # WHY: Keeps the home page steps in one named place so they can be understood, checked, and reused.
 @require_http_methods(["GET"])
@@ -53,6 +57,12 @@ def app_guide_page(request):
     # WHY: The guide is public and needs no private account information.
     return render(request, "guide.html")
 
+
+# =============================================================================
+# NOTIFICATIONS
+# Shows the signed-in person's activity and records when it has been read.
+# =============================================================================
+
 # WHY: Keeps the notifications page steps in one named place so they can be understood, checked, and reused.
 @require_GET
 @login_required
@@ -73,6 +83,12 @@ def mark_notifications_read(request):
     # WHY: Changes only this recipient's rows, then reloads the notification list to show the new state.
     mark_all_notifications_read(request.user)
     return redirect("notifications")
+
+
+# =============================================================================
+# ACCOUNT ACCESS
+# Handles account creation, sign-in, and sign-out pages.
+# =============================================================================
 
 # WHY: Keeps the sign up page steps in one named place so they can be understood, checked, and reused.
 @require_http_methods(["GET", "POST"])
@@ -172,6 +188,12 @@ def sign_out_user(request):
     messages.success(request, "You have signed out.")
     return redirect("sign_in")
 
+
+# =============================================================================
+# PRIVATE PROFILE
+# Displays and updates the profile owned by the signed-in person.
+# =============================================================================
+
 # WHY: Keeps the account page steps in one named place so they can be understood, checked, and reused.
 @require_http_methods(["GET"])
 @login_required
@@ -250,6 +272,12 @@ def edit_profile_page(request):
         "account.html",
         {"mode": "profile_edit", "form": form, "profile": profile},
     )
+
+
+# =============================================================================
+# PROTECTED PROFILE IMAGE
+# Streams a stored profile picture only after the viewer has been checked.
+# =============================================================================
 
 # WHY: Keeps the profile image file steps in one named place so they can be understood, checked, and reused.
 @require_GET

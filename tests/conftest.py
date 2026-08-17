@@ -3,7 +3,6 @@
 # KEYWORD: fixture helper — builds known sample information so many checks can start the same way.
 # KEYWORD: fake — a controlled replacement for an outside service used only while running checks.
 
-
 from itertools import count
 
 from django.contrib.auth import get_user_model
@@ -96,6 +95,18 @@ def create_test_plan(owner=None, status=Plan.Status.PENDING, **changes):
     return Plan.objects.create(owner=owner, **values)
 
 
+# WHY: Builds the two current plan start controls from one readable test datetime.
+def plan_start_form_values(value):
+    """Return the date and time values submitted by the current plan form."""
+    # WHY: Matches the local date and time shown to the visitor before the form is submitted.
+    if timezone.is_aware(value):
+        value = timezone.localtime(value)
+    return {
+        "starts_at_0": value.date().isoformat(),
+        "starts_at_1": value.strftime("%H:%M"),
+    }
+
+
 # WHY: Builds test conversation with all required starting values and checks applied.
 def create_test_conversation(first_user=None, second_user=None):
     """Create one correctly ordered account pair.
@@ -106,7 +117,9 @@ def create_test_conversation(first_user=None, second_user=None):
     """
     first_user = first_user or create_test_user()
     second_user = second_user or create_test_user()
-    lower_user, higher_user = sorted((first_user, second_user), key=lambda user: user.pk)
+    lower_user, higher_user = sorted(
+        (first_user, second_user), key=lambda user: user.pk
+    )
     return Conversation.objects.create(
         first_user=lower_user,
         second_user=higher_user,

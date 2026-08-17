@@ -7,8 +7,12 @@ from django.db import transaction
 from kindlelise.models import Block, Conversation, Message, Participation, Plan, Report
 from kindlelise.policies import can_report_another_user
 
-
 # KEYWORD: atomic — the function's database work is kept fully or not kept at all.
+# =============================================================================
+# BLOCKING
+# Records one person's block and closes contact between the two accounts.
+# =============================================================================
+
 # WHY: Makes the one directional block as a complete database change.
 @transaction.atomic
 def block_user_from_discovery_and_messages(blocker, blocked_user):
@@ -36,6 +40,11 @@ def block_user_from_discovery_and_messages(blocker, blocked_user):
     )
     # WHY: Returns the same block for first and repeated requests so callers have one predictable result.
     return block
+
+# =============================================================================
+# PRIVATE REPORTING
+# Validates and stores a report and its optional supporting context.
+# =============================================================================
 
 # WHY: Checks and stores one private report as a single complete database change.
 @transaction.atomic

@@ -8,8 +8,12 @@ from django.utils import timezone
 
 from kindlelise.models import Notification, Profile
 
-
 # KEYWORD: atomic — either every database change in the function succeeds, or none of them are kept.
+# =============================================================================
+# ACCOUNT CREATION
+# Creates the account and its matching starting profile together.
+# =============================================================================
+
 # WHY: Keeps account and profile creation together so an account is never left without its matching profile.
 @transaction.atomic
 def create_account_and_profile(new_account_details):
@@ -34,6 +38,11 @@ def create_account_and_profile(new_account_details):
     Profile.objects.create(user=account)
     # WHY: Gives the sign-up page the saved account it needs to start the new signed-in session.
     return account
+
+# =============================================================================
+# PROFILE UPDATES
+# Saves the signed-in person's editable details, interests, and availability.
+# =============================================================================
 
 # WHY: Rolls every profile edit back together if saving a field or its linked interests fails.
 @transaction.atomic
@@ -97,6 +106,11 @@ def update_signed_in_user_profile(user, profile_changes):
         profile.interests.set(profile_changes["interests"])
     # WHY: Returns the same refreshed profile object so the page does not need a second database lookup.
     return profile
+
+# =============================================================================
+# NOTIFICATION UPDATES
+# Marks the signed-in person's current activity notices as read.
+# =============================================================================
 
 # WHY: Records all notifications read so the page can show the visitor's latest state.
 def mark_all_notifications_read(user):
