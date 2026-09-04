@@ -1,6 +1,6 @@
 """Read visible plan lists and authorised plan details."""
 
-from django.db.models import Count, Q
+from django.db.models import Count, Exists, OuterRef, Q
 from django.utils import timezone
 
 from kindlelise.models import Participation, Plan
@@ -37,7 +37,15 @@ def get_plans_for_plan_list(user, *, completed=False):
             joined_count=Count(
                 "participations",
                 filter=Q(participations__status=Participation.Status.JOINED),
-            )
+            ),
+            # WHY: Marks only this viewer's confirmed participation so cards can identify joined plans without loading member identities.
+            viewer_has_joined=Exists(
+                Participation.objects.filter(
+                    plan_id=OuterRef("pk"),
+                    user=user,
+                    status=Participation.Status.JOINED,
+                )
+            ),
         )
     )
     if completed:
@@ -132,3 +140,19 @@ def get_plan_page_if_viewer_is_allowed(viewer, plan_id):
         "joined_count": plan.joined_count,
         "viewer_participation_status": viewer_participation_status,
     }
+
+
+# WHY: Reveals pending requester identities only to the owner of the exact plan being managed.
+def get_pending_plan_requests_for_owner(owner, plan):
+    """Return pending requests for one owned plan, or an empty queryset."""
+    if (
+        plan is None
+        or plan.owner_id != getattr(owner, "pk", None)
+        or not can_access_discovery_plans_and_messages(owner)
+    ):
+        return Participation.objects.none()
+    return (
+        Participation.objects.select_related("user", "user__profile")
+        .filter(plan=plan, status=Participation.Status.PENDING)
+        .order_by("requested_at", "pk")
+    )

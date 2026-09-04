@@ -25,6 +25,7 @@ from kindlelise.admin import (
 from kindlelise.models import (
     Block,
     Interest,
+    Plan,
     Profile,
 )
 from kindlelise.policies import (
@@ -34,11 +35,42 @@ from kindlelise.selectors import (
     get_profile_image_if_viewer_is_allowed,
 )
 from tests.conftest import (
+    create_test_plan,
     create_test_user,
     create_verified_test_profile,
 )
 
 pytestmark = pytest.mark.django_db
+
+
+# WHY: Keeps all owned plan states in the owner's visual history without placing the old row list in profile details.
+def test_private_profile_shows_owned_plan_history_as_visual_cards():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    open_plan = create_test_plan(
+        owner=owner,
+        title="Open visual plan",
+        status=Plan.Status.APPROVED,
+    )
+    cancelled_plan = create_test_plan(
+        owner=owner,
+        title="Cancelled visual plan",
+        status=Plan.Status.CANCELLED,
+    )
+    client = Client()
+    client.force_login(owner)
+
+    response = client.get(reverse("account"))
+
+    assert response.status_code == 200
+    assert response.content.count(b'id="plans-title"') == 1
+    assert b"profile-plan-history" in response.content
+    assert b"profile-plans-grid" in response.content
+    assert b"private-profile-plan-links" not in response.content
+    assert reverse("plan_detail", args=[open_plan.pk]).encode() in response.content
+    assert reverse("plan_detail", args=[cancelled_plan.pk]).encode() in response.content
+    assert b"Your plan" in response.content
+    assert b"Cancelled" in response.content
 
 
 # WHY: Checks that registration http creates unverified profile without authenticating so a future change cannot quietly break it.
@@ -145,6 +177,9 @@ def test_sign_in_http_uses_generic_failure_and_only_safe_local_next():
     )
     assert external_response.status_code == 302
     assert external_response.url == reverse("home")
+    home_response = client.get(reverse("home"))
+    assert home_response.status_code == 302
+    assert home_response.url == reverse("plan_list")
 
 
 # WHY: Checks that profile edit http changes only owner fields and clears availability so a future change cannot quietly break it.
@@ -161,7 +196,7 @@ def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
 
     get_response = client.get(reverse("profile_edit"))
     assert get_response.status_code == 200
-    assert b"Free now" in get_response.content
+    assert b"Open to company" in get_response.content
     assert b"Available from" in get_response.content
     assert all(
         label in get_response.content

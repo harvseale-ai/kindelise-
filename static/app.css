@@ -29,55 +29,108 @@
 
 /* # WHY: Defines the shared colours once so every page and selectable colour theme stays consistent. */
 :root {
+  color-scheme: light;
+  --ink: #1B1D1B;
+  --muted: #686E6A;
+  --page: #F7F8F6;
+  --surface: #FFFFFF;
+  --soft: #E7EFE9;
+  --accent: #5F806B;
+  --accent-strong: #3E634B;
+  --border: #E2E5E1;
+  --danger: #A44147;
+  --focus: #A76724;
+  --success: #2F6B46;
+  --on-accent: #FFFFFF;
+  --control: #F1F4F1;
+  --hover: #DCE9DF;
+  --border-strong: #C7CEC8;
+  --image-ink: #F7F8F6;
+  --image-muted: #D7DDD8;
+  --success-surface: #EAF5ED;
+  --warning-border: #E7D2AD;
+  --warning-ink: #71440F;
+  --warning-surface: #FFF5E6;
+  --danger-surface: #FBECEE;
+  --full: #9A5B00;
+  --full-border: #D79A42;
+  --full-surface: #FFF1DC;
+  --pending: #685D7C;
+  --pending-border: #BDB2CD;
+  --pending-surface: #F1EDF6;
+  --nav-surface: rgba(255, 255, 255, .96);
+  --elevated-surface: rgba(255, 255, 255, .97);
+  --notice-surface: rgba(255, 255, 255, .84);
+  --navigation-glass: rgba(255, 255, 255, .78);
+  --navigation-active: rgba(255, 255, 255, .58);
+  --glass-highlight: rgba(255, 255, 255, .78);
+  --photo-control: rgba(27, 29, 27, .48);
+  --photo-control-hover: rgba(27, 29, 27, .82);
+  --photo-line: rgba(247, 248, 246, .34);
+  --photo-line-hover: rgba(247, 248, 246, .62);
+  --shadow-soft: rgba(27, 29, 27, .06);
+  --shadow: rgba(27, 29, 27, .12);
+  --shadow-strong: rgba(27, 29, 27, .22);
+  --photo-scrim: linear-gradient(transparent, rgba(0, 0, 0, .76));
+  --card-scrim: linear-gradient(transparent, rgba(0, 0, 0, .92));
+  --image-chip-surface: rgba(25, 25, 30, .88);
+  --image-highlight: rgba(255, 255, 255, .015);
+  --image-card-overlay: linear-gradient(to top, rgba(27, 29, 27, .78) 0%, rgba(27, 29, 27, .46) 45%, rgba(255, 255, 255, .06) 100%);
+  --image-card-overlay-hover: linear-gradient(to top, rgba(27, 29, 27, .72) 0%, rgba(27, 29, 27, .38) 45%, rgba(255, 255, 255, .03) 100%);
+  --placeholder-surface: linear-gradient(180deg, #F4F5F3 0%, #E7E9E7 100%);
+  --placeholder-figure: #C9CDCA;
+  --font-semibold: 600;
+  font-family: "Open Sans", Arial, sans-serif;
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
   --ink: #f3f3f5;
   --muted: #aaaab4;
   --page: #000;
   --surface: #111114;
   --soft: #19191e;
-  --accent: #aaaab4;
-  --accent-strong: #29292f;
+  --accent: #c3d9ca;
+  --accent-strong: #3f5547;
   --border: #3c3c46;
   --danger: #ffaaaa;
   --focus: #ffd166;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
-}
-
-/* # WHY: Each optional theme changes only shared colours, allowing every component rule to be reused. */
-:root[data-theme="blue"] {
-  --ink: #f4f6f8;
-  --muted: #aeb9c5;
-  --page: #0d1117;
-  --surface: #141a22;
-  --soft: #1c2530;
-  --accent: #c4d5e7;
-  --accent-strong: #34485d;
-  --border: #495a6d;
-  --focus: #a8c7e8;
-}
-
-:root[data-theme="pink"] {
-  --ink: #f8f3f5;
-  --muted: #c2afb8;
-  --page: #151012;
-  --surface: #1d171a;
-  --soft: #292126;
-  --accent: #e7c5d3;
-  --accent-strong: #59404b;
-  --border: #69525d;
-  --focus: #e4b7c9;
-}
-
-:root[data-theme="green"] {
-  --ink: #f2f7f4;
-  --muted: #adc0b5;
-  --page: #0f1411;
-  --surface: #171d19;
-  --soft: #212a24;
-  --accent: #c3d9ca;
-  --accent-strong: #3f5547;
-  --border: #53665a;
-  --focus: #acd0b8;
+  --success: #4fae73;
+  --on-accent: #FFFFFF;
+  --control: #24242a;
+  --hover: #202026;
+  --border-strong: #3a3a44;
+  --image-ink: #f3f3f5;
+  --image-muted: #c7c7cf;
+  --success-surface: #15251B;
+  --warning-border: #733300;
+  --warning-ink: #fff3c6;
+  --warning-surface: #352b13;
+  --danger-surface: #361d1d;
+  --full: #ffb300;
+  --full-border: #733300;
+  --full-surface: #301700;
+  --pending: #aaa4b9;
+  --pending-border: #454055;
+  --pending-surface: #24212c;
+  --nav-surface: rgba(17, 17, 20, .96);
+  --elevated-surface: rgba(17, 17, 20, .97);
+  --notice-surface: rgba(17, 17, 20, .84);
+  --navigation-glass: rgba(17, 17, 20, .78);
+  --navigation-active: rgba(255, 255, 255, .08);
+  --glass-highlight: rgba(255, 255, 255, .12);
+  --photo-control: rgba(10, 10, 12, .38);
+  --photo-control-hover: rgba(10, 10, 12, .78);
+  --photo-line: rgba(199, 199, 207, .25);
+  --photo-line-hover: rgba(199, 199, 207, .58);
+  --shadow-soft: rgba(0, 0, 0, .16);
+  --shadow: rgba(0, 0, 0, .22);
+  --shadow-strong: rgba(0, 0, 0, .45);
+  --photo-scrim: linear-gradient(transparent, rgba(0, 0, 0, .76));
+  --image-card-overlay: linear-gradient(to top, rgba(5, 5, 7, .98) 0%, rgba(7, 7, 10, .82) 45%, rgba(8, 8, 11, .38) 100%);
+  --image-card-overlay-hover: linear-gradient(to top, rgba(5, 5, 7, .96) 0%, rgba(7, 7, 10, .76) 45%, rgba(8, 8, 11, .3) 100%);
+  --placeholder-surface: var(--soft);
+  --placeholder-figure: var(--border-strong);
 }
 
 /* -----------------------------------------------------------------------------
@@ -159,8 +212,8 @@ summary:focus-visible {
   position: sticky;
   top: 0;
   z-index: 999;
-  min-height: 4rem;
-  padding: .8rem max(1rem, calc((100% - 48rem) / 2));
+  min-height: 3rem;
+  padding: .8rem max(1rem, calc((100% - 70rem) / 2));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -172,13 +225,19 @@ summary:focus-visible {
 .brand {
   color: var(--ink);
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: var(--font-semibold);
+  letter-spacing: -.01em;
   text-decoration: none;
 }
-/* # WHY: Keeps the colour, create-plan, guide and notification controls aligned as one top-bar group. */
+/* # WHY: Keeps the notification, colour-theme and guide controls aligned as one top-bar group. */
 .site-context { display: inline-flex; align-items: center; gap: 1rem; color: var(--muted); font-size: .8rem; text-align: right; }
 .site-context a,
-.site-theme-toggle { display: inline-flex; color: inherit; }
+.site-theme-toggle {
+  display: inline-flex;
+  color: inherit;
+  transform-origin: center;
+  transition: color .15s ease, transform .15s ease;
+}
 .site-theme-toggle {
   min-height: 0;
   padding: 0;
@@ -186,7 +245,12 @@ summary:focus-visible {
   border-radius: 0;
   background: transparent;
 }
-.site-theme-toggle:hover { background: transparent; color: var(--ink); }
+.site-context a:hover,
+:root[data-theme] .site-theme-toggle:hover {
+  background: transparent;
+  color: var(--ink);
+  transform: translateY(-1px) scale(1.06);
+}
 /* # WHY: Anchors the unread count to the notification bell rather than using extra header space. */
 .site-notification-link { position: relative; }
 .site-notification-count {
@@ -202,10 +266,10 @@ summary:focus-visible {
   background: var(--ink);
   color: var(--page);
   font-size: .62rem;
-  font-weight: 800;
+  font-weight: var(--font-semibold);
   line-height: 1;
 }
-.back-link { font-weight: 700; }
+.back-link { font-weight: var(--font-semibold); }
 
 /* -----------------------------------------------------------------------------
    PRIMARY NAVIGATION
@@ -219,33 +283,41 @@ summary:focus-visible {
   bottom: max(1rem, env(safe-area-inset-bottom));
   left: 50%;
   z-index: 999;
-  width: min(calc(100% - 2rem), 48rem);
+  width: min(90%, 43.2rem);
   margin: 0;
   transform: translateX(-50%);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: .35rem;
   padding: .35rem;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: .9rem;
-  background: rgba(17, 17, 20, .96);
-  box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .45);
+  background: var(--navigation-glass);
+  box-shadow: 0 .75rem 2rem var(--shadow-strong);
+  -webkit-backdrop-filter: blur(1.25rem) saturate(1.2);
+  backdrop-filter: blur(1.25rem) saturate(1.2);
 }
 .primary-navigation a {
   min-height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: .65rem;
   color: var(--muted);
   font-size: .9rem;
-  font-weight: 750;
+  font-weight: var(--font-semibold);
   text-decoration: none;
+  transform-origin: center;
+  transition: color .15s ease, transform .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.primary-navigation a:hover {
+  color: var(--ink);
+  transform: translateY(-1px) scale(1.06);
 }
 .primary-navigation a[aria-current="page"] {
-  border-color: var(--accent);
-  background: var(--soft);
+  background: var(--navigation-active);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 .25rem .8rem var(--shadow-soft);
   color: var(--ink);
 }
 
@@ -282,8 +354,8 @@ summary:focus-visible {
   padding: .85rem 1rem;
   border: 1px solid var(--focus);
   border-radius: .65rem;
-  background: #352b13;
-  color: #fff3c6;
+  background: var(--warning-surface);
+  color: var(--warning-ink);
 }
 
 /* ==========================================================================
@@ -302,7 +374,7 @@ summary:focus-visible {
   border: 1px solid var(--border);
   border-radius: 1rem;
   padding: clamp(1.1rem, 4vw, 2rem);
-  box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .22);
+  box-shadow: 0 .75rem 2rem var(--shadow);
 }
 .profile-image {
   display: block;
@@ -318,12 +390,13 @@ summary:focus-visible {
   margin: 0 0 .25rem;
   color: var(--accent);
   font-size: .8rem;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  font-weight: var(--font-semibold);
+  letter-spacing: normal;
+  text-transform: none;
 }
-h1 { margin: 0 0 1rem; font-size: clamp(1.8rem, 7vw, 2.5rem); line-height: 1.1; }
-h2 { margin: 1.75rem 0 .6rem; font-size: 1.15rem; }
+h1 { margin: 0 0 1rem; font-size: clamp(1.8rem, 7vw, 2.5rem); font-weight: var(--font-semibold); line-height: 1.1; }
+h2 { margin: 1.75rem 0 .6rem; font-size: 1.15rem; font-weight: var(--font-semibold); }
+h3, h4, h5, h6, strong, b { font-weight: var(--font-semibold); }
 
 /* -----------------------------------------------------------------------------
    BASE FORM CONTROLS
@@ -332,18 +405,18 @@ h2 { margin: 1.75rem 0 .6rem; font-size: 1.15rem; }
 
 /* # WHY: Gives every basic form a usable starting layout before a page adds specific styling. */
 form p { margin: 1rem 0; }
-label { display: block; margin-bottom: .35rem; font-weight: 700; }
+label { display: block; margin-bottom: .35rem; font-weight: var(--font-semibold); }
 input, select, textarea {
   width: 100%;
   min-height: 2.9rem;
   padding: .7rem .75rem;
-  border: 2px solid #3c3c46;
+  border: 2px solid var(--border-strong);
   border-radius: .55rem;
-  background: #f3f3f5;
-  color: #17171a;
+  background: var(--control);
+  color: var(--ink);
   font: inherit;
 }
-textarea { min-height: 7rem; resize: vertical; }
+textarea { min-height: 7rem; resize: none; }
 /* # WHY: Keeps checkboxes compact instead of inheriting the full width of text fields. */
 input[type="checkbox"] { width: 1.4rem; min-height: 1.4rem; margin: 0; accent-color: var(--accent-strong); }
 select[multiple] { min-height: 10rem; }
@@ -368,14 +441,21 @@ select[multiple] { min-height: 10rem; }
   cursor: pointer;
 }
 .interest-checkboxes input[type="checkbox"],
-.area-checkboxes input[type="checkbox"] { flex: 0 0 auto; }
+.interest-checkboxes input[type="radio"],
+.area-checkboxes input[type="checkbox"] {
+  width: 1.4rem;
+  min-height: 1.4rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--accent-strong);
+}
 /* # KEYWORD: :has() — selects a parent when a matching element exists inside it. */
 /* # WHY: Lets the whole choice row show its selected state, not only the small checkbox. */
 .interest-checkboxes label:has(input:checked),
 .area-checkboxes label:has(input:checked) {
   border-color: var(--accent);
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* --- Discovery filter controls shared by desktop and mobile layouts ---------- */
@@ -395,7 +475,7 @@ select[multiple] { min-height: 10rem; }
   background: var(--page);
   color: var(--ink);
   scrollbar-width: none;
-  box-shadow: 0 .65rem 1.5rem rgba(0, 0, 0, .22);
+  box-shadow: 0 .65rem 1.5rem var(--shadow);
 }
 .filter-pill-scroller::-webkit-scrollbar { display: none; }
 .filter-row-label,
@@ -410,7 +490,7 @@ select[multiple] { min-height: 10rem; }
   background: var(--soft);
   color: var(--ink);
   font: inherit;
-  font-weight: 750;
+  font-weight: var(--font-semibold);
   white-space: nowrap;
 }
 .filter-row-label { gap: .55rem; padding-inline: .8rem 1rem; text-decoration: none; cursor: pointer; }
@@ -421,9 +501,10 @@ select[multiple] { min-height: 10rem; }
 }
 .filter-trigger:hover,
 .filter-trigger:focus-visible,
+.filter-trigger.is-filtered,
 .filter-trigger[aria-expanded="true"] {
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
 }
 /* # WHY: Separates an open filter from both the filter row and the results below it. */
 .discovery-filter-panel {
@@ -434,13 +515,15 @@ select[multiple] { min-height: 10rem; }
   border-radius: 1rem;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 .75rem 2rem rgba(0, 0, 0, .28);
+  box-shadow: 0 .75rem 2rem var(--shadow-strong);
 }
 /* # WHY: JavaScript adds this class only after it can safely control which panel is visible. */
 .filter-panels-ready .discovery-filter-panel { display: none; }
 .filter-panels-ready .discovery-filter-panel.is-active { display: block; }
 .discovery-filter-panel > fieldset {
   margin: 0;
+  border: 0;
+  background: var(--surface);
 }
 .discovery-filter-panel > .action-row { margin-top: 1rem; }
 .availability-filter-fieldset .checkbox-row { margin: 0; }
@@ -492,9 +575,9 @@ select[multiple] { min-height: 10rem; }
 /* # WHY: Keeps guidance quieter than labels while keeping errors visible and free of list bullets. */
 .helptext { display: block; color: var(--muted); font-size: .875rem; margin-top: .25rem; font-weight: 400; }
 .helptext ul { padding-left: 1.25rem; }
-.errorlist, .error-summary { color: var(--danger); font-weight: 700; }
+.errorlist, .error-summary { color: var(--danger); font-weight: var(--font-semibold); }
 .errorlist { padding-left: 0; list-style: none; }
-.error-summary { padding: .75rem 1rem; background: #361d1d; }
+.error-summary { padding: .75rem 1rem; background: var(--danger-surface); }
 
 button, .button, summary {
   min-height: 2.75rem;
@@ -509,21 +592,21 @@ button, .button {
   border-radius: 999px;
   padding: .65rem 1.1rem;
   background: var(--accent-strong);
-  color: #fff;
+  color: var(--on-accent);
   font: inherit;
-  font-weight: 750;
+  font-weight: var(--font-semibold);
   text-align: center;
   text-decoration: none;
   cursor: pointer;
 }
-button:hover, .button:hover { background: #34343d; }
+button:hover, .button:hover { background: var(--border-strong); }
 button:disabled { cursor: wait; opacity: .7; }
 .secondary { background: transparent; border-color: var(--accent); color: var(--accent); }
 .danger { border-color: var(--danger); color: var(--danger); }
 .action-row { display: flex; flex-wrap: wrap; gap: .75rem; }
-summary { display: flex; align-items: center; width: fit-content; cursor: pointer; font-weight: 750; }
+summary { display: flex; align-items: center; width: fit-content; cursor: pointer; font-weight: var(--font-semibold); }
 fieldset { margin-block: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: .7rem; }
-legend { padding-inline: .35rem; font-weight: 750; }
+legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 
 /* # KEYWORD: @keyframes — describes the starting appearance of a named movement. */
 /* # WHY: Uses one panel shape for page state while allowing temporary messages to enter and leave gently. */
@@ -536,13 +619,17 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .state-panel { border-left: .3rem solid var(--accent); }
 .message {
   margin: .5rem 0 0;
-  border-color: #4fae73;
-  color: #4fae73;
+  border: 0;
+  background: var(--notice-surface);
+  box-shadow: 0 .75rem 2rem var(--shadow-strong);
+  -webkit-backdrop-filter: blur(1rem) saturate(1.15);
+  backdrop-filter: blur(1rem) saturate(1.15);
+  color: var(--success);
   pointer-events: auto;
   animation: message-pop-in .18s ease-out;
   transition: opacity .18s ease, transform .18s ease;
 }
-.message.error { border-color: #ff6b72; color: #ff6b72; }
+.message.error { color: var(--danger); }
 .message.is-dismissing { opacity: 0; transform: translateX(1rem); }
 @keyframes message-pop-in {
   from { opacity: 0; transform: translateX(1rem); }
@@ -574,38 +661,40 @@ legend { padding-inline: .35rem; font-weight: 750; }
 
 /* # WHY: Keeps discovery controls and square profile-image cards within the colours used elsewhere. */
 .discovery-route {
-  background: #000;
-  color: #f3f3f5;
+  background: var(--page);
+  color: var(--ink);
 }
-.discovery-route .filter-pill-scroller {
-  border-color: #292930;
-  background: #000;
-  color: #f3f3f5;
+:is(.discovery-route, .plans-route) .filter-pill-scroller {
+  border-color: var(--border-strong);
+  background: var(--page);
+  color: var(--ink);
   box-shadow: none;
 }
-.discovery-route .filter-row-label,
-.discovery-route .filter-trigger {
-  border-color: #34343d;
-  background: #19191e;
-  color: #aaaab4;
+:is(.discovery-route, .plans-route) .filter-row-label,
+:is(.discovery-route, .plans-route) .filter-trigger {
+  border-color: var(--border-strong);
+  background: var(--soft);
+  color: var(--muted);
 }
-.discovery-route .filter-trigger:hover,
-.discovery-route .filter-trigger:focus-visible,
-.discovery-route .filter-trigger[aria-expanded="true"] {
-  background: #29292f;
-  color: #f3f3f5;
+:is(.discovery-route, .plans-route) .filter-trigger:hover,
+:is(.discovery-route, .plans-route) .filter-trigger:focus-visible,
+:is(.discovery-route, .plans-route) .filter-trigger.is-filtered,
+:is(.discovery-route, .plans-route) .filter-trigger[aria-expanded="true"] {
+  background: var(--control);
+  color: var(--ink);
 }
-.discovery-route .discovery-filter-panel {
-  border-color: #292930;
-  background: #111114;
+:is(.discovery-route, .plans-route) .discovery-filter-panel {
+  border-color: var(--border-strong);
+  background: var(--surface);
 }
-.discovery-route .interest-checkboxes label,
-.discovery-route .interest-checkboxes label:has(input:checked) {
+:is(.discovery-route, .plans-route) .interest-checkboxes label,
+:is(.discovery-route, .plans-route) .interest-checkboxes label:has(input:checked) {
   background: transparent;
+  color: var(--ink);
   font-weight: 400;
 }
 .discovery-route input[name="available_now"]:checked {
-  accent-color: #4fae73;
+  accent-color: var(--success);
 }
 /* # KEYWORD: aspect-ratio — keeps width and height in the stated proportion as the grid changes size. */
 /* # WHY: Makes every discovery result a consistent square card regardless of its text length. */
@@ -617,9 +706,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: flex;
   align-items: flex-end;
   padding: 1rem;
-  border-color: #292930;
+  border-color: var(--border-strong);
   border-radius: 1rem;
-  background: #19191e;
+  background: var(--soft);
 }
 /* # KEYWORD: pseudo-element — ::after creates a decorative layer without adding extra template markup. */
 /* # WHY: Darkens the lower image so names and profile details remain readable over different photos. */
@@ -628,7 +717,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   position: absolute;
   z-index: -1;
   inset: 28% 0 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, .92));
+  background: var(--card-scrim);
 }
 .discovery-profile-card > div {
   width: 100%;
@@ -638,7 +727,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .discovery-profile-card strong a {
   display: block;
   overflow: hidden;
-  color: #f3f3f5;
+  color: var(--ink);
   text-decoration: none;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -647,7 +736,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: -webkit-box;
   overflow: hidden;
   margin: .25rem 0 .6rem;
-  color: #aaaab4;
+  color: var(--muted);
   font-size: .8rem;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -657,13 +746,19 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .discovery-profile-card .chips li {
   padding: .2rem .5rem;
-  border-color: #3a3a43;
-  background: rgba(25, 25, 30, .88);
-  color: #c7c7cf;
+  border-color: var(--border-strong);
+  background: var(--image-chip-surface);
+  color: var(--image-muted);
   font-size: .68rem;
 }
 .discovery-profile-card .chips li:nth-child(n + 3) {
   display: none;
+}
+.discovery-profile-card--with-image :is(strong, strong a) {
+  color: var(--image-ink);
+}
+.discovery-profile-card--with-image p {
+  color: var(--image-muted);
 }
 
 @media (max-width: 35rem) {
@@ -671,7 +766,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   .site-header { min-height: 3.5rem; }
   .site-context { max-width: 9rem; }
   .page-shell { width: 100%; margin-block: 0; padding-bottom: calc(6.5rem + env(safe-area-inset-bottom)); }
-  .discovery-route .discovery-controls { padding-top: 1rem; }
+  :is(.discovery-route, .plans-route) .discovery-controls { padding-top: 1rem; }
   .page-shell > .card { border-inline: 0; border-radius: 0; box-shadow: none; }
   .primary-navigation {
     padding: .4rem;
@@ -691,17 +786,17 @@ legend { padding-inline: .35rem; font-weight: 750; }
 
 /* # WHY: Gives the profile-edit page stable field, image, availability, and verification styling. */
 .profile-edit-route {
-  background: #000;
-  color: #f3f3f5;
+  background: var(--page);
+  color: var(--ink);
 }
 .profile-edit-page {
-  --edit-panel: #19191d;
-  --edit-control: #24242a;
-  --edit-line: #2d2d34;
-  --edit-muted: #9696a1;
-  --edit-green: #555561;
+  --edit-panel: var(--soft);
+  --edit-control: var(--control);
+  --edit-line: var(--border-strong);
+  --edit-muted: var(--muted);
+  --edit-green: var(--success);
   min-height: 100vh;
-  background: #000;
+  background: var(--page);
 }
 .profile-edit-header {
   min-height: 7.75rem;
@@ -709,7 +804,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
   flex-direction: column;
   justify-content: flex-end;
   padding: .9rem .85rem 1.05rem;
-  border-bottom: 1px solid #202026;
+  border-bottom: 1px solid var(--control);
+  background: transparent;
 }
 .profile-edit-header .back-link {
   width: fit-content;
@@ -731,10 +827,10 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .profile-edit-form > .error-summary {
   margin: 0;
-  border: 1px solid #71343a;
+  border: 1px solid var(--danger);
   border-radius: .75rem;
-  background: #261518;
-  color: #ff9aa0;
+  background: var(--danger-surface);
+  color: var(--danger);
   font-size: .8rem;
 }
 .profile-edit-field {
@@ -747,9 +843,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .profile-edit-field > legend {
   margin: 0 0 .6rem;
   padding: 0;
-  color: #f3f3f5;
+  color: var(--ink);
   font-size: .78rem;
-  font-weight: 750;
+  font-weight: var(--font-semibold);
   line-height: 1.3;
 }
 .profile-edit-field > .helptext {
@@ -765,7 +861,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .profile-edit-page .errorlist {
   margin: .65rem 0 0;
   padding: 0;
-  color: #ff6b72;
+  color: var(--danger);
   font-size: .72rem;
   list-style: none;
 }
@@ -777,8 +873,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .verification-panel {
   border: 1px solid var(--edit-line);
   border-radius: .9rem;
-  background: #18181c;
-  box-shadow: 0 .45rem 1.4rem rgba(0, 0, 0, .16);
+  background: var(--soft);
+  box-shadow: 0 .45rem 1.4rem var(--shadow-soft);
 }
 
 /* --- Profile image ---------------------------------------------------------- */
@@ -800,10 +896,10 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: grid;
   place-items: center;
   overflow: hidden;
-  border: 1px solid #393943;
+  border: 1px solid var(--border-strong);
   border-radius: 50%;
-  background: #222229;
-  color: #797984;
+  background: var(--control);
+  color: var(--muted);
   font-size: 1.5rem;
 }
 .profile-image-preview img {
@@ -828,9 +924,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: block;
   width: fit-content;
   margin: 0 0 .35rem;
-  color: #dedee3;
+  color: var(--ink);
   font-size: .76rem;
-  font-weight: 700;
+  font-weight: var(--font-semibold);
   cursor: pointer;
 }
 .profile-field-panel {
@@ -855,10 +951,10 @@ legend { padding-inline: .35rem; font-weight: 750; }
   min-height: 2.75rem;
   padding: .65rem .75rem;
   font-size: .78rem;
-  border: 1px solid #383842;
+  border: 1px solid var(--border-strong);
   border-radius: .75rem;
   background: var(--edit-control);
-  color: #f1f1f4;
+  color: var(--ink);
   box-shadow: none;
 }
 .profile-edit-page textarea {
@@ -866,7 +962,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .profile-edit-page input::placeholder,
 .profile-edit-page textarea::placeholder {
-  color: #72727d;
+  color: var(--muted);
 }
 .biography-field > h2 {
   margin-bottom: .85rem;
@@ -919,12 +1015,12 @@ legend { padding-inline: .35rem; font-weight: 750; }
   justify-content: center;
   gap: 0;
   padding: .48rem .78rem;
-  border: 1px solid #3e3e48;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #050506;
-  color: #9b9ba7;
+  background: var(--surface);
+  color: var(--muted);
   font-size: .68rem;
-  font-weight: 650;
+  font-weight: var(--font-semibold);
   text-align: center;
 }
 .profile-interests-field .interest-checkboxes input {
@@ -940,9 +1036,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
   content: none;
 }
 .profile-interests-field .interest-checkboxes label:has(input:checked) {
-  border-color: #f3f3f5;
-  background: #f3f3f5;
-  color: #161619;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--page);
 }
 .profile-interests-field .interest-checkboxes input:checked::before {
   content: none;
@@ -976,8 +1072,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
   gap: 1rem;
   margin: 0;
   padding: 1rem 1.05rem;
-  border-bottom: 1px solid #292930;
-  color: #9b9ba6;
+  border-bottom: 1px solid var(--border-strong);
+  color: var(--muted);
   font-size: .92rem;
   cursor: pointer;
 }
@@ -990,23 +1086,23 @@ legend { padding-inline: .35rem; font-weight: 750; }
   width: 1.3rem;
   min-height: 1.3rem;
   margin: 0;
-  border: 2px solid #474751;
+  border: 2px solid var(--border-strong);
   border-radius: .35rem;
   background: transparent;
 }
 .profile-choice-list input[type="radio"]:checked,
 .profile-choice-list input[type="checkbox"]:checked {
-  border-color: #f3f3f5;
-  background: #f3f3f5;
+  border-color: var(--ink);
+  background: var(--ink);
   box-shadow: inset 0 0 0 .3rem var(--edit-panel);
 }
 .profile-choice-list label:has(input:checked) {
-  color: #f0f0f3;
+  color: var(--ink);
 }
 .profile-choice-list label:hover,
 .profile-interests-field .interest-checkboxes label:hover,
 .availability-choice-chips span:hover {
-  border-color: #5b5b67;
+  border-color: var(--border-strong);
 }
 
 /* --- Availability ----------------------------------------------------------- */
@@ -1031,11 +1127,11 @@ legend { padding-inline: .35rem; font-weight: 750; }
   justify-content: space-between;
   gap: 1rem;
   padding: 1.15rem 1rem;
-  border-bottom: 1px solid #292930;
+  border-bottom: 1px solid var(--border-strong);
 }
 .free-now-row label {
   margin: 0 0 .4rem;
-  color: #dedee3;
+  color: var(--ink);
   font-size: .92rem;
 }
 .free-now-row .helptext {
@@ -1065,9 +1161,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .availability-switch-track {
   position: absolute;
   inset: 0;
-  border: 1px solid #4b4b55;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #2b2b32;
+  background: var(--control);
   transition: border-color .15s ease, background .15s ease;
 }
 .availability-switch-track::before {
@@ -1078,13 +1174,13 @@ legend { padding-inline: .35rem; font-weight: 750; }
   top: .14rem;
   left: .16rem;
   border-radius: 50%;
-  background: #f3f3f5;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+  background: var(--ink);
+  box-shadow: 0 1px 3px var(--shadow-strong);
   transition: transform .15s ease;
 }
 .free-now-row .availability-toggle:checked + .availability-switch-track {
-  border-color: #4fae73;
-  background: #4fae73;
+  border-color: var(--success);
+  background: var(--success);
 }
 .free-now-row .availability-toggle:checked + .availability-switch-track::before {
   transform: translateX(1.43rem);
@@ -1125,16 +1221,16 @@ legend { padding-inline: .35rem; font-weight: 750; }
   align-items: center;
   gap: .35rem;
   padding: .55rem .95rem;
-  border: 1px solid #35353e;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #151519;
-  color: #73737e;
+  background: var(--control);
+  color: var(--muted);
   font-size: .78rem;
 }
 .availability-choice-chips input:checked + span {
-  border-color: #f3f3f5;
-  background: #f3f3f5;
-  color: #17171a;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--page);
 }
 .availability-status-note {
   margin: 1.45rem 0 0;
@@ -1142,13 +1238,6 @@ legend { padding-inline: .35rem; font-weight: 750; }
   font-size: .82rem;
   line-height: 1.4;
 }
-.availability-status-note::before {
-  content: "●";
-  margin-right: .45rem;
-  font-size: .45rem;
-  vertical-align: .1rem;
-}
-
 /* --- Verification and save action ------------------------------------------ */
 
 /* # WHY: Separates staff verification information from fields the account owner can edit. */
@@ -1170,7 +1259,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .verification-panel strong {
   display: block;
-  color: #dedee3;
+  color: var(--ink);
   font-size: .72rem;
   line-height: 1.35;
 }
@@ -1185,14 +1274,14 @@ legend { padding-inline: .35rem; font-weight: 750; }
   min-height: 2.8rem;
   border: 0;
   border-radius: .8rem;
-  background: #f1f1f3;
-  color: #17171a;
+  background: var(--ink);
+  color: var(--page);
   font-size: .72rem;
-  font-weight: 750;
-  box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .22);
+  font-weight: var(--font-semibold);
+  box-shadow: 0 .5rem 1.5rem var(--shadow);
 }
 .profile-edit-form > button[type="submit"]:hover {
-  background: #fff;
+  background: var(--on-accent);
 }
 
 /* --- Account access and private-report forms -------------------------------- */
@@ -1215,7 +1304,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   margin-top: 1.35rem;
   border-color: var(--edit-line);
   border-left-width: 1px;
-  background: #18181c;
+  background: var(--soft);
 }
 .brand-form-footer {
   margin-block: .5rem 0;
@@ -1223,13 +1312,13 @@ legend { padding-inline: .35rem; font-weight: 750; }
   color: var(--edit-muted);
   font-size: .76rem;
 }
-.brand-form-footer a:not(.button) { color: #dedee3; }
+.brand-form-footer a:not(.button) { color: var(--ink); }
 .brand-form-footer > .button {
   width: 100%;
   border: 0;
   border-radius: .8rem;
-  background: #f1f1f3;
-  color: #17171a;
+  background: var(--ink);
+  color: var(--page);
 }
 
 /* --- Plan create and edit form ---------------------------------------------- */
@@ -1237,6 +1326,132 @@ legend { padding-inline: .35rem; font-weight: 750; }
 /* # WHY: Reuses the profile form proportions and changes only the fields unique to a plan. */
 .plan-details-form {
   padding-bottom: 2rem;
+}
+.plan-compact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, .35fr);
+  gap: 1rem;
+}
+.plan-compact-row > * { min-width: 0; }
+.plan-form-field--idea textarea {
+  min-height: 12rem;
+  padding: 1rem;
+  border-width: 2px;
+  border-radius: 1rem;
+  line-height: 1.5;
+}
+.plan-create-quick-fields { align-items: start; }
+.plan-create-quick-fields .plan-form-field--capacity .profile-field-panel { max-width: none; }
+.plan-draft-review .plan-compact-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.plan-generate-button {
+  width: 100%;
+  min-height: 3rem;
+}
+.plan-generation-status { margin-top: .65rem; }
+.plan-draft-review {
+  display: grid;
+  gap: 1.65rem;
+  padding: 1.2rem;
+  border-radius: 1.1rem;
+  background: var(--notice-surface);
+  box-shadow: 0 .7rem 2rem var(--shadow-soft);
+}
+.plan-draft-review[hidden] { display: none; }
+.plan-draft-review > h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+}
+.plan-draft-card-preview {
+  min-height: 15rem;
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: var(--control);
+  box-shadow: 0 .65rem 1.8rem var(--shadow-soft);
+}
+.plan-draft-card-preview::after {
+  content: "";
+  position: absolute;
+  inset: 25% 0 0;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, .78));
+  pointer-events: none;
+}
+.plan-draft-card-preview .plan-metadata-preview {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+.plan-image-dropzone {
+  position: absolute;
+  z-index: 2;
+  inset: .85rem;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: .3rem;
+  padding: 1rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: .8rem;
+  background: var(--notice-surface);
+  color: var(--muted);
+  text-align: center;
+  transition: transform .16s ease, background-color .16s ease;
+}
+.plan-image-dropzone[hidden] { display: none; }
+.plan-image-dropzone.is-dragging {
+  transform: scale(1.01);
+  background: var(--soft);
+}
+.plan-image-dropzone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.plan-image-dropzone > span { font-size: 1.5rem; }
+.plan-image-dropzone > strong { color: var(--ink); }
+.plan-image-dropzone > small { font-size: .72rem; }
+.plan-edit-image-preview {
+  min-height: 12rem;
+}
+.plan-image-dropzone--edit {
+  min-height: 7rem;
+  position: relative;
+  inset: auto;
+  margin-top: .75rem;
+}
+.plan-draft-card-content {
+  position: absolute;
+  z-index: 1;
+  inset: auto 1rem 1rem;
+  display: grid;
+  gap: .35rem;
+  color: #fff;
+}
+.plan-draft-card-content strong { font-size: 1.2rem; }
+.plan-draft-card-content span { font-size: .82rem; }
+.plan-draft-card-content span:last-child { opacity: .82; }
+.plan-draft-review > button[type="submit"] {
+  width: 100%;
+  min-height: 2.8rem;
+  border: 0;
+  border-radius: .8rem;
+  background: var(--ink);
+  color: var(--page);
+  font-size: .72rem;
+  font-weight: var(--font-semibold);
+  box-shadow: 0 .5rem 1.5rem var(--shadow);
 }
 .plan-form-field > h2 label {
   margin: 0;
@@ -1271,13 +1486,17 @@ legend { padding-inline: .35rem; font-weight: 750; }
   gap: .75rem;
   margin-top: .65rem;
 }
+@media (max-width: 35rem) {
+  .plan-compact-row { grid-template-columns: 1fr; }
+  .plan-draft-review { padding: 1rem .85rem; }
+}
 /* # WHY: Keeps the fetched image and status beside the URL without preventing manual place entry. */
 .plan-metadata-actions button {
   min-height: 2.35rem;
   flex: 0 0 auto;
   padding: .5rem .9rem;
-  border-color: #3c3c46;
-  color: #c3c3cb;
+  border-color: var(--border-strong);
+  color: var(--muted);
   font-size: .7rem;
 }
 .plan-metadata-actions .helptext {
@@ -1298,14 +1517,154 @@ legend { padding-inline: .35rem; font-weight: 750; }
 
 /* # WHY: Builds the message list from the standard heading, button, filter, and profile-image pieces. */
 .inbox-route {
-  background: #000;
-  color: #f3f3f5;
+  background: var(--page);
+  color: var(--ink);
 }
 .inbox-page {
   overflow: hidden;
-  border: 1px solid #292930;
+  border: 1px solid var(--border-strong);
   border-radius: 1rem;
-  background: #000;
+  background: var(--page);
+}
+.inbox-thread-pane {
+  display: none;
+}
+.inbox-thread-empty {
+  min-height: 36rem;
+  display: grid;
+  place-content: center;
+  padding: 2rem;
+  border-radius: 1rem;
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+  box-shadow: 0 .75rem 2rem var(--shadow);
+}
+.inbox-thread-empty strong {
+  color: var(--ink);
+}
+.inbox-thread-empty p {
+  margin: .4rem 0 0;
+}
+
+@media (max-width: 55.999rem) {
+  /* # WHY: Keeps the established one-page mobile conversation flow while desktop shows both panes together. */
+  .messages-has-selection .inbox-list-pane {
+    display: none;
+  }
+  .messages-has-selection .inbox-thread-pane {
+    display: block;
+  }
+}
+
+@media (min-width: 56rem) {
+  /* # WHY: Reuses the established desktop master-detail width for the inbox list and selected thread. */
+  .page-shell:has(.messages-split-layout) {
+    width: min(100% - 2rem, 70rem);
+  }
+  .inbox-page:has(.messages-split-layout) {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+  .messages-split-layout {
+    display: grid;
+    grid-template-columns: minmax(18rem, 21rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 1rem;
+  }
+  .inbox-list-pane,
+  .inbox-thread-pane {
+    min-width: 0;
+  }
+  .inbox-list-pane {
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: 0 .75rem 2rem var(--shadow-soft);
+  }
+  .inbox-thread-pane {
+    display: block;
+  }
+  .inbox-list-pane .plans-page-header {
+    min-height: 6rem;
+    padding: 1.25rem 1rem;
+  }
+  .inbox-list-pane .plans-page-header h1 {
+    font-size: 1.8rem;
+  }
+  .inbox-list-pane .plans-create-button {
+    min-width: 0;
+    min-height: 2.5rem;
+    padding-inline: .8rem;
+    font-size: .72rem;
+  }
+  .inbox-list-pane .inbox-intro {
+    padding: 1rem;
+  }
+  .inbox-list-pane .inbox-intro > p {
+    font-size: .75rem;
+  }
+  .inbox-list-pane .inbox-conversation-row {
+    min-height: 5rem;
+    grid-template-columns: 3rem minmax(0, 1fr) auto;
+    gap: .75rem;
+    padding: .75rem 1rem;
+  }
+  .inbox-list-pane .inbox-avatar.profile-image {
+    width: 3rem;
+    height: 3rem;
+  }
+  .inbox-list-pane .inbox-avatar-placeholder::before {
+    width: 1.2rem;
+    height: 1.2rem;
+    top: .65rem;
+  }
+  .inbox-list-pane .inbox-avatar-placeholder span {
+    width: 2.2rem;
+    height: 1.2rem;
+  }
+  .inbox-list-pane .inbox-conversation-copy strong {
+    font-size: .9rem;
+  }
+  .inbox-list-pane :is(.inbox-conversation-copy .state-label, .inbox-conversation-row time) {
+    font-size: .65rem;
+  }
+  .inbox-conversation-row.is-selected {
+    background: var(--soft);
+  }
+  .inbox-thread-pane .conversation-page {
+    height: calc(100vh - 12rem);
+    height: calc(100dvh - 12rem);
+    min-height: 30rem;
+    position: sticky;
+    top: 1rem;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 .75rem 2rem var(--shadow);
+  }
+  .inbox-thread-pane .conversation-page-header {
+    position: relative;
+    top: auto;
+    flex: 0 0 auto;
+  }
+  .inbox-thread-pane .conversation-page-header > .back-link {
+    display: none;
+  }
+  .inbox-thread-pane .conversation-thread {
+    min-height: 0;
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+  .inbox-thread-pane .conversation-composer {
+    position: relative;
+    bottom: auto;
+    flex: 0 0 auto;
+  }
 }
 
 /* --- Inbox interest filters ------------------------------------------------ */
@@ -1313,7 +1672,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 /* # WHY: Keeps the interest filters and explanation together below the shared page heading. */
 .inbox-intro {
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid #202026;
+  border-bottom: 1px solid var(--control);
 }
 .inbox-interest-strip {
   flex-wrap: nowrap;
@@ -1328,9 +1687,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .inbox-interest-strip li {
   flex: 0 0 auto;
   padding: 0;
-  border-color: #34343d;
-  background: #202026;
-  color: #aaaab4;
+  border-color: var(--border-strong);
+  background: var(--control);
+  color: var(--muted);
 }
 .inbox-interest-strip a {
   display: block;
@@ -1339,14 +1698,14 @@ legend { padding-inline: .35rem; font-weight: 750; }
   text-decoration: none;
 }
 .inbox-interest-strip .is-active {
-  border-color: #f3f3f5;
-  background: #f3f3f5;
-  color: #17171a;
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--page);
 }
 .inbox-intro > p {
   max-width: 42rem;
   margin: 0;
-  color: #777782;
+  color: var(--muted);
   font-size: 1rem;
   line-height: 1.55;
 }
@@ -1360,7 +1719,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   list-style: none;
 }
 .inbox-conversation-list > li {
-  border-bottom: 1px solid #202026;
+  border-bottom: 1px solid var(--control);
 }
 .inbox-conversation-row {
   min-height: 8rem;
@@ -1369,19 +1728,19 @@ legend { padding-inline: .35rem; font-weight: 750; }
   align-items: center;
   gap: 1.25rem;
   padding: 1.25rem 2rem;
-  color: #f3f3f5;
+  color: var(--ink);
   text-decoration: none;
 }
 /* # WHY: Keeps image, person details and latest time in predictable columns as names change length. */
 .inbox-conversation-row:hover {
-  background: #101013;
+  background: var(--surface);
 }
 .inbox-avatar.profile-image {
   width: 4.5rem;
   height: 4.5rem;
   margin: 0;
   border: 0;
-  background: #303039;
+  background: var(--border-strong);
 }
 .inbox-avatar-placeholder {
   position: relative;
@@ -1394,7 +1753,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   left: 50%;
   transform: translateX(-50%);
   display: block;
-  background: #55555f;
+  background: var(--border-strong);
 }
 .inbox-avatar-placeholder::before {
   content: "";
@@ -1416,20 +1775,20 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .inbox-conversation-copy strong {
   overflow: hidden;
-  color: #f3f3f5;
+  color: var(--ink);
   font-size: 1.15rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .inbox-conversation-copy .state-label,
 .inbox-conversation-row time {
-  color: #777782;
+  color: var(--muted);
 }
 .inbox-conversation-row time {
   align-self: start;
   padding-top: .35rem;
   font-size: .85rem;
-  font-weight: 700;
+  font-weight: var(--font-semibold);
 }
 .inbox-conversation-list .empty-state {
   min-height: 14rem;
@@ -1461,14 +1820,14 @@ legend { padding-inline: .35rem; font-weight: 750; }
 
 /* # WHY: Reuses message-list images and shared controls while keeping conversation text open and uncluttered. */
 .conversation-route {
-  background: #000;
-  color: #f3f3f5;
+  background: var(--page);
+  color: var(--ink);
 }
 .conversation-page {
   overflow: visible;
-  border: 1px solid #292930;
+  border: 1px solid var(--border-strong);
   border-radius: 1rem;
-  background: #0a0a0c;
+  background: var(--surface);
 }
 /* # WHY: Keeps the person's identity and safety control visible while messages move underneath. */
 .conversation-page-header {
@@ -1480,15 +1839,15 @@ legend { padding-inline: .35rem; font-weight: 750; }
   align-items: center;
   gap: .8rem 1rem;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid #292930;
+  border-bottom: 1px solid var(--border-strong);
   border-radius: 1rem 1rem 0 0;
-  background: rgba(17, 17, 20, .97);
+  background: var(--elevated-surface);
   backdrop-filter: blur(.75rem);
 }
 .conversation-page-header > .back-link {
   grid-column: 1 / -1;
   width: fit-content;
-  color: #8f8f99;
+  color: var(--muted);
   font-size: .8rem;
   text-decoration: none;
 }
@@ -1505,7 +1864,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .conversation-person .eyebrow {
   margin: .15rem 0 0;
-  color: #777782;
+  color: var(--muted);
   font-size: .68rem;
   text-transform: none;
 }
@@ -1527,9 +1886,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .conversation-safety > summary {
   min-height: 2.75rem;
   padding: .55rem .9rem;
-  border: 1px solid #3a3a44;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  color: #aaaab4;
+  color: var(--muted);
   font-size: .78rem;
 }
 .conversation-safety-panel {
@@ -1538,14 +1897,14 @@ legend { padding-inline: .35rem; font-weight: 750; }
   top: calc(100% + .5rem);
   right: 0;
   padding: 1rem;
-  border: 1px solid #3a3a44;
+  border: 1px solid var(--border-strong);
   border-radius: .9rem;
-  background: #19191d;
-  box-shadow: 0 1rem 2rem rgba(0, 0, 0, .45);
+  background: var(--soft);
+  box-shadow: 0 1rem 2rem var(--shadow-strong);
 }
 .conversation-safety-panel p {
   margin: .75rem 0;
-  color: #9696a1;
+  color: var(--muted);
   font-size: .78rem;
 }
 .conversation-safety-panel > a {
@@ -1584,7 +1943,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   border: 1px solid transparent;
   border-radius: 1rem 1rem 1rem .25rem;
   background: transparent;
-  color: #efeff2;
+  color: var(--ink);
 }
 .is-own .conversation-bubble {
   border-color: transparent;
@@ -1594,12 +1953,12 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .conversation-sender {
   display: block;
   margin-bottom: .2rem;
-  color: #9696a1;
+  color: var(--muted);
   font-size: .68rem;
-  font-weight: 750;
+  font-weight: var(--font-semibold);
 }
 .is-own .conversation-sender {
-  color: #aaaab4;
+  color: var(--muted);
 }
 .conversation-bubble > p {
   margin: 0;
@@ -1612,11 +1971,24 @@ legend { padding-inline: .35rem; font-weight: 750; }
   justify-content: flex-end;
   gap: .35rem .75rem;
   margin-top: .45rem;
-  color: #777782;
+  color: var(--muted);
   font-size: .65rem;
 }
 .conversation-message-meta a {
-  color: #aaaab4;
+  color: var(--muted);
+}
+.conversation-message-meta form {
+  margin: 0;
+}
+.conversation-message-action {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
 }
 .conversation-empty {
   margin: auto;
@@ -1632,10 +2004,10 @@ legend { padding-inline: .35rem; font-weight: 750; }
   z-index: 15;
   margin: 0;
   padding: .8rem 1rem;
-  border-top: 1px solid #292930;
+  border-top: 1px solid var(--border-strong);
   border-radius: 0 0 1rem 1rem;
-  background: rgba(17, 17, 20, .98);
-  box-shadow: 0 -.75rem 1.5rem rgba(0, 0, 0, .22);
+  background: var(--elevated-surface);
+  box-shadow: 0 -.75rem 1.5rem var(--shadow);
   backdrop-filter: blur(.75rem);
 }
 .conversation-compose-row {
@@ -1646,20 +2018,20 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .conversation-compose-row #id_body {
   min-width: 0;
   min-height: 3rem;
-  border: 1px solid #3a3a44;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #24242a;
-  color: #f3f3f5;
+  background: var(--control);
+  color: var(--ink);
 }
 .conversation-compose-row #id_body::placeholder {
-  color: #777782;
+  color: var(--muted);
 }
 .conversation-compose-row button {
   min-width: 5rem;
   min-height: 3rem;
   border: 0;
-  background: #f3f3f5;
-  color: #17171a;
+  background: var(--ink);
+  color: var(--page);
 }
 .conversation-draft-tools {
   margin-top: .55rem;
@@ -1667,7 +2039,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 /* # WHY: Keeps optional writing help collapsed so the ordinary Send action remains the main task. */
 .conversation-draft-tools > summary {
   min-height: 2rem;
-  color: #9696a1;
+  color: var(--muted);
   font-size: .72rem;
 }
 .conversation-draft-tools > div {
@@ -1683,9 +2055,9 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .conversation-composer > .state-panel {
   margin-top: .75rem;
-  border: 1px solid #3a3a44;
+  border: 1px solid var(--border-strong);
   border-radius: .9rem;
-  background: #19191d;
+  background: var(--soft);
 }
 .conversation-composer > .state-panel h2 {
   margin-top: 0;
@@ -1719,18 +2091,18 @@ legend { padding-inline: .35rem; font-weight: 750; }
 
 /* # WHY: Gives profiles, plan details, notifications, and the guide one matching content layout. */
 .private-profile-route {
-  background: #000;
-  color: #f3f3f5;
+  background: var(--page);
+  color: var(--ink);
 }
 .private-profile-page {
-  --profile-panel: #19191d;
-  --profile-line: #2d2d34;
-  --profile-muted: #9696a1;
-  --profile-green: #aaaab4;
+  --profile-panel: var(--soft);
+  --profile-line: var(--border-strong);
+  --profile-muted: var(--muted);
+  --profile-green: var(--muted);
   overflow: hidden;
   border-radius: 1rem;
-  background: #000;
-  color: #f3f3f5;
+  background: var(--page);
+  color: var(--ink);
 }
 /* # WHY: Provides a compact heading only on page modes that do not begin with a large image. */
 .private-profile-header {
@@ -1739,7 +2111,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   align-items: flex-end;
   padding: 1.25rem 1.35rem;
   border-bottom: 1px solid var(--profile-line);
-  background: #111114;
+  background: var(--surface);
 }
 .private-profile-header .back-link {
   color: var(--profile-muted);
@@ -1747,7 +2119,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   text-decoration: none;
 }
 .private-profile-header .back-link:hover {
-  color: #f3f3f5;
+  color: var(--ink);
 }
 
 /* --- Profile or plan hero image -------------------------------------------- */
@@ -1757,13 +2129,14 @@ legend { padding-inline: .35rem; font-weight: 750; }
   min-height: clamp(22rem, 62vw, 31rem);
   position: relative;
   overflow: hidden;
-  background: #1c1c21;
+  background: var(--soft);
 }
-.private-profile-hero::after {
+.private-profile-hero:has(> img)::after,
+:root[data-theme="dark"] .private-profile-hero::after {
   content: "";
   position: absolute;
   inset: 45% 0 0;
-  background: linear-gradient(transparent, rgba(0, 0, 0, .76));
+  background: var(--photo-scrim);
   pointer-events: none;
 }
 /* # WHY: Crops different uploaded image sizes consistently while preserving the card proportions. */
@@ -1781,13 +2154,13 @@ legend { padding-inline: .35rem; font-weight: 750; }
   min-height: inherit;
   display: grid;
   place-items: end center;
-  background: #1d1d22;
+  background: var(--placeholder-surface);
 }
 /* # WHY: Draws a recognisable neutral person shape when the account has no usable image. */
 .private-profile-placeholder::before,
 .private-profile-placeholder span {
   display: block;
-  background: #44444c;
+  background: var(--placeholder-figure);
 }
 .private-profile-placeholder::before {
   content: "";
@@ -1804,17 +2177,17 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 /* # WHY: Places the back action over the image while keeping it subtle until hovered or focused. */
 .private-profile-back {
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 5.5rem;
+  height: 3.25rem;
   position: absolute;
   top: 1.5rem;
   left: 1.5rem;
   z-index: 2;
   display: grid;
   place-items: center;
-  border: 1px solid rgba(199, 199, 207, .25);
-  border-radius: 50%;
-  background: rgba(10, 10, 12, .38);
+  border: 1px solid var(--photo-line);
+  border-radius: 999px;
+  background: var(--photo-control);
   opacity: .62;
   text-decoration: none;
   transition: opacity .18s ease, border-color .18s ease, background-color .18s ease;
@@ -1823,20 +2196,22 @@ legend { padding-inline: .35rem; font-weight: 750; }
   content: "";
   width: 1.75rem;
   height: 1.75rem;
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f3f3f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  background: var(--image-ink);
+  -webkit-mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
 }
 .private-profile-back:hover,
 .private-profile-back:focus-visible {
-  border-color: rgba(199, 199, 207, .58);
-  background: rgba(10, 10, 12, .78);
+  border-color: var(--photo-line-hover);
+  background: var(--photo-control-hover);
   opacity: 1;
 }
 .profile-edit-header .private-profile-back {
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 4.75rem;
+  height: 2.75rem;
   position: static;
-  flex: 0 0 3.5rem;
-  margin-bottom: 2.75rem;
+  flex: 0 0 2.75rem;
+  margin-bottom: 2rem;
 }
 .profile-edit-header .private-profile-back::before {
   width: 1.35rem;
@@ -1850,6 +2225,55 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: grid;
   gap: 2rem;
   padding: 1.25rem 1.35rem 2rem;
+}
+/* # WHY: Wrapper elements preserve the existing single-column flow until desktop has room for the account split. */
+.private-profile-account-summary,
+.private-profile-account-details,
+.private-profile-account-stage,
+.private-profile-split-summary,
+.private-profile-split-details,
+.private-profile-split-stage {
+  display: contents;
+}
+@media (min-width: 56rem) {
+  /* # WHY: Gives profile-shaped pages enough room for reusable desktop summary and details columns. */
+  .page-shell:has(.private-profile-split-page) {
+    width: min(100% - 2rem, 70rem);
+  }
+  .private-profile-split-stage {
+    display: grid;
+    grid-template-columns: minmax(16rem, .72fr) minmax(0, 1.28fr);
+    align-items: start;
+    gap: 2rem;
+    padding: 1.25rem 1.35rem 2rem;
+  }
+  .private-profile-split-stage > .private-profile-hero {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 27rem;
+    border-radius: 1rem;
+  }
+  .private-profile-split-content {
+    display: contents;
+  }
+  .private-profile-split-summary,
+  .private-profile-split-details {
+    display: grid;
+    gap: 2rem;
+  }
+  .private-profile-split-summary {
+    grid-column: 1;
+    grid-row: 1;
+    margin-top: 29rem;
+  }
+  .private-profile-split-details {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: 0 .75rem 2rem var(--shadow);
+  }
 }
 .private-profile-identity {
   padding-bottom: 1.25rem;
@@ -1868,6 +2292,27 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .private-profile-identity-heading {
   justify-content: space-between;
   gap: 1rem;
+}
+/* # WHY: Keeps plan controls beside a compact title without letting either pill collapse. */
+.private-plan-identity-heading {
+  align-items: flex-start;
+  gap: .75rem;
+}
+.private-plan-identity-heading .private-profile-name.private-plan-name {
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: .75rem;
+}
+.private-plan-identity-heading h1 {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  line-height: 1.08;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.private-plan-identity-heading .private-plan-state {
+  flex: 0 0 auto;
 }
 .private-profile-name {
   min-width: 0;
@@ -1891,24 +2336,26 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 /* # WHY: Reserves green for the meaningful state that the person is currently available. */
 .private-profile-status-dot.is-online {
-  background: #4fae73;
+  background: var(--success);
 }
 .private-profile-identity-edit {
   min-height: 2.5rem;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: .5rem 1rem;
-  border: 1px solid #3c3c46;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  color: #f3f3f5;
+  color: var(--ink);
   font-size: .9rem;
-  font-weight: 700;
+  font-weight: var(--font-semibold);
   text-decoration: none;
+  white-space: nowrap;
 }
 .private-profile-identity-edit:hover {
-  border-color: #555561;
-  background: #18181d;
+  border-color: var(--border-strong);
+  background: var(--soft);
 }
 .private-profile-identity > p {
   margin: 0;
@@ -1919,7 +2366,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   overflow: hidden;
   margin-top: .45rem;
   font-size: clamp(1rem, 3.2vw, 1.3rem);
-  font-weight: 650;
+  font-weight: var(--font-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1929,7 +2376,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   flex-wrap: wrap;
   gap: .5rem 1.25rem;
   margin-top: .8rem;
-  color: #aaaab4;
+  color: var(--muted);
 }
 .private-profile-account-meta {
   gap: .6rem 1.75rem;
@@ -1948,26 +2395,29 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .private-profile-notice {
   padding: 1rem;
-  border: 1px solid #574928;
+  border: 0;
   border-radius: .9rem;
-  background: #201d15;
-  color: #f3e5bb;
+  background: var(--notice-surface);
+  box-shadow: 0 .5rem 1.5rem var(--shadow-soft);
+  -webkit-backdrop-filter: blur(1rem) saturate(1.1);
+  backdrop-filter: blur(1rem) saturate(1.1);
+  color: var(--ink);
 }
 .private-profile-notice p {
   margin: .35rem 0 0;
-  color: #c9bea2;
+  color: var(--muted);
   font-size: .82rem;
 }
 
 /* --- Profile sections, interests and information rows ---------------------- */
 
-/* # WHY: Uses quiet uppercase labels so the person's content remains more prominent than section names. */
+/* # WHY: Uses quiet title-case labels so the person's content remains more prominent than section names. */
 .private-profile-section h2 {
   margin: 0 0 1rem;
-  color: #7f7f8a;
+  color: var(--muted);
   font-size: .76rem;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  letter-spacing: normal;
+  text-transform: none;
 }
 .private-profile-chips,
 .private-profile-plans {
@@ -1982,20 +2432,24 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 .private-profile-chips li {
   padding: .55rem .95rem;
-  border: 1px solid #36363f;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #202026;
-  color: #b6b6bf;
+  background: var(--control);
+  color: var(--muted);
 }
 .private-profile-about {
   margin: 0;
-  color: #cacad1;
+  color: var(--ink);
   line-height: 1.65;
 }
 /* # WHY: Aligns each fact label with its value without relying on a visual HTML table. */
 .private-profile-availability,
 .private-profile-availability div {
   margin: 0;
+}
+.private-profile-availability {
+  border: 0;
+  background: transparent;
 }
 .private-profile-availability div {
   min-height: 4rem;
@@ -2009,9 +2463,15 @@ legend { padding-inline: .35rem; font-weight: 750; }
   background: var(--profile-panel);
 }
 .private-profile-availability dt,
-.private-profile-availability dd {
+.private-profile-availability dd,
+.private-profile-availability p {
   margin: 0;
   color: var(--profile-muted);
+}
+.private-profile-availability--status > div {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  text-align: center;
 }
 .private-profile-availability a {
   text-decoration: none;
@@ -2033,7 +2493,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   justify-content: space-between;
   gap: 1rem;
   padding: .9rem 1.15rem;
-  color: #c7c7cf;
+  color: var(--image-muted);
 }
 .private-profile-plan-links li {
   padding: 0;
@@ -2051,20 +2511,37 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 /* # WHY: Makes the complete plan row clickable while preserving its two-column alignment. */
 .private-profile-plan-links li > a:hover {
-  background: #202026;
+  background: var(--control);
 }
 .private-profile-plan-links .private-profile-plan-empty {
   display: flex;
   align-items: center;
   padding: .9rem 1.15rem;
 }
+
+/* # WHY: Moves the owner's complete plan history below the compact profile split and keeps it visual. */
+.profile-plan-history {
+  padding: 0 1.35rem 2rem;
+}
+.profile-plan-history > h2 {
+  margin-bottom: 1rem;
+}
+.profile-plans-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (min-width: 56rem) {
+  .profile-plan-history {
+    padding: 0 1.35rem 2.5rem;
+  }
+}
 .private-profile-plans li + li {
-  border-top: 1px solid #24242a;
+  border-top: 1px solid var(--control);
 }
 .private-plan-state {
   flex: 0 0 auto;
   padding: .25rem .7rem;
-  border: 1px solid #36363f;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
   color: var(--profile-muted);
   font-size: .76rem;
@@ -2075,13 +2552,13 @@ legend { padding-inline: .35rem; font-weight: 750; }
   align-items: center;
   padding: .5rem 1rem;
   font-size: .9rem;
-  font-weight: 700;
+  font-weight: var(--font-semibold);
 }
 /* # WHY: Keeps current and completed plan states visually distinct without changing row sizing. */
 .private-plan-state--approved {
-  border-color: #45454f;
-  background: #242429;
-  color: #c7c7cf;
+  border-color: var(--border-strong);
+  background: var(--control);
+  color: var(--image-muted);
 }
 
 /* --- Premium and profile actions ------------------------------------------- */
@@ -2095,7 +2572,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   padding: 1.4rem 1.5rem;
   border: 1px solid var(--profile-line);
   border-radius: 1.75rem;
-  background: #1c1c20;
+  background: var(--soft);
 }
 .private-premium-icon {
   width: 4.5rem;
@@ -2103,14 +2580,16 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: #29292f;
-  color: #b8b8c2;
+  background: var(--control);
+  color: var(--muted);
 }
 .private-premium-icon::before {
   content: "";
   width: 2.75rem;
   height: 2.75rem;
-  background: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b8b8c2' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7Z'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E");
+  background: currentColor;
+  -webkit-mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7Z'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E");
+  mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7Z'/%3E%3Cpath d='M5 20h14'/%3E%3C/svg%3E");
 }
 .private-profile-premium h2 {
   margin: 0 0 .25rem;
@@ -2132,15 +2611,15 @@ legend { padding-inline: .35rem; font-weight: 750; }
   padding: .75rem 1.5rem;
   border: 0;
   border-radius: 999px;
-  background: #f3f3f5;
-  color: #17171a;
+  background: var(--ink);
+  color: var(--page);
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: var(--font-semibold);
   cursor: pointer;
 }
 .private-profile-premium button:hover,
 .private-profile-premium button:focus-visible {
-  background: #fff;
+  background: var(--on-accent);
 }
 .private-profile-sign-out {
   margin: 0;
@@ -2149,11 +2628,11 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .private-profile-sign-out button {
   width: 100%;
   min-height: 3.5rem;
-  border: 1px solid #633036;
+  border: 1px solid var(--danger);
   border-radius: 1rem;
   background: transparent;
-  color: #ff6b72;
-  font-weight: 800;
+  color: var(--danger);
+  font-weight: var(--font-semibold);
 }
 .public-profile-message {
   margin: 0;
@@ -2163,21 +2642,21 @@ legend { padding-inline: .35rem; font-weight: 750; }
   min-height: 3.5rem;
   border: 0;
   border-radius: 1rem;
-  background: #f3f3f5;
-  color: #17171a;
+  background: var(--ink);
+  color: var(--page);
   font-size: inherit;
-  font-weight: 800;
+  font-weight: var(--font-semibold);
 }
 .public-profile-message button:hover,
 .public-profile-message button:focus-visible {
-  background: #fff;
+  background: var(--on-accent);
 }
 .public-profile-block {
   margin-left: auto;
 }
 .public-profile-report {
-  border-color: #ff6b72;
-  color: #ff6b72;
+  border-color: var(--danger);
+  color: var(--danger);
 }
 
 @media (max-width: 35rem) {
@@ -2190,8 +2669,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
     min-height: 25rem;
   }
   .private-profile-back {
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 4.75rem;
+    height: 2.75rem;
     top: 1rem;
     left: 1rem;
   }
@@ -2234,27 +2713,30 @@ legend { padding-inline: .35rem; font-weight: 750; }
 
 /* # WHY: Keeps plan headings, filters, image cards, and detail rows aligned with the rest of the site. */
 .plans-route {
-  background: #000;
-  color: #f3f3f5;
+  --plans-line: var(--border-strong);
+  --plans-muted: var(--muted);
+  --plans-green: var(--image-muted);
+  background: var(--page);
+  color: var(--ink);
 }
 .plans-page {
-  --plans-line: #292930;
-  --plans-muted: #777782;
-  --plans-green: #c7c7cf;
+  --plans-line: var(--border-strong);
+  --plans-muted: var(--muted);
+  --plans-green: var(--image-muted);
   overflow: hidden;
   border-radius: 1rem;
-  background: #000;
+  background: var(--page);
 }
 /* # WHY: Matches the Messages heading proportions so moving between the main pages feels consistent. */
 .plans-page-header {
-  min-height: 8.45rem;
+  min-height: 5.45rem;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 1rem;
-  padding: 2.25rem 2rem 1.75rem;
-  border-bottom: 1px solid #202026;
-  background: #111114;
+  padding: 1rem 2rem 1.75rem;
+  border-bottom: 1px solid var(--control);
+  background: var(--surface);
 }
 .plans-page-header h1 {
   margin: 0;
@@ -2264,8 +2746,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .plans-create-button {
   min-width: 8rem;
   gap: .5rem;
-  border-color: #3c3c46;
-  color: #a7a7b1;
+  border-color: var(--border-strong);
+  color: var(--muted);
 }
 .plans-create-button span {
   font-size: 1.35rem;
@@ -2273,57 +2755,157 @@ legend { padding-inline: .35rem; font-weight: 750; }
   line-height: 1;
 }
 .plans-create-button:hover {
-  border-color: #555561;
-  background: #18181d;
-  color: #ededf0;
+  border-color: var(--border-strong);
+  background: var(--soft);
+  color: var(--ink);
 }
 
 /* --- Plan filters and introduction ----------------------------------------- */
 
-/* # WHY: Keeps every plan state reachable in one line and permits horizontal scrolling on narrow screens. */
-.plans-filter-strip {
+/* # WHY: Gives open-plan search the same quiet glass surface as the filter row while keeping suggestions anchored to it. */
+.plan-search {
+  position: relative;
+  z-index: 3;
+  margin-bottom: .75rem;
+}
+/* # WHY: Keeps the same search available in the shared header without increasing the header's normal height. */
+.topbar-plan-search {
+  min-width: 8rem;
   width: 100%;
-  max-width: 100%;
+  max-width: 47.6rem;
+  flex: 1 1 47.6rem;
+  z-index: 1;
+  margin: 0 auto;
+}
+.topbar-plan-search .plan-search-control {
+  min-height: 2.7rem;
+  padding-block: .2rem;
+  border-radius: .8rem;
+  box-shadow: none;
+}
+.topbar-plan-search .plan-search-input,
+.topbar-plan-search .plan-search-clear { min-height: 2.2rem; }
+.plan-search-control {
+  min-height: 3.75rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .7rem;
+  padding: .45rem .65rem .45rem 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: 0 .65rem 1.5rem var(--shadow-soft);
+  backdrop-filter: blur(1rem);
+}
+.plan-search-control:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 .18rem color-mix(in srgb, var(--accent) 18%, transparent), 0 .65rem 1.5rem var(--shadow-soft);
+}
+.plan-search-control > svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: var(--muted);
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+.plan-search-input {
+  width: 100%;
+  min-height: 2.7rem;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+/* # WHY: Removes the generic amber input ring because the enclosing search surface already supplies one accessible focus state. */
+.plan-search-input:focus-visible { outline: 0; outline-offset: 0; }
+.plan-search-input::placeholder { color: var(--muted); opacity: 1; }
+.plan-search-input::-webkit-search-cancel-button { display: none; }
+.plan-search-clear {
+  min-height: 2.7rem;
+  padding: .4rem .8rem;
+  border: 0;
+  border-radius: .7rem;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: .8rem;
+  font-weight: var(--font-semibold);
+  cursor: pointer;
+}
+.plan-search-clear:hover,
+.plan-search-clear:focus-visible { background: var(--soft); color: var(--ink); }
+.plan-search-suggestions {
+  position: absolute;
+  top: calc(100% + .4rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: min(24rem, 55vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: .4rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  list-style: none;
+  box-shadow: 0 1rem 2.5rem var(--shadow);
+  backdrop-filter: blur(1rem);
+}
+.plan-search-suggestion > a {
   min-width: 0;
+  display: grid;
+  grid-template-columns: 2.7rem minmax(0, 1fr);
+  align-items: center;
+  gap: .8rem;
+  padding: .65rem;
+  border-radius: .7rem;
+  color: var(--ink);
+  text-decoration: none;
+}
+.plan-search-suggestion.is-active > a,
+.plan-search-suggestion > a:hover,
+.plan-search-suggestion > a:focus-visible { background: var(--soft); }
+.plan-search-suggestion img,
+.plan-search-suggestion-image {
+  width: 2.7rem;
+  height: 2.7rem;
+  display: block;
+  border-radius: .65rem;
+  background: var(--control);
+  object-fit: cover;
+}
+.plan-search-suggestion-copy { min-width: 0; }
+.plan-search-suggestion strong,
+.plan-search-suggestion span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plan-search-suggestion span { margin-top: .15rem; color: var(--muted); font-size: .8rem; }
+.plan-search-suggestion mark { background: transparent; color: var(--accent-strong); font-weight: var(--font-semibold); }
+
+/* # WHY: Keeps the reset action visually aligned with the expandable filter controls beside it. */
+.filter-reset-link {
+  text-decoration: none;
+}
+/* # WHY: Keeps plan choices compact around their labels instead of stretching them across the panel. */
+.plan-filter-choices {
   display: flex;
   align-items: center;
-  gap: .5rem;
-  overflow-x: auto;
-  margin: 0 0 1.2rem;
-  padding: 0 0 .2rem;
-  scrollbar-width: none;
+  flex-wrap: wrap;
 }
-.plans-filter-strip::-webkit-scrollbar {
-  display: none;
-}
-.plans-filter-strip a {
-  min-height: 2.4rem;
+.plan-filter-choices > div {
   flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: .55rem 1.15rem;
-  border: 1px solid #34343d;
-  border-radius: 999px;
-  background: #202026;
-  color: #aaaab4;
-  font-size: 1rem;
-  font-weight: 400;
-  text-decoration: none;
-  white-space: nowrap;
 }
-.plans-filter-strip a:hover {
-  border-color: #555561;
-  color: #d5d5db;
-}
-.plans-filter-strip a[aria-current="page"] {
-  border-color: #f3f3f5;
-  background: #f3f3f5;
-  color: #17171a;
+.plan-filter-choices label {
+  width: auto;
+  padding-inline: 1rem;
+  border-radius: .65rem;
 }
 .plans-intro {
   padding: 1.5rem 2rem;
-  border-bottom: 1px solid #202026;
+  border-bottom: 1px solid var(--control);
 }
 .plans-intro p {
   max-width: 42rem;
@@ -2335,13 +2917,18 @@ legend { padding-inline: .35rem; font-weight: 750; }
 
 /* --- Plan card grid --------------------------------------------------------- */
 
+/* # WHY: Matches the space between Discover's filter bar and its results without changing either card design. */
+.plans-results {
+  margin-top: 1rem;
+}
+
 /* # WHY: Uses three equal columns so cards preserve the supplied wireframe proportions across page sizes. */
 .plans-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .5rem;
+  gap: .75rem;
   margin: 0;
-  padding: .5rem .1rem 0;
+  padding: 0;
   list-style: none;
 }
 .plans-grid > li {
@@ -2354,26 +2941,26 @@ legend { padding-inline: .35rem; font-weight: 750; }
   overflow: hidden;
   padding: 1.25rem;
   border-radius: 1rem;
-  background: linear-gradient(165deg, #1d1d23 0%, #17171c 56%, #0e0e11 100%);
-  color: #f1f1f3;
+  background: var(--soft);
+  color: var(--ink);
   text-decoration: none;
-  box-shadow: inset 0 1px rgba(255, 255, 255, .015);
+  box-shadow: inset 0 1px var(--image-highlight);
 }
 /* # WHY: Anchors plan information at the bottom where it remains predictable with or without an image. */
 .plan-card:hover {
-  background: linear-gradient(165deg, #232329 0%, #1b1b20 56%, #111114 100%);
+  background: var(--hover);
 }
 .plan-card--with-image {
   background-image:
-    linear-gradient(to top, rgba(5, 5, 7, .98) 0%, rgba(7, 7, 10, .82) 45%, rgba(8, 8, 11, .38) 100%),
+    var(--image-card-overlay),
     var(--plan-card-image);
   background-position: center;
   background-size: cover;
 }
-/* # WHY: Places a dark gradient over fetched pictures so every plan title and detail stays readable. */
+/* # WHY: Places a theme-adjusted gradient over fetched pictures so every plan title and detail stays readable. */
 .plan-card--with-image:hover {
   background-image:
-    linear-gradient(to top, rgba(5, 5, 7, .96) 0%, rgba(7, 7, 10, .76) 45%, rgba(8, 8, 11, .3) 100%),
+    var(--image-card-overlay-hover),
     var(--plan-card-image);
 }
 .plan-card-content {
@@ -2385,7 +2972,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .plan-card-title {
   display: block;
   margin-bottom: .55rem;
-  color: #ededf0;
+  color: var(--ink);
   font-size: 1.15rem;
   line-height: 1.18;
 }
@@ -2393,7 +2980,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: -webkit-box;
   overflow: hidden;
   margin-bottom: .75rem;
-  color: #7c7c87;
+  color: var(--muted);
   font-size: 1rem;
   font-weight: 550;
   line-height: 1.3;
@@ -2407,11 +2994,17 @@ legend { padding-inline: .35rem; font-weight: 750; }
   align-items: center;
   gap: .45rem;
   overflow: hidden;
-  color: #5e5e69;
+  color: var(--muted);
   font-size: .85rem;
   font-weight: 550;
   line-height: 1.35;
   white-space: nowrap;
+}
+.plan-card--with-image :is(.plan-card-title, .plan-card-description, .plan-card-detail) {
+  color: var(--image-ink);
+}
+.plan-card--with-image :is(.plan-card-description, .plan-card-detail) {
+  color: var(--image-muted);
 }
 .plan-card-detail > span,
 .plan-card-detail > time {
@@ -2446,10 +3039,10 @@ legend { padding-inline: .35rem; font-weight: 750; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #303039;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  background: #202026;
-  color: #858591;
+  background: var(--control);
+  color: var(--muted);
   font-size: .8rem;
   font-weight: 500;
   white-space: nowrap;
@@ -2459,30 +3052,35 @@ legend { padding-inline: .35rem; font-weight: 750; }
   padding: .35rem .9rem;
 }
 .plan-state--available {
-  border-color: #45454f;
-  background: #242429;
+  border-color: var(--border-strong);
+  background: var(--control);
   color: var(--plans-green);
 }
 .plan-state--yours {
-  border-color: #4fae73;
-  color: #4fae73;
+  border-color: var(--success);
+  color: var(--success);
+}
+.plan-state--joined {
+  border-color: var(--success);
+  background: var(--success-surface);
+  color: var(--success);
 }
 /* # WHY: Uses exceptional colours only for meaningful states such as ownership, full capacity and pending review. */
 .plan-state--full {
-  border-color: #733300;
-  background: #301700;
-  color: #ffb300;
+  border-color: var(--full-border);
+  background: var(--full-surface);
+  color: var(--full);
 }
 .plan-state--pending {
-  border-color: #454055;
-  background: #24212c;
-  color: #aaa4b9;
+  border-color: var(--pending-border);
+  background: var(--pending-surface);
+  color: var(--pending);
 }
 .plan-capacity {
   flex: 0 0 auto;
   gap: .35rem;
   padding: .35rem .8rem;
-  color: #696975;
+  color: var(--muted);
 }
 .plans-empty-state {
   grid-column: 1 / -1;
@@ -2492,7 +3090,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   justify-items: center;
   padding: 2rem;
   border-radius: 1rem;
-  color: #ededf0;
+  color: var(--ink);
   text-align: center;
 }
 /* # WHY: Gives an empty filter result the same height as one card so the page structure remains steady. */
@@ -2508,7 +3106,7 @@ legend { padding-inline: .35rem; font-weight: 750; }
   margin-top: 2rem;
   padding: 1.5rem 2rem;
   border-top: 1px solid var(--plans-line);
-  color: #555560;
+  color: var(--muted);
 }
 /* # WHY: Keeps the public-place reminder separate from the cards without presenting it as an error. */
 .plans-safety-note svg {
@@ -2573,8 +3171,8 @@ legend { padding-inline: .35rem; font-weight: 750; }
   }
   .plans-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: .25rem;
-    padding: .25rem;
+    gap: .4rem;
+    padding: 0;
     padding-bottom: 0;
   }
   .plan-card {
@@ -2639,71 +3237,786 @@ legend { padding-inline: .35rem; font-weight: 750; }
 }
 
 /* ==========================================================================
-   09. COLOUR THEMES AND REDUCED MOTION
+   09. APPEARANCE THEMES AND REDUCED MOTION
    ========================================================================== */
 
 /* # KEYWORD: :is() — groups several selectors that need the same rule without repeating the declarations. */
-/* # WHY: Changes only shared colours when cycling themes so component sizes and page layout never move. */
-:root[data-theme]:not([data-theme="black"]) body,
-:root[data-theme]:not([data-theme="black"]) :is(.profile-edit-page, .inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller) {
+/* # WHY: Connects every component to the master appearance tokens so switching modes never changes layout. */
+:root body,
+:root :is(.profile-edit-page, .inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller) {
   background-color: var(--page);
   color: var(--ink);
 }
 /* # KEYWORD: color-mix() — blends two current theme colours into a related control colour. */
 /* # WHY: Derives form surfaces from each selected theme rather than maintaining more hard-coded palettes. */
-:root[data-theme]:not([data-theme="black"]) .profile-edit-page {
+:root .profile-edit-page {
   --edit-panel: var(--soft);
   --edit-control: color-mix(in srgb, var(--soft) 82%, var(--ink));
   --edit-line: var(--border);
   --edit-muted: var(--muted);
 }
-:root[data-theme]:not([data-theme="black"]) .private-profile-page {
+:root .private-profile-page {
   --profile-panel: var(--soft);
   --profile-line: var(--border);
   --profile-muted: var(--muted);
 }
-:root[data-theme]:not([data-theme="black"]) .plans-page {
+:root .plans-page {
   --plans-line: var(--border);
   --plans-muted: var(--muted);
 }
-:root[data-theme]:not([data-theme="black"]) :is(.plans-page-header, .conversation-page-header, .private-profile-header, .discovery-filter-panel) {
+:root :is(.plans-page-header, .conversation-page-header, .private-profile-header, .discovery-filter-panel) {
   border-color: var(--border);
   background-color: var(--surface);
 }
-:root[data-theme]:not([data-theme="black"]) :is(.profile-field-panel, .profile-choice-list, .profile-availability-panel, .verification-panel, .brand-form-state, .conversation-composer, .private-profile-plans, .private-profile-availability, .private-profile-premium) {
+:root :is(.profile-field-panel, .profile-choice-list, .profile-availability-panel, .verification-panel, .brand-form-state, .conversation-composer, .private-profile-plans, .private-profile-premium) {
   border-color: var(--border);
   background-color: var(--soft);
 }
-:root[data-theme]:not([data-theme="black"]) :is(.profile-edit-field > h2, .profile-edit-field > legend, .plans-page-header h1, .conversation-person h1 a, .private-profile-identity h1, .inbox-conversation-copy strong) {
+:root :is(.profile-edit-field > h2, .profile-edit-field > legend, .plans-page-header h1, .conversation-person h1 a, .private-profile-identity h1, .inbox-conversation-copy strong) {
   color: var(--ink);
 }
-:root[data-theme]:not([data-theme="black"]) .profile-edit-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea),
-:root[data-theme]:not([data-theme="black"]) .conversation-compose-row #id_body {
+:root .profile-edit-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea),
+:root .conversation-compose-row #id_body {
   border-color: var(--border);
   background-color: color-mix(in srgb, var(--soft) 82%, var(--ink));
   color: var(--ink);
 }
-:root[data-theme]:not([data-theme="black"]) :is(.filter-row-label, .filter-trigger, .inbox-interest-strip li) {
+:root :is(.filter-row-label, .filter-trigger, .inbox-interest-strip li) {
   border-color: var(--border);
   background-color: var(--soft);
   color: var(--muted);
 }
-:root[data-theme]:not([data-theme="black"]) :is(.discovery-profile-card:not(.discovery-profile-card--with-image), .plan-card:not(.plan-card--with-image)) {
+:root :is(.discovery-profile-card:not(.discovery-profile-card--with-image), .plan-card:not(.plan-card--with-image)) {
   border-color: var(--border);
   background: var(--soft);
   color: var(--ink);
 }
-:root[data-theme]:not([data-theme="black"]) .plan-card:not(.plan-card--with-image) :is(.plan-card-title, .plan-card-description, .plan-card-detail) {
+:root .plan-card:not(.plan-card--with-image) :is(.plan-card-title, .plan-card-description, .plan-card-detail) {
   color: var(--ink);
 }
 
-.guide-page { --profile-line: #292930; }
-/* # WHY: Allows guide sentences to wrap normally instead of using the one-line profile statement treatment. */
-.guide-page .private-profile-content > * { min-width: 0; }
-.guide-page .private-profile-identity > .private-profile-title-statement {
+.page-shell:has(.guide-page) { width: min(100% - 2rem, 70rem); }
+.guide-page {
+  display: grid;
+  gap: 1.25rem;
+  color: var(--ink);
+}
+.guide-page > *,
+.guide-hero > *,
+.guide-feature > * { min-width: 0; }
+.guide-page p { line-height: 1.65; }
+.guide-titlebar {
+  min-height: 4.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem clamp(1rem, 3vw, 2rem);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+.guide-titlebar .eyebrow,
+.guide-titlebar .back-link { margin: 0; }
+.guide-titlebar .eyebrow { color: var(--ink); font-size: 1.4rem; }
+.guide-titlebar .back-link { color: var(--muted); text-decoration: none; }
+.guide-hero,
+.guide-feature,
+.guide-overview,
+.guide-start {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--surface);
+  box-shadow: 0 .75rem 2rem var(--shadow-soft);
+}
+.guide-hero {
+  min-height: 25rem;
+  display: grid;
+  grid-template-columns: minmax(17rem, .85fr) minmax(0, 1.15fr);
+  align-items: stretch;
+}
+.guide-hero-copy,
+.guide-feature-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.5rem, 5vw, 3.5rem);
+}
+.guide-hero-copy h1 {
+  max-width: 11ch;
+  margin-bottom: 1rem;
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  letter-spacing: -.045em;
+}
+.guide-hero-copy > p:not(.eyebrow),
+.guide-feature-copy > p:not(.eyebrow),
+.guide-overview header > p:not(.eyebrow),
+.guide-start-copy > p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+}
+.guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: 1.5rem;
+}
+.guide-video-placeholder {
+  min-height: 22rem;
+  display: grid;
+  place-content: center;
+  gap: 1rem;
+  border-left: 1px solid var(--border);
+  background:
+    radial-gradient(circle at 72% 24%, color-mix(in srgb, var(--accent) 25%, transparent), transparent 27%),
+    radial-gradient(circle at 24% 76%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 30%),
+    var(--soft);
+  color: var(--muted);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.guide-video-placeholder img {
+  width: min(16rem, 55%);
+  margin-inline: auto;
+  opacity: .82;
+}
+.guide-feature-list { display: grid; gap: 1.25rem; }
+.guide-feature {
+  min-height: 21rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.guide-feature-copy h2,
+.guide-overview h2,
+.guide-start h2 {
+  margin: .25rem 0 1rem;
+  font-size: clamp(1.65rem, 3.5vw, 2.7rem);
+  line-height: 1.12;
+  letter-spacing: -.035em;
+}
+.guide-feature-visual {
+  min-height: 20rem;
+  border-right: 1px solid var(--border);
+  background: var(--soft);
+}
+.guide-feature--reverse .guide-feature-visual {
+  border-right: 0;
+  border-left: 1px solid var(--border);
+}
+
+/* # WHY: Provides replaceable visual proportions now, while real product media can be supplied later. */
+.guide-plan-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: .65rem;
+  padding: clamp(1rem, 3vw, 2rem);
+}
+.guide-plan-preview > div {
+  min-width: 0;
+  min-height: 13rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: .3rem;
+  overflow: hidden;
+  padding: .8rem;
+  border-radius: 1rem;
+  background: linear-gradient(160deg, var(--accent), var(--ink));
+  color: var(--image-ink);
+  box-shadow: 0 .65rem 1.5rem var(--shadow);
+}
+.guide-plan-preview > div:nth-child(2) { transform: translateY(1rem); background: linear-gradient(160deg, var(--pending), var(--ink)); }
+.guide-plan-preview > div:nth-child(3) { background: linear-gradient(160deg, var(--muted), var(--ink)); }
+.guide-plan-preview-card--video { background: var(--ink); }
+.guide-plan-preview-card--video video {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  object-fit: cover;
+  transition: opacity .35s ease;
+}
+.guide-plan-preview-card--video.is-playing video { opacity: .72; }
+.guide-plan-preview-card--video.is-finished video { opacity: 0; }
+.guide-plan-preview span,
+.guide-plan-preview small { position: relative; z-index: 1; }
+.guide-plan-preview span { overflow-wrap: anywhere; }
+.guide-plan-preview small { color: var(--image-muted); }
+.guide-people-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .65rem;
+  padding: clamp(1rem, 4vw, 3rem);
+}
+.guide-people-preview > .guide-profile-preview-card,
+.guide-people-preview > .guide-profile-preview-empty {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 2.5rem minmax(0, 1fr);
+  align-content: center;
+  column-gap: .65rem;
+  padding: .85rem;
+  border: 1px solid var(--border);
+  border-radius: .9rem;
+  background: var(--surface);
+  box-shadow: 0 .5rem 1.25rem var(--shadow-soft);
+}
+.guide-profile-preview-card {
+  color: inherit;
+  text-decoration: none;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+.guide-profile-preview-card:hover,
+.guide-profile-preview-card:focus-visible {
+  transform: translateY(-.2rem);
+  box-shadow: 0 .75rem 1.5rem var(--shadow);
+}
+.guide-people-preview i,
+.guide-people-preview img {
+  width: 2.5rem;
+  height: 2.5rem;
+  grid-row: span 2;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--placeholder-figure);
+}
+.guide-people-preview span { overflow: hidden; color: var(--muted); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.guide-message-preview { display: grid; grid-template-columns: 34% minmax(0, 1fr); }
+.guide-message-list {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+}
+.guide-message-list span {
+  position: relative;
+  border-bottom: 1px solid var(--border);
+}
+.guide-message-list span::before {
+  content: "";
+  width: 2.2rem;
+  height: 2.2rem;
+  position: absolute;
+  top: 50%;
+  left: .8rem;
+  border-radius: 50%;
+  background: var(--placeholder-figure);
+  transform: translateY(-50%);
+}
+.guide-message-list .is-active { background: var(--soft); }
+.guide-message-thread {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: .8rem;
+  padding: 1.25rem;
+}
+.guide-message-thread p {
+  width: fit-content;
+  max-width: 86%;
+  margin: 0;
+  padding: .65rem .85rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem 1rem 1rem .25rem;
+  background: var(--surface);
+}
+.guide-message-thread p:nth-child(2) { align-self: flex-end; border-radius: 1rem 1rem .25rem 1rem; background: var(--soft); }
+.guide-message-thread i { height: 2.65rem; margin-top: 1rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
+
+.guide-overview { padding: clamp(1.5rem, 5vw, 3.5rem); }
+.guide-overview > header { max-width: 43rem; margin: 0 auto 2rem; text-align: center; }
+.guide-overview-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.guide-overview-list article {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: .8rem;
+  background: var(--page);
+}
+.guide-overview-list h3 { margin: 0 0 .35rem; }
+.guide-overview-list p { margin: 0; color: var(--muted); }
+.guide-start { padding: clamp(1.5rem, 5vw, 3.5rem); text-align: center; }
+.guide-start-copy { max-width: 38rem; margin-inline: auto; }
+.guide-profile-preview {
+  max-width: 47rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 2rem auto 0;
+  text-align: left;
+}
+.guide-profile-preview > :is(div, a) {
+  min-height: 12rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: .3rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--page);
+  box-shadow: 0 .65rem 1.5rem var(--shadow-soft);
+}
+.guide-profile-preview i {
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-bottom: auto;
+  border-radius: 50%;
+  background: var(--placeholder-figure);
+}
+.guide-profile-preview span { color: var(--muted); font-size: .82rem; }
+.guide-profile-preview-card { color: var(--ink); text-decoration: none; }
+.guide-profile-preview-card img {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: auto;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.guide-featured-plans {
+  width: min(100%, 70rem);
+  margin: 3rem auto 0;
+  text-align: left;
+}
+.guide-start > .guide-actions { justify-content: center; }
+
+@media (max-width: 48rem) {
+  .page-shell:has(.guide-page) { width: min(100% - 1rem, 70rem); }
+  .guide-page { width: 100%; overflow: hidden; }
+  .guide-hero,
+  .guide-feature { grid-template-columns: 1fr; }
+  .guide-video-placeholder,
+  .guide-feature-visual { min-height: 17rem; border: 0; border-top: 1px solid var(--border); }
+  .guide-feature--reverse .guide-feature-visual { border-left: 0; border-top: 1px solid var(--border); }
+  .guide-feature--reverse .guide-feature-copy { order: 1; }
+  .guide-feature--reverse .guide-feature-visual { order: 2; }
+  .guide-hero-copy h1 { max-width: 13ch; }
+  .guide-overview-list { grid-template-columns: 1fr; }
+  .guide-profile-preview { grid-template-columns: 1fr; }
+  .guide-profile-preview > :is(div, a) { min-height: 8rem; }
+}
+
+@media (max-width: 30rem) {
+  .guide-titlebar { border-inline: 0; border-radius: 0; }
+  .guide-plan-preview { gap: .4rem; padding-inline: .65rem; }
+  .guide-plan-preview > div { min-height: 11rem; padding: .55rem; font-size: .75rem; }
+  .guide-people-preview { padding: 1rem; }
+  .guide-message-preview { grid-template-columns: 30% minmax(0, 1fr); }
+}
+
+/* -----------------------------------------------------------------------------
+   GUIDE EDITORIAL LAYOUT
+   Opens the guide into flowing full-width bands while keeping each product
+   mockup small enough to be replaced by real imagery later.
+   ----------------------------------------------------------------------------- */
+
+.private-profile-route:has(.guide-page) .page-shell {
+  margin-block: 0;
+  padding-bottom: 0;
+}
+.guide-page {
+  --guide-dark: #14271F;
+  --guide-dark-ink: #F7F8F6;
+  gap: 0;
   overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
+}
+:root[data-theme="dark"] .guide-page { --guide-dark: #101412; }
+.guide-titlebar {
+  min-height: 5.5rem;
+  padding-inline: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.guide-titlebar .eyebrow { font-size: 1.2rem; }
+.guide-hero,
+.guide-feature,
+.guide-purpose,
+.guide-overview,
+.guide-start,
+.guide-proof-points {
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  margin-left: -50vw;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.guide-hero {
+  min-height: 32rem;
+  grid-template-columns: 1fr minmax(18rem, 30rem) minmax(30rem, 40rem) 1fr;
+  background: var(--guide-dark);
+  color: var(--guide-dark-ink);
+}
+.guide-hero-copy {
+  grid-column: 2;
+  position: relative;
+  z-index: 2;
+  padding-block: clamp(4rem, 8vw, 7rem);
+  padding-inline: 0 clamp(2rem, 5vw, 5rem);
+  text-shadow: 0 .1rem .8rem rgba(0, 0, 0, .24);
+}
+.guide-hero-copy h1 {
+  max-width: 12ch;
+  color: var(--guide-dark-ink);
+  font-size: clamp(2.8rem, 5vw, 4.8rem);
+}
+.guide-hero-copy .eyebrow { color: #AFC9B7; }
+.guide-hero-copy > p:not(.eyebrow) { color: color-mix(in srgb, var(--guide-dark-ink) 72%, transparent); }
+.guide-hero .button { border-color: #AFC9B7; background: #AFC9B7; color: #14271F; }
+.guide-hero .button.secondary { background: transparent; color: var(--guide-dark-ink); }
+.guide-video-placeholder {
+  min-height: 100%;
+  position: absolute;
+  display: block;
+  overflow: hidden;
+  inset: 0;
+  z-index: 0;
+  margin: 0;
+  border: 0;
+  background: var(--guide-dark);
+  color: color-mix(in srgb, var(--guide-dark-ink) 65%, transparent);
+}
+.guide-video-placeholder::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(20, 39, 31, .72) 0%, rgba(20, 39, 31, .34) 54%, rgba(20, 39, 31, .18) 100%),
+    rgba(100, 130, 110, .12);
+}
+.guide-video-placeholder video {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  object-fit: cover;
+  filter: saturate(.78) contrast(.94) brightness(.9);
+  transition: opacity .55s ease;
+}
+.guide-video-placeholder video.is-active { opacity: 1; }
+.guide-video-toggle {
+  min-height: 2.5rem;
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 2;
+  padding: .45rem .9rem;
+  border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: 999px;
+  background: rgba(20, 39, 31, .62);
+  color: #fff;
+  box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .18);
+  backdrop-filter: blur(.65rem);
+  -webkit-backdrop-filter: blur(.65rem);
+}
+.guide-video-toggle:hover,
+.guide-video-toggle:focus-visible { background: rgba(20, 39, 31, .82); }
+.guide-proof-points {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 2rem;
+  padding: 1.75rem max(1.5rem, calc((100vw - 70rem) / 2)) 4.5rem;
+  background: var(--guide-dark);
+  color: var(--guide-dark-ink);
+}
+.guide-proof-points > div {
+  min-width: 0;
+  padding-left: 1rem;
+  border-left: 2px solid #AFC9B7;
+}
+.guide-proof-points strong,
+.guide-proof-points span { display: block; }
+.guide-proof-points strong { font-size: 1.15rem; }
+.guide-proof-points span { margin-top: .25rem; color: color-mix(in srgb, var(--guide-dark-ink) 65%, transparent); font-size: .78rem; }
+.guide-purpose {
+  min-height: 27rem;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 35rem) minmax(0, 35rem) 1fr;
+  align-items: center;
+  padding-block: clamp(3.75rem, 7vw, 6rem);
+  background: var(--soft);
+}
+.guide-purpose-copy {
+  max-width: 34rem;
+  grid-column: 2;
+  padding: 2rem clamp(1.5rem, 5vw, 4rem) 2rem 0;
+}
+.guide-purpose-copy h2 {
+  max-width: 16ch;
+  margin: .25rem 0 1.25rem;
+  font-size: clamp(2.15rem, 4vw, 3.5rem);
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+.guide-purpose-copy > p:not(.eyebrow) { max-width: 36rem; margin: 0; color: var(--muted); }
+.guide-purpose-visual {
+  width: min(100% - 2rem, 29rem);
+  min-height: 17.5rem;
+  position: relative;
+  grid-column: 3;
+  justify-self: center;
+  color: var(--accent);
+  border-radius: 48% 52% 45% 55% / 55% 44% 56% 45%;
+  background:
+    radial-gradient(circle at 50% 62%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 31%),
+    color-mix(in srgb, var(--soft) 86%, var(--surface));
+}
+.guide-purpose-visual svg { width: 100%; height: 100%; position: absolute; inset: 0; overflow: visible; }
+.guide-purpose-route {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-dasharray: 5 9;
+  stroke-linecap: round;
+  opacity: .55;
+}
+.guide-purpose-contour {
+  fill: color-mix(in srgb, var(--surface) 30%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 42%, transparent);
+  stroke-width: 1.5;
+  opacity: .52;
+}
+.guide-purpose-contour--inner {
+  fill: none;
+  stroke-width: 1;
+  opacity: .32;
+}
+.guide-purpose-footprint { fill: var(--accent-strong); }
+.guide-purpose-compass {
+  fill: color-mix(in srgb, var(--accent) 18%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .48;
+}
+.guide-purpose-visual > img {
+  width: 6.5rem;
+  position: absolute;
+  left: 50%;
+  bottom: 1.2rem;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 .8rem 1rem var(--shadow));
+}
+.guide-purpose-idea {
+  position: absolute;
+  top: .6rem;
+  left: 50%;
+  padding: .75rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  color: var(--ink);
+  box-shadow: 0 .75rem 2rem var(--shadow-soft);
+  white-space: nowrap;
+  backdrop-filter: blur(.75rem);
+  -webkit-backdrop-filter: blur(.75rem);
+}
+.guide-purpose-idea::after {
+  content: "";
+  width: .55rem;
+  height: .55rem;
+  position: absolute;
+  left: 50%;
+  bottom: -.32rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--surface);
+}
+.guide-purpose-person {
+  width: 4.15rem;
+  height: 4.15rem;
+  position: absolute;
+  bottom: 2.9rem;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 .8rem 2rem var(--shadow);
+}
+.guide-purpose-person::before {
+  content: "";
+  width: 1.15rem;
+  height: 1.15rem;
+  position: absolute;
+  top: .9rem;
+  left: 50%;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: var(--muted);
+}
+.guide-purpose-person::after {
+  content: "";
+  width: 2.25rem;
+  height: 1.15rem;
+  position: absolute;
+  bottom: .85rem;
+  left: 50%;
+  border-radius: 1.25rem 1.25rem .5rem .5rem;
+  transform: translateX(-50%);
+  background: var(--muted);
+}
+.guide-purpose-person--one { left: 3%; }
+.guide-purpose-person--two { right: 3%; bottom: 5.2rem; }
+.guide-feature-list { display: contents; }
+.guide-feature {
+  min-height: 34rem;
+  grid-template-columns: 1fr minmax(0, 35rem) minmax(0, 35rem) 1fr;
+  align-items: center;
+  padding-block: clamp(4.5rem, 8vw, 7rem);
+  background: var(--surface);
+}
+.guide-feature:nth-child(even) { background: var(--page); }
+.guide-feature > .guide-feature-visual {
+  width: min(100% - 3rem, 29rem);
+  min-height: 22rem;
+  grid-column: 2;
+  justify-self: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 3.5rem var(--shadow);
+}
+.guide-feature > .guide-feature-copy {
+  grid-column: 3;
+  max-width: 33rem;
+  padding: 2rem clamp(2rem, 6vw, 5rem);
+}
+.guide-feature--reverse > .guide-feature-copy {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+.guide-feature--reverse > .guide-feature-visual {
+  grid-column: 3;
+  grid-row: 1;
+}
+.guide-feature-copy h2 { font-size: clamp(2rem, 3.5vw, 3rem); }
+.guide-plan-preview { padding: 1.15rem; }
+.guide-plan-preview > div { min-height: 15rem; }
+.guide-people-preview { padding: 2rem; }
+.guide-message-preview { border: 1px solid var(--border); }
+.guide-overview {
+  padding: clamp(5rem, 9vw, 8rem) max(1.5rem, calc((100vw - 70rem) / 2));
+  background: var(--soft);
+}
+.guide-overview > header { max-width: 46rem; margin-bottom: 3.5rem; }
+.guide-overview-list {
+  max-width: 58rem;
+  display: block;
+  margin-inline: auto;
+  border-top: 1px solid var(--border-strong);
+}
+.guide-overview-list details { border-bottom: 1px solid var(--border-strong); }
+.guide-overview-list summary {
+  width: 100%;
+  min-height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: .9rem 0;
+  list-style: none;
+}
+.guide-overview-list summary::-webkit-details-marker { display: none; }
+.guide-overview-list summary::after {
+  content: "+";
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: 0 0 1.25rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--muted);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1;
+}
+.guide-overview-list details[open] summary::after { content: "−"; }
+.guide-overview-list details > p {
+  max-width: 48rem;
+  margin: -.15rem 2.5rem 1.35rem 0;
+  color: var(--muted);
+}
+.guide-start {
+  padding: clamp(5rem, 9vw, 8rem) max(1.5rem, calc((100vw - 70rem) / 2));
+  background: var(--surface);
+}
+.guide-start-copy { max-width: 43rem; }
+.guide-profile-preview { max-width: 58rem; gap: 1.5rem; margin-top: 3rem; }
+.guide-profile-preview > :is(div, a) {
+  min-height: 14rem;
+  border: 0;
+  border-radius: .5rem;
+  background: var(--page);
+  box-shadow: 0 1rem 3rem var(--shadow-soft);
+}
+
+@media (max-width: 70rem) {
+  .guide-titlebar { padding-inline: 1.5rem; }
+  .guide-hero { grid-template-columns: 1.5rem minmax(18rem, .9fr) minmax(0, 1.1fr) 1.5rem; }
+  .guide-feature { grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1fr) 1.5rem; }
+  .guide-purpose { grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1fr) 1.5rem; }
+}
+
+@media (max-width: 48rem) {
+  .private-profile-route:has(.guide-page) .page-shell { width: 100%; }
+  .guide-page { overflow: hidden; }
+  .guide-titlebar { padding-inline: 1rem; }
+  .guide-hero {
+    grid-template-columns: 1fr;
+    padding: 4.5rem 1.25rem 3rem;
+  }
+  .guide-hero-copy { grid-column: 1; }
+  .guide-hero-copy { padding: 0; }
+  .guide-video-placeholder { min-height: 100%; margin: 0; border-top: 0; }
+  .guide-proof-points { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 1rem 1.25rem 4rem; }
+  .guide-feature {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    padding: 4rem 1.25rem;
+  }
+  .guide-purpose {
+    min-height: 0;
+    grid-template-columns: 1fr;
+    padding: 4.5rem 1.25rem;
+  }
+  .guide-purpose-copy,
+  .guide-purpose-visual {
+    width: 100%;
+    max-width: 38rem;
+    grid-column: 1;
+    justify-self: center;
+  }
+  .guide-purpose-copy { padding: 0 0 2rem; }
+  .guide-purpose-visual { min-height: 17rem; }
+  .guide-feature > .guide-feature-copy,
+  .guide-feature > .guide-feature-visual,
+  .guide-feature--reverse > .guide-feature-copy,
+  .guide-feature--reverse > .guide-feature-visual {
+    width: 100%;
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: stretch;
+  }
+  .guide-feature > .guide-feature-copy { max-width: 38rem; padding: 0 0 2.5rem; }
+  .guide-feature > .guide-feature-visual { min-height: 18rem; order: 2; border-top: 0; }
+  .guide-overview,
+  .guide-start { padding: 4.5rem 1.25rem; }
+  .guide-profile-preview { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 30rem) {
+  .guide-proof-points { grid-template-columns: 1fr; gap: 1.25rem; }
 }
 .inbox-page,
 .conversation-page,
@@ -2712,18 +4025,564 @@ legend { padding-inline: .35rem; font-weight: 750; }
 .filter-pill-scroller,
 .discovery-filter-panel,
 .discovery-grid > .card,
-.plan-card { border-color: #292930; }
-:root[data-theme]:not([data-theme="black"]) :is(.inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller, .discovery-filter-panel, .plan-card),
-:root[data-theme]:not([data-theme="black"]) .discovery-grid > .card { border-color: #292930; }
+.plan-card { border-color: var(--border-strong); }
+:root :is(.inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller, .discovery-filter-panel, .plan-card),
+:root .discovery-grid > .card { border-color: var(--border-strong); }
 .guide-page .private-profile-header { border-bottom-color: var(--border); }
+
+/* -----------------------------------------------------------------------------
+   LIGHT APPEARANCE REFRESH
+   Reuses the existing component structure while replacing page-specific dark
+   paint with the shared neutral and sage system. The dark option remains above.
+   ----------------------------------------------------------------------------- */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: .7rem;
+}
+.brand img {
+  width: 2.9rem;
+  height: 1.7rem;
+  display: block;
+}
+.brand-wordmark {
+  display: none;
+  color: var(--muted);
+  font-family: var(--wordmark-family, "Rock Salt"), "Comic Sans MS", cursive;
+  font-size: var(--wordmark-size, 1.08rem);
+  font-weight: 400;
+  letter-spacing: var(--wordmark-spacing, -.075em);
+  line-height: 1;
+  transform: rotate(-1.5deg) skewX(-4deg);
+  transform-origin: left center;
+  text-shadow: .025em .035em 0 currentColor;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s ease, visibility 0s linear .25s;
+}
+.site-header.is-wordmark-visible .brand-wordmark {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+.brand-wordmark.wordmark-font-rock-salt {
+  --wordmark-family: "Rock Salt";
+  --wordmark-size: 1.08rem;
+  --wordmark-spacing: -.075em;
+}
+.brand-wordmark.wordmark-font-caveat-brush {
+  --wordmark-family: "Caveat Brush";
+  --wordmark-size: 1.48rem;
+  --wordmark-spacing: -.035em;
+}
+.brand-wordmark.wordmark-font-kalam {
+  --wordmark-family: "Kalam";
+  --wordmark-size: 1.24rem;
+  --wordmark-spacing: -.055em;
+}
+.brand-wordmark.wordmark-font-patrick-hand {
+  --wordmark-family: "Patrick Hand";
+  --wordmark-size: 1.38rem;
+  --wordmark-spacing: -.025em;
+}
+.brand-wordmark.wordmark-font-gloria {
+  --wordmark-family: "Gloria Hallelujah";
+  --wordmark-size: 1.05rem;
+  --wordmark-spacing: -.06em;
+}
+.discovery-intro {
+  max-width: 42rem;
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+:root[data-theme="light"] :is(.discovery-route, .profile-edit-route, .inbox-route, .conversation-route, .private-profile-route, .plans-route) {
+  background: var(--page);
+  color: var(--ink);
+}
+:root[data-theme="light"] .site-header {
+  background: var(--nav-surface);
+  box-shadow: 0 1px 0 var(--shadow-soft);
+}
+:root[data-theme="light"] .primary-navigation {
+  background: var(--navigation-glass);
+  box-shadow: 0 .75rem 2rem var(--shadow);
+}
+:root[data-theme="light"] .primary-navigation a[aria-current="page"] {
+  background: var(--navigation-active);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), 0 .35rem 1rem var(--shadow);
+  color: var(--ink);
+}
+:root[data-theme="light"] .card {
+  box-shadow: 0 .55rem 1.5rem var(--shadow);
+}
+:root[data-theme="light"] .connection-status {
+  background: var(--warning-surface);
+  color: var(--warning-ink);
+}
+:root[data-theme="light"] .error-summary {
+  background: var(--danger-surface);
+  color: var(--danger);
+}
+:root[data-theme="light"] button:hover,
+:root[data-theme="light"] .button:hover {
+  background: var(--accent-strong);
+}
+:root[data-theme="light"] .secondary {
+  background: var(--surface);
+  color: var(--accent-strong);
+}
+:root[data-theme="light"] .secondary:hover {
+  border-color: var(--accent-strong);
+  background: var(--soft);
+  color: var(--accent-strong);
+}
+:root[data-theme="light"] .danger,
+:root[data-theme="light"] .danger:hover {
+  border-color: var(--danger);
+  background: var(--surface);
+  color: var(--danger);
+}
+:root[data-theme="light"] .message {
+  background: var(--notice-surface);
+  color: var(--success);
+}
+:root[data-theme="light"] .message.error {
+  background: var(--notice-surface);
+  color: var(--danger);
+}
+
+/* Discovery keeps dark overlays only when a real photograph needs them. */
+:root[data-theme="light"] :is(.discovery-route, .plans-route) .filter-pill-scroller {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 .45rem 1.25rem var(--shadow-soft);
+}
+:root[data-theme="light"] :is(.discovery-route, .plans-route) :is(.filter-row-label, .filter-trigger) {
+  border-color: var(--border);
+  background: var(--soft);
+  color: var(--ink);
+}
+:root[data-theme="light"] :is(.discovery-route, .plans-route) :is(.filter-trigger:hover, .filter-trigger:focus-visible, .filter-trigger.is-filtered, .filter-trigger[aria-expanded="true"]) {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+:root[data-theme="light"] :is(.discovery-route, .plans-route) .discovery-filter-panel {
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="light"] .discovery-profile-card:not(.discovery-profile-card--with-image) {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="light"] .discovery-profile-card:not(.discovery-profile-card--with-image)::after {
+  display: none;
+}
+:root[data-theme="light"] .discovery-profile-card:not(.discovery-profile-card--with-image) :is(strong, strong a) {
+  color: var(--ink);
+}
+:root[data-theme="light"] .discovery-profile-card:not(.discovery-profile-card--with-image) p {
+  color: var(--muted);
+}
+:root[data-theme="light"] .discovery-profile-card:not(.discovery-profile-card--with-image) .chips li {
+  border-color: var(--border);
+  background: var(--soft);
+  color: var(--muted);
+}
+
+/* Forms retain every field and state; only their surfaces and typography change. */
+:root[data-theme="light"] .profile-edit-page {
+  --edit-panel: var(--surface);
+  --edit-control: var(--surface);
+  --edit-line: var(--border);
+  --edit-muted: var(--muted);
+  background: var(--page);
+  color: var(--ink);
+}
+:root[data-theme="light"] .profile-edit-header {
+  border-bottom-color: var(--border);
+}
+:root[data-theme="light"] :is(.profile-image-panel, .profile-field-panel, .profile-choice-list, .profile-availability-panel, .verification-panel, .brand-form-state) {
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="light"] .profile-edit-field :is(h2, legend, label, strong),
+:root[data-theme="light"] .brand-form-footer a:not(.button) {
+  color: var(--ink);
+}
+:root[data-theme="light"] .profile-edit-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="light"] .profile-edit-page :is(input, select, textarea):focus-visible {
+  border-color: var(--accent);
+}
+:root[data-theme="light"] :is(.profile-choice-list label, .profile-interests-field .interest-checkboxes label, .availability-choice-chips span) {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="light"] :is(.profile-choice-list label:has(input:checked), .profile-interests-field .interest-checkboxes label:has(input:checked), .availability-choice-chips input:checked + span) {
+  border-color: var(--accent);
+  background: var(--soft);
+  color: var(--accent-strong);
+}
+:root[data-theme="light"] .profile-edit-form > button[type="submit"] {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+
+/* Messages, profiles and plan shells share the same bright neutral hierarchy. */
+:root[data-theme="light"] :is(.inbox-page, .conversation-page, .private-profile-page, .plans-page) {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+:root[data-theme="light"] :is(.inbox-intro, .conversation-page-header, .private-profile-header, .plans-page-header) {
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="light"] .inbox-interest-strip li {
+  border-color: var(--border);
+  background: var(--soft);
+  color: var(--muted);
+}
+:root[data-theme="light"] .inbox-interest-strip li.is-active {
+  border-color: var(--accent);
+  background: var(--soft);
+  color: var(--accent-strong);
+}
+:root[data-theme="light"] .inbox-conversation-list > li,
+:root[data-theme="light"] .inbox-conversation-row {
+  border-color: var(--border);
+  color: var(--ink);
+}
+:root[data-theme="light"] .inbox-conversation-row:hover,
+:root[data-theme="light"] .private-profile-plan-links li > a:hover {
+  background: var(--soft);
+}
+:root[data-theme="light"] :is(.inbox-conversation-copy strong, .conversation-person h1 a, .private-profile-identity h1, .plans-page-header h1) {
+  color: var(--ink);
+}
+:root[data-theme="light"] :is(.inbox-conversation-copy .state-label, .inbox-conversation-row time, .inbox-intro > p) {
+  color: var(--muted);
+}
+:root[data-theme="light"] .conversation-safety-panel,
+:root[data-theme="light"] .conversation-composer {
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="light"] .conversation-bubble {
+  border-color: var(--border);
+  background: var(--soft);
+  color: var(--ink);
+}
+:root[data-theme="light"] .is-own .conversation-bubble {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--soft);
+}
+:root[data-theme="light"] .conversation-compose-row #id_body {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+:root[data-theme="light"] .private-profile-page {
+  --profile-panel: var(--surface);
+  --profile-line: var(--border);
+  --profile-muted: var(--muted);
+}
+:root[data-theme="light"] .private-profile-placeholder {
+  background: var(--placeholder-surface);
+}
+:root[data-theme="light"] .private-profile-identity-edit {
+  border-color: var(--border);
+  color: var(--ink);
+}
+:root[data-theme="light"] :is(.private-profile-meta, .private-profile-section h2, .private-profile-about, .private-profile-plans li) {
+  color: var(--muted);
+}
+:root[data-theme="light"] :is(.private-profile-chips li, .private-profile-availability div, .private-profile-plans, .private-profile-premium) {
+  border-color: var(--border);
+  background: var(--surface);
+}
+:root[data-theme="light"] .private-profile-chips li {
+  color: var(--muted);
+}
+:root[data-theme="light"] .private-profile-plans li + li {
+  border-top-color: var(--border);
+}
+:root[data-theme="light"] .private-plan-state,
+:root[data-theme="light"] .private-plan-state--approved {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: var(--soft);
+  color: var(--accent-strong);
+}
+:root[data-theme="light"] :is(.private-profile-premium button, .public-profile-message button) {
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+:root[data-theme="light"] :is(.private-profile-premium button, .public-profile-message button):hover {
+  background: var(--accent-strong);
+}
+:root[data-theme="light"] .private-profile-notice {
+  background: var(--notice-surface);
+  color: var(--ink);
+}
+:root[data-theme="light"] .private-profile-notice p {
+  color: var(--muted);
+}
+
+/* Plan photography keeps its legibility overlay; image-free cards become white. */
+:root[data-theme="light"] .plans-route {
+  --plans-line: var(--border);
+  --plans-muted: var(--muted);
+  --plans-green: var(--accent-strong);
+}
+:root[data-theme="light"] .plans-create-button {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--accent-strong);
+}
+:root[data-theme="light"] .plans-filter-strip a {
+  border-color: var(--border);
+  background: var(--soft);
+  color: var(--muted);
+}
+:root[data-theme="light"] .plans-filter-strip a[aria-current="page"] {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+  color: var(--on-accent);
+}
+:root[data-theme="light"] .plans-intro {
+  border-bottom-color: var(--border);
+}
+:root[data-theme="light"] .plan-card:not(.plan-card--with-image) {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 .45rem 1.25rem var(--shadow-soft);
+}
+:root[data-theme="light"] .plan-card:not(.plan-card--with-image):hover {
+  background: var(--soft);
+}
+:root[data-theme="light"] .plan-card:not(.plan-card--with-image) :is(.plan-card-title, .plan-card-description, .plan-card-detail) {
+  color: var(--ink);
+}
+:root[data-theme="light"] .plan-card:not(.plan-card--with-image) :is(.plan-card-description, .plan-card-detail) {
+  color: var(--muted);
+}
+:root[data-theme="light"] :is(.plan-state, .plan-capacity) {
+  border-color: var(--border);
+  background: var(--soft);
+  color: var(--muted);
+}
+/* # WHY: Uses the available desktop canvas for four results while preserving every existing card and smaller-screen layout. */
+@media (min-width: 70rem) {
+  :is(.discovery-route, .plans-route) .page-shell {
+    width: min(100% - 2rem, 70rem);
+  }
+  :is(.discovery-grid, .plans-grid) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+:root[data-theme="light"] .plan-state--available {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent-strong);
+}
+:root[data-theme="light"] .plan-state--yours {
+  border-color: var(--success);
+  color: var(--success);
+}
+:root[data-theme="light"] .plans-empty-state {
+  color: var(--ink);
+}
+:root[data-theme="light"] .plans-safety-note {
+  color: var(--muted);
+}
+
+@media (max-width: 35rem) {
+  .site-header {
+    width: 100vw;
+    max-width: 100vw;
+    padding-inline: .75rem;
+  }
+  .brand {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+  .brand-wordmark { font-size: .9rem; }
+  .brand img { width: 2.4rem; height: 1.4rem; }
+  .topbar-plan-search {
+    min-width: 5.5rem;
+    flex-basis: 10rem;
+  }
+  .topbar-plan-search .plan-search-control {
+    gap: .4rem;
+    padding-inline: .65rem .35rem;
+  }
+  .topbar-plan-search .plan-search-input { font-size: .82rem; }
+  .topbar-plan-search .plan-search-clear { padding-inline: .35rem; font-size: .7rem; }
+  .site-context {
+    max-width: none;
+    flex: 0 0 auto;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1.5rem;
+    gap: .65rem;
+  }
+  .site-context a,
+  .site-theme-toggle {
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 1.5rem;
+  }
+  .profile-edit-route { overflow-x: hidden; }
+  :is(.profile-edit-page, .profile-edit-form) {
+    width: 100vw;
+    max-width: 100vw;
+    min-width: 0;
+  }
+  .profile-edit-field,
+  .profile-edit-form > button[type="submit"] {
+    width: calc(100vw - 1.7rem);
+    max-width: calc(100vw - 1.7rem);
+    min-width: 0;
+  }
+  .profile-field-panel {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .profile-edit-page :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea) {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
 
 /* # KEYWORD: prefers-reduced-motion — follows a device request to avoid unnecessary movement. */
 /* # WHY: Keeps the same content and controls while making animation effectively immediate for motion-sensitive visitors. */
 @media (prefers-reduced-motion: reduce) {
+  .guide-purpose-footprint { display: none; }
   *, *::before, *::after {
     scroll-behavior: auto !important;
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
+  }
+}
+
+@media (min-width: 56rem) {
+  /* # WHY: Lets the two desktop profile columns sit on the page without a second white surface behind them. */
+  :root[data-theme] .private-profile-split-page {
+    background: transparent;
+    background-color: transparent;
+  }
+  /* # WHY: Keeps the Messages master-detail shell invisible around its two independent floating panels. */
+  :root[data-theme] .inbox-page:has(.messages-split-layout) {
+    border-color: transparent;
+    background: transparent;
+    background-color: transparent;
+  }
+  /* # WHY: Gives the desktop conversation exactly three rows so the composer sits at the panel bottom without leaving an unused area. */
+  :root[data-theme] .inbox-thread-pane .conversation-page {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+  :root[data-theme] .inbox-thread-pane .conversation-thread {
+    min-height: 0;
+    overflow-y: auto;
+  }
+  :root[data-theme] .inbox-thread-pane .conversation-composer {
+    position: static;
+    inset: auto;
+  }
+}
+
+/* # WHY: Keeps shared page headings part of their surrounding layout instead of painting a separate white or dark block. */
+:root[data-theme] .plans-page-header {
+  background: transparent;
+  background-color: transparent;
+}
+
+/* -----------------------------------------------------------------------------
+   CALMER FUNCTIONAL SURFACES
+   Brings the Guide's spacing-led hierarchy into desktop forms and detail pages
+   without changing controls, content order, card layouts, or phone behaviour.
+   ----------------------------------------------------------------------------- */
+
+@media (min-width: 56rem) {
+  /* Forms use space for grouping; the actual inputs retain their clear edges. */
+  .profile-edit-page {
+    min-height: auto;
+    background: transparent;
+  }
+  .profile-edit-header {
+    min-height: 6.5rem;
+    padding: 1.75rem 0 1.25rem;
+    border-bottom-color: color-mix(in srgb, var(--border) 62%, transparent);
+  }
+  .profile-edit-form {
+    gap: 2rem;
+    padding: 2rem 0 4rem;
+  }
+  :is(
+    .profile-image-panel,
+    .profile-field-panel,
+    .profile-choice-list,
+    .profile-availability-panel,
+    .verification-panel,
+    .brand-form-state
+  ) {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--soft) 68%, transparent);
+    box-shadow: 0 .65rem 1.8rem var(--shadow-soft);
+  }
+  .biography-field .profile-field-panel { border-width: 0; }
+  .plan-draft-review {
+    background: color-mix(in srgb, var(--soft) 76%, transparent);
+    box-shadow: 0 .75rem 2.25rem var(--shadow-soft);
+  }
+
+  /* Detail content remains elevated, with quieter edges and more breathing room. */
+  .private-profile-split-stage { gap: 2.4rem; }
+  .private-profile-split-details {
+    gap: 2.35rem;
+    padding: 1.75rem;
+    background: color-mix(in srgb, var(--surface) 94%, var(--soft));
+    box-shadow: 0 1rem 2.75rem var(--shadow-soft);
+  }
+  :is(
+    .private-profile-availability div,
+    .private-profile-plans,
+    .private-profile-premium
+  ) {
+    border-color: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 58%, transparent);
+  }
+
+  /* Messages retain their dense master-detail layout but lose the hard frame. */
+  .inbox-list-pane,
+  .inbox-thread-pane .conversation-page,
+  .conversation-route .conversation-page {
+    border-color: transparent;
+    background: color-mix(in srgb, var(--surface) 95%, var(--soft));
+    box-shadow: 0 1rem 2.75rem var(--shadow-soft);
+  }
+  .inbox-intro,
+  .conversation-page-header,
+  .conversation-composer,
+  .inbox-conversation-list > li {
+    border-color: color-mix(in srgb, var(--border) 62%, transparent);
+  }
+  .conversation-composer {
+    box-shadow: 0 -.6rem 1.5rem color-mix(in srgb, var(--shadow-soft) 72%, transparent);
   }
 }

@@ -16,9 +16,11 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import (
     close_old_connections,
+    connection,
     connections,
 )
 from django.test import Client, TransactionTestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -29,12 +31,18 @@ from kindlelise.models import (
     Conversation,
     Message,
     Notification,
+    Participation,
     Plan,
+    PlanChat,
+    PlanChatMessage,
+    Profile,
 )
 from kindlelise.services import (
+    confirm_requested_plan_participation,
     find_or_start_direct_conversation,
-    join_approved_plan_and_lock_meeting_details,
+    request_plan_participation_and_open_owner_conversation,
     send_direct_message,
+    send_plan_chat_message,
 )
 from tests.conftest import (
     create_test_conversation,
@@ -47,17 +55,284 @@ from tests.conftest import (
 pytestmark = pytest.mark.django_db
 
 
+# WHY: Proves plan chat access always follows current confirmed participation and preserves one history across rejoining.
+def test_plan_chat_http_reuses_shared_thread_and_revokes_then_restores_access():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner, display_name="Plan owner")
+    participant = create_test_user()
+    create_verified_test_profile(user=participant, display_name="Confirmed person")
+    pending_user = create_test_user()
+    create_verified_test_profile(user=pending_user, display_name="Pending person")
+    outsider = create_test_user()
+    create_verified_test_profile(user=outsider, display_name="Unrelated person")
+    plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Shared walking plan",
+        capacity=3,
+    )
+    participation, _conversation = (
+        request_plan_participation_and_open_owner_conversation(participant, plan)
+    )
+    confirmed_participation, chat = confirm_requested_plan_participation(
+        owner,
+        plan,
+        participation.pk,
+    )
+    pending_participation, _pending_conversation = (
+        request_plan_participation_and_open_owner_conversation(pending_user, plan)
+    )
+    chat_url = reverse("plan_chat_detail", args=[plan.pk])
+    send_url = reverse("plan_chat_message_send", args=[plan.pk])
+
+    owner_client = Client()
+    owner_client.force_login(owner)
+    participant_client = Client()
+    participant_client.force_login(participant)
+    assert owner_client.get(chat_url).status_code == 200
+    participant_page = participant_client.get(chat_url)
+    assert participant_page.status_code == 200
+    assert b"Shared walking plan" in participant_page.content
+    assert b"Keep personal information private" in participant_page.content
+    assert owner_client.post(send_url, {"body": "Owner welcome"}).status_code == 302
+
+    pending_client = Client()
+    pending_client.force_login(pending_user)
+    outsider_client = Client()
+    outsider_client.force_login(outsider)
+    assert pending_client.get(chat_url).status_code == 404
+    assert pending_client.post(send_url, {"body": "not permitted"}).status_code == 404
+    assert outsider_client.get(chat_url).status_code == 404
+
+    sent_response = participant_client.post(
+        send_url,
+        {"body": "Hello <script>alert('no')</script>", "sender": owner.pk},
+    )
+    saved_message = PlanChatMessage.objects.get(body__startswith="Hello")
+    assert sent_response.status_code == 302
+    assert sent_response.url == chat_url
+    assert saved_message.sender == participant
+    assert saved_message.body == "Hello <script>alert('no')</script>"
+    rendered = owner_client.get(chat_url)
+    assert b"Hello &lt;script&gt;alert(&#x27;no&#x27;)&lt;/script&gt;" in rendered.content
+    assert b"<script>alert" not in rendered.content
+
+    leave_response = participant_client.post(reverse("plan_leave", args=[plan.pk]))
+    assert leave_response.status_code == 302
+    assert participant_client.get(chat_url).status_code == 404
+    assert participant_client.post(send_url, {"body": "after leaving"}).status_code == 404
+
+    participant_client.post(reverse("plan_participation_request", args=[plan.pk]))
+    confirmed_participation.refresh_from_db()
+    assert confirmed_participation.status == Participation.Status.PENDING
+    _participation, restored_chat = confirm_requested_plan_participation(
+        owner,
+        plan,
+        confirmed_participation.pk,
+    )
+    assert restored_chat == chat
+    restored_page = participant_client.get(chat_url)
+    assert restored_page.status_code == 200
+    assert b"Hello &lt;script&gt;alert" in restored_page.content
+    assert PlanChat.objects.filter(plan=plan).count() == 1
+    assert pending_participation.status == Participation.Status.PENDING
+
+
+# WHY: Proves a started or cancelled plan keeps authorised history visible but refuses every new message.
+def test_plan_chat_becomes_read_only_after_start_or_cancellation():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    participant = create_test_user()
+    create_verified_test_profile(user=participant)
+    plan = create_test_plan(owner=owner, status=Plan.Status.APPROVED)
+    participation, _conversation = (
+        request_plan_participation_and_open_owner_conversation(participant, plan)
+    )
+    _participation, chat = confirm_requested_plan_participation(
+        owner,
+        plan,
+        participation.pk,
+    )
+    send_plan_chat_message(participant, chat, "Saved before cancellation")
+    plan.starts_at = timezone.now() - timezone.timedelta(minutes=1)
+    plan.save(update_fields=["starts_at"])
+    participant_client = Client()
+    participant_client.force_login(participant)
+    started_page = participant_client.get(reverse("plan_chat_detail", args=[plan.pk]))
+    assert started_page.status_code == 200
+    assert b"This plan chat is now read-only" in started_page.content
+    assert (
+        participant_client.post(
+            reverse("plan_chat_message_send", args=[plan.pk]),
+            {"body": "after start"},
+        ).status_code
+        == 404
+    )
+
+    plan.starts_at = timezone.now() + timezone.timedelta(days=1)
+    plan.save(update_fields=["starts_at"])
+    owner_client = Client()
+    owner_client.force_login(owner)
+    owner_client.post(reverse("plan_cancel", args=[plan.pk]))
+
+    page = participant_client.get(reverse("plan_chat_detail", args=[plan.pk]))
+    assert page.status_code == 200
+    assert b"Saved before cancellation" in page.content
+    assert b"This plan chat is now read-only" in page.content
+    assert b'id="message-composer"' not in page.content
+    assert (
+        participant_client.post(
+            reverse("plan_chat_message_send", args=[plan.pk]),
+            {"body": "too late"},
+        ).status_code
+        == 404
+    )
+    assert PlanChatMessage.objects.count() == 1
+
+
+# WHY: Proves plan chats share the Messages list without exposing them to pending, former or unrelated accounts.
+def test_messages_inbox_mixes_authorised_direct_and_plan_chat_rows():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner, display_name="Inbox owner")
+    participant = create_test_user()
+    create_verified_test_profile(user=participant, display_name="Inbox participant")
+    peer = create_test_user()
+    create_verified_test_profile(user=peer, display_name="Direct peer")
+    pending_user = create_test_user()
+    create_verified_test_profile(user=pending_user, display_name="Pending viewer")
+    plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Inbox plan chat",
+        capacity=3,
+        thumbnail_image="plan-thumbnails/inbox-plan.jpg",
+    )
+    participation, _conversation = (
+        request_plan_participation_and_open_owner_conversation(participant, plan)
+    )
+    _participation, _chat = confirm_requested_plan_participation(
+        owner,
+        plan,
+        participation.pk,
+    )
+    request_plan_participation_and_open_owner_conversation(pending_user, plan)
+    direct_conversation = create_test_conversation(participant, peer)
+
+    client = Client()
+    client.force_login(participant)
+    inbox = client.get(reverse("inbox"))
+    assert inbox.status_code == 200
+    assert b"Direct peer" in inbox.content
+    assert b"Inbox plan chat" in inbox.content
+    assert reverse("conversation_detail", args=[direct_conversation.pk]).encode() in inbox.content
+    assert reverse("plan_chat_detail", args=[plan.pk]).encode() in inbox.content
+    assert reverse("plan_thumbnail", args=[plan.pk]).encode() in inbox.content
+    selected_chat = client.get(reverse("plan_chat_detail", args=[plan.pk]))
+    assert b"messages-split-layout" in selected_chat.content
+    assert b"Plan chat" in selected_chat.content
+
+    pending_client = Client()
+    pending_client.force_login(pending_user)
+    assert b"Inbox plan chat" not in pending_client.get(reverse("inbox")).content
+    client.post(reverse("plan_leave", args=[plan.pk]))
+    assert b"Inbox plan chat" not in client.get(reverse("inbox")).content
+
+
+# WHY: Guards the mixed inbox against one extra database query per plan-chat row.
+def test_mixed_inbox_query_count_stays_bounded_with_several_plan_chats():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    for index in range(8):
+        plan = create_test_plan(
+            owner=owner,
+            status=Plan.Status.APPROVED,
+            title=f"Bounded chat {index}",
+        )
+        PlanChat.objects.create(plan=plan)
+    client = Client()
+    client.force_login(owner)
+    with CaptureQueriesContext(connection) as captured_queries:
+        response = client.get(reverse("inbox"))
+    assert response.status_code == 200
+    assert len(captured_queries) <= 12
+
+
+# WHY: Proves each group message alert reaches exactly the other current chat members and links back to the chat.
+def test_plan_chat_message_notifications_exclude_sender_pending_and_former_members():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner, display_name="Alert owner")
+    sender = create_test_user()
+    create_verified_test_profile(user=sender, display_name="Alert sender")
+    recipient = create_test_user()
+    create_verified_test_profile(user=recipient, display_name="Alert recipient")
+    pending_user = create_test_user()
+    create_verified_test_profile(user=pending_user, display_name="Alert pending")
+    plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Alert plan chat",
+        capacity=4,
+    )
+    chats = []
+    for participant in (sender, recipient):
+        participation, _conversation = (
+            request_plan_participation_and_open_owner_conversation(participant, plan)
+        )
+        _participation, chat = confirm_requested_plan_participation(
+            owner,
+            plan,
+            participation.pk,
+        )
+        chats.append(chat)
+    request_plan_participation_and_open_owner_conversation(pending_user, plan)
+    Notification.objects.all().delete()
+
+    chat_message = send_plan_chat_message(sender, chats[0], "New group message")
+    alerts = Notification.objects.filter(kind=Notification.Kind.PLAN_CHAT_MESSAGE)
+    assert set(alerts.values_list("recipient_id", flat=True)) == {
+        owner.pk,
+        recipient.pk,
+    }
+    assert set(alerts.values_list("plan_chat_message_id", flat=True)) == {
+        chat_message.pk
+    }
+    assert not alerts.filter(recipient=sender).exists()
+    assert not alerts.filter(recipient=pending_user).exists()
+
+    owner_client = Client()
+    owner_client.force_login(owner)
+    notifications_page = owner_client.get(reverse("notifications"))
+    assert b"Alert sender posted in Alert plan chat" in notifications_page.content
+    assert reverse("plan_chat_detail", args=[plan.pk]).encode() in notifications_page.content
+
+    recipient_client = Client()
+    recipient_client.force_login(recipient)
+    recipient_client.post(reverse("plan_leave", args=[plan.pk]))
+    send_plan_chat_message(sender, chats[0], "After leaving")
+    assert alerts.filter(recipient=recipient).count() == 1
+    former_member_notifications = recipient_client.get(reverse("notifications"))
+    assert b"Alert sender posted in Alert plan chat" not in former_member_notifications.content
+    assert b'class="site-notification-count"' not in former_member_notifications.content
+
+
 # WHY: Checks that direct conversation http starts from authorised profile once with csrf so a future change cannot quietly break it.
 
 
 # WHY: Checks that direct conversation http starts from authorised profile once with csrf so a future change cannot quietly break it.
 def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf():
     viewer = create_test_user()
-    create_verified_test_profile(user=viewer, display_name="Message starter")
+    Profile.objects.create(
+        user=viewer,
+        display_name="Message starter",
+        broad_area="central",
+        broad_areas=["central"],
+    )
     target = create_test_user()
-    target_profile = create_verified_test_profile(
+    target_profile = Profile.objects.create(
         user=target,
         display_name="Message target",
+        broad_area="central",
+        broad_areas=["central"],
     )
     blocked_target = create_test_user()
     blocked_profile = create_verified_test_profile(
@@ -72,7 +347,7 @@ def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf(
     start_url = reverse("direct_conversation_start", args=[target_profile.pk])
     assert profile_response.status_code == 200
     assert start_url.encode() in profile_response.content
-    assert b"Send Message" in profile_response.content
+    assert b"Send message" in profile_response.content
     assert client.get(start_url).status_code == 405
 
     missing_csrf_response = client.post(start_url)
@@ -121,8 +396,8 @@ def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf(
     assert Conversation.objects.count() == 1
 
 
-# WHY: Checks that notification badge counts messages and plan joins then marks them read so a future change cannot quietly break it.
-def test_notification_badge_counts_messages_and_plan_joins_then_marks_them_read():
+# WHY: Checks that notification badges and pages include participation requests and decisions alongside messages.
+def test_notification_badge_counts_messages_requests_and_decisions_then_marks_read():
     owner = create_test_user()
     create_verified_test_profile(user=owner, display_name="Plan owner")
     participant = create_test_user()
@@ -135,11 +410,14 @@ def test_notification_badge_counts_messages_and_plan_joins_then_marks_them_read(
     conversation = create_test_conversation(owner, participant)
 
     message = send_direct_message(participant, conversation, "New message")
-    participation = join_approved_plan_and_lock_meeting_details(participant, plan)
+    participation, reused_conversation = (
+        request_plan_participation_and_open_owner_conversation(participant, plan)
+    )
+    assert reused_conversation == conversation
 
     assert set(
         Notification.objects.filter(recipient=owner).values_list("kind", flat=True)
-    ) == {Notification.Kind.MESSAGE, Notification.Kind.PLAN_JOIN}
+    ) == {Notification.Kind.MESSAGE, Notification.Kind.PLAN_REQUEST}
     assert Notification.objects.get(message=message).recipient == owner
     assert Notification.objects.get(participation=participation).recipient == owner
     assert not Notification.objects.filter(recipient=participant).exists()
@@ -152,7 +430,7 @@ def test_notification_badge_counts_messages_and_plan_joins_then_marks_them_read(
     assert b'class="site-notification-count"' in response.content
     assert b">2</span>" in response.content
     assert b"Message from Plan participant" in response.content
-    assert b"Plan participant joined Notification plan" in response.content
+    assert b"Plan participant asked to join Notification plan" in response.content
 
     assert client.get(reverse("notifications_read")).status_code == 405
     read_response = client.post(reverse("notifications_read"))
@@ -165,6 +443,13 @@ def test_notification_badge_counts_messages_and_plan_joins_then_marks_them_read(
         b'class="site-notification-count"'
         not in client.get(reverse("notifications")).content
     )
+
+    confirm_requested_plan_participation(owner, plan, participation.pk)
+    participant_client = Client()
+    participant_client.force_login(participant)
+    decision_response = participant_client.get(reverse("notifications"))
+    assert b">1</span>" in decision_response.content
+    assert b"Your participation in Notification plan was confirmed" in decision_response.content
 
 
 # WHY: Checks that conversation http escapes ordered messages and shares one hidden 404 so a future change cannot quietly break it.

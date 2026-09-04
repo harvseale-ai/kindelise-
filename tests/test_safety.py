@@ -18,11 +18,18 @@ from kindlelise.models import (
     Block,
     Message,
     Participation,
+    Plan,
     Profile,
     Report,
 )
 from kindlelise.selectors import get_signed_in_user_account_summary
-from kindlelise.services import submit_private_report_about_user
+from kindlelise.services import (
+    block_user_from_discovery_and_messages,
+    confirm_requested_plan_participation,
+    request_plan_participation_and_open_owner_conversation,
+    send_plan_chat_message,
+    submit_private_report_about_user,
+)
 from tests.conftest import (
     create_test_conversation,
     create_test_plan,
@@ -271,3 +278,149 @@ def test_private_report_service_stores_received_reports_with_valid_contexts():
             reported_conversation=conversation,
             reported_message=message,
         )
+
+
+# WHY: Proves a received plan-chat message can be reported without accepting another sender or hidden chat as evidence.
+def test_plan_chat_message_reporting_requires_authorised_received_context():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner, display_name="Report plan owner")
+    reporter = create_test_user()
+    create_verified_test_profile(user=reporter, display_name="Plan reporter")
+    target = create_test_user()
+    target_profile = create_verified_test_profile(
+        user=target,
+        display_name="Reported participant",
+    )
+    outsider = create_test_user()
+    create_verified_test_profile(user=outsider, display_name="Hidden reporter")
+    plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Reportable plan chat",
+        capacity=3,
+    )
+    chat = None
+    for participant in (reporter, target):
+        participation, _conversation = (
+            request_plan_participation_and_open_owner_conversation(participant, plan)
+        )
+        _participation, chat = confirm_requested_plan_participation(
+            owner,
+            plan,
+            participation.pk,
+        )
+    received_message = send_plan_chat_message(target, chat, "Reportable group words")
+    own_message = send_plan_chat_message(reporter, chat, "Reporter own words")
+    report_url = reverse("report_create", args=[target_profile.pk])
+    reporter_client = Client()
+    reporter_client.force_login(reporter)
+    chat_page = reporter_client.get(reverse("plan_chat_detail", args=[plan.pk]))
+    assert chat_page.content.count(b"Report this message") == 1
+    assert f"context_id={received_message.pk}".encode() in chat_page.content
+    assert f"context_id={own_message.pk}".encode() not in chat_page.content
+
+    report_response = reporter_client.post(
+        report_url,
+        {
+            "category": Report.Category.SAFETY_CONCERN,
+            "description": "Private plan chat concern.",
+            "context_type": "plan_chat_message",
+            "context_id": str(received_message.pk),
+        },
+    )
+    assert report_response.status_code == 200
+    saved_report = Report.objects.get()
+    assert saved_report.reported_plan_chat_message == received_message
+    assert saved_report.reported_user == target
+
+    outsider_client = Client()
+    outsider_client.force_login(outsider)
+    refused = outsider_client.post(
+        report_url,
+        {
+            "category": Report.Category.OTHER,
+            "description": "Must not reveal a hidden group message.",
+            "context_type": "plan_chat_message",
+            "context_id": str(received_message.pk),
+        },
+    )
+    assert refused.status_code == 404
+    assert Report.objects.count() == 1
+
+
+# WHY: Proves blocking revokes the correct current plan memberships and chat access for every relationship.
+def test_blocking_removes_owner_participant_and_shared_participant_chat_access():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    first = create_test_user()
+    create_verified_test_profile(user=first)
+    second = create_test_user()
+    create_verified_test_profile(user=second)
+    plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        capacity=3,
+    )
+    participations = {}
+    for participant in (first, second):
+        participation, _conversation = (
+            request_plan_participation_and_open_owner_conversation(participant, plan)
+        )
+        participations[participant.pk], _chat = confirm_requested_plan_participation(
+            owner,
+            plan,
+            participation.pk,
+        )
+
+    block_user_from_discovery_and_messages(first, second)
+    participations[first.pk].refresh_from_db()
+    participations[second.pk].refresh_from_db()
+    assert participations[first.pk].status == Participation.Status.LEFT
+    assert participations[second.pk].status == Participation.Status.JOINED
+    first_client = Client()
+    first_client.force_login(first)
+    assert first_client.get(reverse("plan_chat_detail", args=[plan.pk])).status_code == 404
+
+    second_plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        capacity=2,
+        title="Owner blocks participant",
+    )
+    second_request, _conversation = (
+        request_plan_participation_and_open_owner_conversation(second, second_plan)
+    )
+    second_participation, _chat = confirm_requested_plan_participation(
+        owner,
+        second_plan,
+        second_request.pk,
+    )
+    block_user_from_discovery_and_messages(owner, second)
+    second_participation.refresh_from_db()
+    assert second_participation.status == Participation.Status.LEFT
+    second_client = Client()
+    second_client.force_login(second)
+    assert (
+        second_client.get(reverse("plan_chat_detail", args=[second_plan.pk])).status_code
+        == 404
+    )
+
+    third = create_test_user()
+    create_verified_test_profile(user=third)
+    third_plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        capacity=2,
+        title="Participant blocks owner",
+    )
+    third_request, _conversation = (
+        request_plan_participation_and_open_owner_conversation(third, third_plan)
+    )
+    third_participation, _chat = confirm_requested_plan_participation(
+        owner,
+        third_plan,
+        third_request.pk,
+    )
+    block_user_from_discovery_and_messages(third, owner)
+    third_participation.refresh_from_db()
+    assert third_participation.status == Participation.Status.LEFT

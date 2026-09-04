@@ -89,6 +89,12 @@ urlpatterns = [
     # WHY: The shortest plan address shows the collection before any one plan is selected.
     # Code route: kindlelise/urls.py > kindlelise/views/plans.py (plan_list_page) > kindlelise/selectors/plans.py > templates/plan.html.
     path("plans/", plans.plan_list_page, name="plan_list"),
+    # WHY: Gives the shared topbar a small authorised result list without exposing private plan states.
+    path(
+        "plans/search/",
+        plans.plan_search_suggestions,
+        name="plan_search_suggestions",
+    ),
     # WHY: Creation has its own form address so it cannot be mistaken for an existing plan number.
     # Code route: kindlelise/urls.py > kindlelise/views/plans.py (create_plan_page) > kindlelise/forms.py > kindlelise/services/plans.py > templates/plan.html.
     path("plans/create/", plans.create_plan_page, name="plan_create"),
@@ -98,6 +104,12 @@ urlpatterns = [
         "plans/fetch-details/",
         plans.request_plan_metadata,
         name="plan_metadata_fetch",
+    ),
+    # WHY: Returns optional title and description wording for review without creating a plan.
+    path(
+        "plans/draft-suggestion/",
+        plans.request_plan_draft,
+        name="plan_draft_suggestion",
     ),
     # KEYWORD: <int:plan_id> — turns the plan number in the address into the `plan_id` given to the view.
     # WHY: Keeps thumbnail delivery behind the same plan rules used by the rest of the site.
@@ -113,12 +125,44 @@ urlpatterns = [
     # WHY: Keeps editing separate from viewing and lets the view enforce owner and first-join rules.
     # Code route: kindlelise/urls.py > kindlelise/views/plans.py (edit_plan_page) > kindlelise/forms.py > kindlelise/services/plans.py > templates/plan.html.
     path("plans/<int:plan_id>/edit/", plans.edit_plan_page, name="plan_edit"),
-    # WHY: Each plan-changing action has a clear address so permissions are checked again before saving.
-    # Code route: kindlelise/urls.py > kindlelise/views/plans.py (join_plan) > kindlelise/selectors/plans.py > kindlelise/services/plans.py > redirect to plan detail.
-    path("plans/<int:plan_id>/join/", plans.join_plan, name="plan_join"),
+    # WHY: Asking to join creates only a pending request and opens the existing private owner conversation.
+    path(
+        "plans/<int:plan_id>/request/",
+        plans.request_plan_participation,
+        name="plan_participation_request",
+    ),
+    # WHY: Owner decisions use distinct POST routes so a pending request changes in only the intended direction.
+    path(
+        "plans/<int:plan_id>/requests/<int:participation_id>/confirm/",
+        plans.confirm_plan_participation,
+        name="plan_participation_confirm",
+    ),
+    path(
+        "plans/<int:plan_id>/requests/<int:participation_id>/decline/",
+        plans.decline_plan_participation,
+        name="plan_participation_decline",
+    ),
+    # WHY: A requester can remove only their own pending state without deleting its history row.
+    path(
+        "plans/<int:plan_id>/request/withdraw/",
+        plans.withdraw_plan_participation,
+        name="plan_participation_withdraw",
+    ),
     # WHY: Leaving is separate from joining so participation history is changed in only the intended direction.
     # Code route: kindlelise/urls.py > kindlelise/views/plans.py (leave_plan) > kindlelise/selectors/plans.py > kindlelise/services/plans.py > redirect to plan detail.
     path("plans/<int:plan_id>/leave/", plans.leave_plan, name="plan_leave"),
+    # WHY: A plan chat is readable only to the owner and current confirmed participants.
+    path(
+        "plans/<int:plan_id>/chat/",
+        messages.plan_chat_page,
+        name="plan_chat_detail",
+    ),
+    # WHY: Sending remains an explicit CSRF-protected action separate from opening chat history.
+    path(
+        "plans/<int:plan_id>/chat/messages/send/",
+        messages.send_plan_chat_message_view,
+        name="plan_chat_message_send",
+    ),
     # WHY: Cancellation has its own owner-only action and cannot be confused with editing plan details.
     # Code route: kindlelise/urls.py > kindlelise/views/plans.py (cancel_plan) > kindlelise/selectors/plans.py > kindlelise/services/plans.py > redirect to plan detail.
     path("plans/<int:plan_id>/cancel/", plans.cancel_plan, name="plan_cancel"),
@@ -133,7 +177,7 @@ urlpatterns = [
     path("messages/", messages.inbox_page, name="inbox"),
     # KEYWORD: <int:conversation_id> — supplies the saved conversation number to the view for membership checks.
     # WHY: Displays one conversation only after confirming the signed-in person belongs to it.
-    # Code route: kindlelise/urls.py > kindlelise/views/messages.py (conversation_page) > kindlelise/selectors/messages.py > templates/conversation.html.
+    # Code route: kindlelise/urls.py > kindlelise/views/messages.py (conversation_page) > kindlelise/selectors/messages.py > templates/inbox.html > shared conversation panel.
     path(
         "conversations/<int:conversation_id>/",
         messages.conversation_page,

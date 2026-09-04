@@ -16,6 +16,7 @@ from threading import Barrier
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import (
     close_old_connections,
     connections,
@@ -26,13 +27,16 @@ from django.utils import timezone
 from PIL import Image
 
 import kindlelise.plan_metadata as plan_metadata
+import kindlelise.views.plans as plan_views
 from kindlelise.models import (
     Participation,
     Plan,
+    PlanChat,
     Profile,
 )
 from kindlelise.services import (
-    join_approved_plan_and_lock_meeting_details,
+    confirm_requested_plan_participation,
+    request_plan_participation_and_open_owner_conversation,
 )
 from tests.conftest import (
     create_test_plan,
@@ -122,8 +126,173 @@ def test_plan_http_list_gates_access_and_preserves_owner_only_states():
     unverified_client = Client()
     unverified_client.force_login(unverified)
     unverified_response = unverified_client.get(reverse("plan_list"))
-    assert unverified_response.status_code == 302
-    assert unverified_response.url == reverse("account")
+    assert unverified_response.status_code == 200
+
+
+# WHY: Checks that the plan filter hub separates availability, involvement, and time without exposing hidden plans.
+def test_plan_list_filter_hub_supports_open_full_joined_and_time_ranges():
+    viewer = create_test_user()
+    create_verified_test_profile(user=viewer)
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    participant = create_test_user()
+    create_verified_test_profile(user=participant)
+    current_time = timezone.now()
+    open_plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Open filter plan",
+        starts_at=current_time + timezone.timedelta(days=2),
+        capacity=2,
+    )
+    full_plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Full filter plan",
+        starts_at=current_time + timezone.timedelta(days=3),
+        capacity=1,
+    )
+    Participation.objects.create(
+        plan=full_plan,
+        user=participant,
+        status=Participation.Status.JOINED,
+        joined_at=current_time,
+    )
+    joined_plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Joined filter plan",
+        starts_at=current_time + timezone.timedelta(days=4),
+        capacity=2,
+    )
+    Participation.objects.create(
+        plan=joined_plan,
+        user=viewer,
+        status=Participation.Status.JOINED,
+        joined_at=current_time,
+    )
+    later_plan = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Later filter plan",
+        starts_at=current_time + timezone.timedelta(days=20),
+        capacity=2,
+    )
+    client = Client()
+    client.force_login(viewer)
+
+    open_response = client.get(reverse("plan_list"), {"filter": "available"})
+    full_response = client.get(reverse("plan_list"), {"filter": "full"})
+    joined_response = client.get(reverse("plan_list"), {"filter": "joined"})
+    week_response = client.get(reverse("plan_list"), {"filter": "this_week"})
+    month_response = client.get(reverse("plan_list"), {"filter": "this_month"})
+
+    assert open_plan.title.encode() in open_response.content
+    assert joined_plan.title.encode() in open_response.content
+    assert full_plan.title.encode() not in open_response.content
+    assert full_plan.title.encode() in full_response.content
+    assert open_plan.title.encode() not in full_response.content
+    assert joined_plan.title.encode() in joined_response.content
+    assert open_plan.title.encode() not in joined_response.content
+    assert b'<span class="plan-state plan-state--available plan-state--joined">Joined</span>' in joined_response.content
+    assert later_plan.title.encode() not in week_response.content
+    assert later_plan.title.encode() in month_response.content
+    assert b"Availability" in open_response.content
+    assert b"Your plans" in open_response.content
+    assert b"Next 7 days" in open_response.content
+
+
+# WHY: Proves search covers the useful public wording while excluding private, past, and full plans from both results and suggestion data.
+def test_plan_list_search_finds_only_open_public_plan_text():
+    viewer = create_test_user()
+    create_verified_test_profile(user=viewer)
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    participant = create_test_user()
+    create_verified_test_profile(user=participant)
+    future = timezone.now() + timezone.timedelta(days=2)
+    title_match = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Needle walking group",
+        starts_at=future,
+        capacity=3,
+    )
+    description_match = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Quiet coffee",
+        description="A relaxed needle conversation.",
+        starts_at=future,
+        capacity=3,
+    )
+    place_match = create_test_plan(
+        owner=viewer,
+        status=Plan.Status.APPROVED,
+        title="Gallery visit",
+        public_place="Needle Arts Centre",
+        starts_at=future,
+        capacity=3,
+    )
+    full_match = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Needle full plan",
+        starts_at=future,
+        capacity=1,
+    )
+    Participation.objects.create(
+        plan=full_match,
+        user=participant,
+        status=Participation.Status.JOINED,
+        joined_at=timezone.now(),
+    )
+    private_match = create_test_plan(
+        owner=viewer,
+        title="Needle pending plan",
+        starts_at=future,
+    )
+    past_match = create_test_plan(
+        owner=owner,
+        status=Plan.Status.APPROVED,
+        title="Needle past plan",
+        starts_at=timezone.now() - timezone.timedelta(minutes=1),
+    )
+    client = Client()
+    client.force_login(viewer)
+
+    response = client.get(reverse("plan_list"), {"q": "NEEDLE"})
+
+    assert response.status_code == 200
+    assert response.context["search_query"] == "NEEDLE"
+    for visible_plan in (title_match, description_match, place_match):
+        assert visible_plan.title.encode() in response.content
+    for hidden_plan in (full_match, private_match, past_match):
+        assert hidden_plan.title.encode() not in response.content
+    assert b'id="plan-search-input"' in response.content
+    assert b'role="combobox"' in response.content
+    assert response.content.count(b"data-plan-searchable") == 3
+
+    suggestion_response = client.get(
+        reverse("plan_search_suggestions"),
+        {"q": "needle"},
+    )
+    assert suggestion_response.status_code == 200
+    suggestion_titles = {
+        result["title"] for result in suggestion_response.json()["results"]
+    }
+    assert suggestion_titles == {
+        title_match.title,
+        description_match.title,
+        place_match.title,
+    }
+    assert full_match.title not in suggestion_titles
+    assert private_match.title not in suggestion_titles
+    assert past_match.title not in suggestion_titles
+
+    owned_response = client.get(reverse("plan_list"), {"filter": "mine", "q": "needle"})
+    assert place_match.title.encode() in owned_response.content
+    assert title_match.title.encode() not in owned_response.content
 
 
 # WHY: Checks that plan http creation is immediately available and preserves invalid form so a future change cannot quietly break it.
@@ -146,14 +315,18 @@ def test_plan_http_creation_is_immediately_available_and_preserves_invalid_form(
     assert b'<select name="starts_at_1"' in get_response.content
     assert b'<option value="09:00">09:00</option>' in get_response.content
     assert b"data-plan-metadata-preview" in get_response.content
+    assert b"data-plan-image-dropzone" in get_response.content
+    assert b'enctype="multipart/form-data"' in get_response.content
     assert b'src="data:image/gif;base64,' in get_response.content
     assert tuple(get_response.context["form"].fields) == (
-        "title",
-        "description",
         "public_url",
         "public_place",
-        "starts_at",
+        "public_address",
         "capacity",
+        "starts_at",
+        "title",
+        "description",
+        "plan_image",
     )
 
     create_response = client.post(
@@ -196,6 +369,130 @@ def test_plan_http_creation_is_immediately_available_and_preserves_invalid_form(
     assert not Plan.objects.filter(title="Invalid HTTP plan").exists()
 
 
+# WHY: Proves the manual drag-and-drop fallback uses the protected normalized plan thumbnail path.
+def test_plan_creation_and_edit_accept_normalized_fallback_photo(
+    settings,
+    tmp_path,
+    django_capture_on_commit_callbacks,
+):
+    settings.MEDIA_ROOT = tmp_path
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    client = Client()
+    client.force_login(owner)
+    future = timezone.now() + timezone.timedelta(days=1)
+    image_output = BytesIO()
+    Image.new("RGBA", (64, 40), color=(31, 97, 68, 180)).save(
+        image_output,
+        format="PNG",
+    )
+
+    response = client.post(
+        reverse("plan_create"),
+        {
+            "title": "Uploaded image plan",
+            "description": "Meet at the public entrance.",
+            "public_place": "City Museum",
+            "public_url": "https://example.test/city-museum",
+            **plan_start_form_values(future),
+            "capacity": "3",
+            "plan_image": SimpleUploadedFile(
+                "camera-name.png",
+                image_output.getvalue(),
+                content_type="image/png",
+            ),
+        },
+    )
+
+    plan = Plan.objects.get(title="Uploaded image plan")
+    assert response.status_code == 302
+    assert plan.thumbnail_image.name.startswith("plan-thumbnails/")
+    with Image.open(tmp_path / plan.thumbnail_image.name) as stored_image:
+        assert stored_image.format == "JPEG"
+        assert stored_image.size == (64, 40)
+        assert not stored_image.getexif()
+
+    first_thumbnail_name = plan.thumbnail_image.name
+    edit_page = client.get(reverse("plan_edit", args=[plan.pk]))
+    assert edit_page.status_code == 200
+    assert b"data-plan-image-editor" in edit_page.content
+    assert b"Replace the plan photo" in edit_page.content
+    assert b'enctype="multipart/form-data"' in edit_page.content
+    replacement_output = BytesIO()
+    Image.new("RGB", (80, 50), color=(90, 100, 110)).save(
+        replacement_output,
+        format="JPEG",
+    )
+    with django_capture_on_commit_callbacks(execute=True):
+        edit_response = client.post(
+            reverse("plan_edit", args=[plan.pk]),
+            {
+                "title": plan.title,
+                "description": plan.description,
+                "public_place": plan.public_place,
+                "public_address": plan.public_address,
+                "public_url": plan.public_url,
+                **plan_start_form_values(future),
+                "capacity": str(plan.capacity),
+                "plan_image": SimpleUploadedFile(
+                    "replacement.jpg",
+                    replacement_output.getvalue(),
+                    content_type="image/jpeg",
+                ),
+            },
+        )
+
+    plan.refresh_from_db()
+    assert edit_response.status_code == 302
+    assert plan.thumbnail_image.name != first_thumbnail_name
+    assert not (tmp_path / first_thumbnail_name).exists()
+    with Image.open(tmp_path / plan.thumbnail_image.name) as stored_image:
+        assert stored_image.format == "JPEG"
+        assert stored_image.size == (80, 50)
+
+
+# WHY: Proves plan wording remains an explicit bounded suggestion and never creates a plan by itself.
+def test_plan_draft_suggestion_validates_facts_and_never_saves(monkeypatch):
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    client = Client()
+    client.force_login(owner)
+    draft_url = reverse("plan_draft_suggestion")
+    future = timezone.now() + timezone.timedelta(days=1)
+    captured = {}
+
+    def return_draft(**facts):
+        captured.update(facts)
+        return {
+            "title": "Mahjong at the public games café",
+            "description": "Join me for a friendly game of mahjong.",
+            "public_place": "Public Games Café",
+            "public_address": "10 High Street, London",
+            "date": future.date().isoformat(),
+            "time": future.strftime("%H:%M"),
+        }
+
+    monkeypatch.setattr(plan_views, "get_plan_draft_suggestion", return_draft)
+    response = client.post(
+        draft_url,
+        {
+            "idea": "I need three other mahjong players.",
+            "public_url": "https://events.example.test/mahjong",
+            "public_place": "Public Games Café",
+            "public_address": "10 High Street, London",
+            "capacity": "3",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["title"] == "Mahjong at the public games café"
+    assert captured["capacity"] == 3
+    assert captured["public_url"] == "https://events.example.test/mahjong"
+    assert not Plan.objects.filter(title="Mahjong at the public games café").exists()
+    assert client.get(draft_url).status_code == 405
+    assert client.post(draft_url, {"capacity": "16"}).status_code == 400
+
+
 # WHY: Checks that plan fetch details stores and serves normalized card thumbnail so a future change cannot quietly break it.
 def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     monkeypatch,
@@ -213,7 +510,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     page_html = b"""
         <html><head>
           <script type="application/ld+json">
-            {"@type":"Event","location":{"@type":"Place","name":"City Museum","image":"https://images.example.test/museum.png"}}
+            {"@type":"Event","location":{"@type":"Place","name":"City Museum","address":{"@type":"PostalAddress","streetAddress":"1 Museum Road","addressLocality":"London","postalCode":"SW1A 1AA","addressCountry":"GB"},"image":"https://images.example.test/museum.png"}}
           </script>
           <meta property="og:site_name" content="Must not become the place">
         </head></html>
@@ -239,7 +536,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     fetch_url = reverse("plan_metadata_fetch")
     create_page = client.get(create_url)
     assert create_page.status_code == 200
-    assert b"Fetch details" in create_page.content
+    assert b"Generate plan draft" in create_page.content
     assert client.get(fetch_url).status_code == 405
     assert (
         client.post(
@@ -260,6 +557,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     assert fetch_response.status_code == 200
     fetched = fetch_response.json()
     assert fetched["public_place"] == "City Museum"
+    assert fetched["public_address"] == "1 Museum Road, London, SW1A 1AA, GB"
     assert fetched["thumbnail_found"] is True
     assert fetched["thumbnail_preview"].startswith("data:image/jpeg;base64,")
     assert fetched["metadata_token"]
@@ -273,6 +571,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
             "description": "Meet at the staffed public entrance.",
             "public_url": "https://venue.example.test/visit",
             "public_place": fetched["public_place"],
+            "public_address": fetched["public_address"],
             **plan_start_form_values(future),
             "capacity": "3",
             "fetched_metadata": fetched["metadata_token"],
@@ -281,6 +580,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     plan = Plan.objects.get(title="Museum thumbnail plan")
     assert create_response.status_code == 302
     assert plan.thumbnail_image.name.startswith("plan-thumbnails/")
+    assert plan.public_address == "1 Museum Road, London, SW1A 1AA, GB"
     thumbnail_path = tmp_path / plan.thumbnail_image.name
     assert thumbnail_path.exists()
     with Image.open(thumbnail_path) as stored_image:
@@ -316,7 +616,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
     assert partial_response.json()["metadata_token"] == ""
 
     edit_url = reverse("plan_edit", args=[plan.pk])
-    assert b"Fetch details" in client.get(edit_url).content
+    assert b"Add venue details" in client.get(edit_url).content
     first_thumbnail_name = plan.thumbnail_image.name
     edit_response = client.post(
         edit_url,
@@ -326,6 +626,7 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
             "description": plan.description,
             "public_url": plan.public_url,
             "public_place": plan.public_place,
+            "public_address": plan.public_address,
             **plan_start_form_values(future),
             "capacity": str(plan.capacity),
             "fetched_metadata": fetched["metadata_token"],
@@ -346,11 +647,12 @@ def test_plan_fetch_details_stores_and_serves_normalized_card_thumbnail(
 def test_plan_fetch_details_rejects_unsafe_targets_and_mismatched_tokens(
     monkeypatch,
 ):
-    fallback_place, fallback_image = plan_metadata._extract_metadata(
+    fallback_place, fallback_address, fallback_image = plan_metadata._extract_metadata(
         b'<meta property="og:site_name" content="BBC News"><meta property="og:image" content="/news.jpg">',
         "https://www.bbc.co.uk/article",
     )
     assert fallback_place == "BBC News"
+    assert fallback_address is None
     assert fallback_image == "https://www.bbc.co.uk/news.jpg"
 
     owner = create_test_user()
@@ -415,7 +717,7 @@ def test_plan_fetch_details_rejects_unsafe_targets_and_mismatched_tokens(
         },
     )
     assert create_response.status_code == 200
-    assert b"Fetch details again before creating the plan" in create_response.content
+    assert b"Add venue details again before creating the plan" in create_response.content
     assert not Plan.objects.filter(title="Mismatched thumbnail plan").exists()
 
 
@@ -505,8 +807,8 @@ def test_plan_http_owner_edit_stays_available_and_hidden_edits_share_404():
     assert {response.content for response in hidden_responses} == {b"Plan unavailable."}
 
 
-# WHY: Checks that plan http join leave rejoin and cancel preserve history and lock so a future change cannot quietly break it.
-def test_plan_http_join_leave_rejoin_and_cancel_preserve_history_and_lock():
+# WHY: Checks that HTTP requests require owner confirmation before capacity, history and the plan lock change.
+def test_plan_http_request_confirm_leave_and_reconfirm_preserve_history_and_lock():
     owner = create_test_user()
     create_verified_test_profile(user=owner)
     participant = create_test_user()
@@ -524,34 +826,57 @@ def test_plan_http_join_leave_rejoin_and_cancel_preserve_history_and_lock():
 
     detail_response = participant_client.get(reverse("plan_detail", args=[plan.pk]))
     missing_csrf_response = participant_client.post(
-        reverse("plan_join", args=[plan.pk])
+        reverse("plan_participation_request", args=[plan.pk])
     )
     assert missing_csrf_response.status_code == 403
     assert not Participation.objects.filter(plan=plan).exists()
 
     csrf_token = participant_client.cookies["csrftoken"].value
-    join_response = participant_client.post(
-        reverse("plan_join", args=[plan.pk]),
+    request_response = participant_client.post(
+        reverse("plan_participation_request", args=[plan.pk]),
         {"csrfmiddlewaretoken": csrf_token},
         HTTP_REFERER=f"http://testserver{detail_response.request['PATH_INFO']}",
     )
     participation = Participation.objects.get(plan=plan, user=participant)
     plan.refresh_from_db()
-    first_lock = plan.meeting_details_locked_at
-    first_join = participation.joined_at
-    assert join_response.status_code == 302
-    assert join_response.url == reverse("plan_detail", args=[plan.pk])
-    assert participation.status == Participation.Status.JOINED
-    assert first_lock is not None
+    assert request_response.status_code == 302
+    assert request_response.url.startswith("/conversations/")
+    assert participation.status == Participation.Status.PENDING
+    assert participation.joined_at is None
+    assert plan.meeting_details_locked_at is None
+    assert plan.participations.filter(status=Participation.Status.JOINED).count() == 0
 
     owner_client = Client()
     owner_client.force_login(owner)
     owner_detail = owner_client.get(reverse("plan_detail", args=[plan.pk]))
+    assert b"Pending requests" in owner_detail.content
+    assert b"Confirm" in owner_detail.content
+    confirm_response = owner_client.post(
+        reverse(
+            "plan_participation_confirm",
+            args=[plan.pk, participation.pk],
+        )
+    )
+    participation.refresh_from_db()
+    plan.refresh_from_db()
+    first_lock = plan.meeting_details_locked_at
+    first_join = participation.joined_at
+    assert confirm_response.status_code == 302
+    assert participation.status == Participation.Status.JOINED
+    assert first_join is not None
+    assert first_lock is not None
+
+    owner_detail = owner_client.get(reverse("plan_detail", args=[plan.pk]))
     assert b"can no longer be edited" in owner_detail.content
     assert reverse("plan_edit", args=[plan.pk]).encode() not in owner_detail.content
-    assert owner_client.get(reverse("plan_join", args=[plan.pk])).status_code == 405
-    owner_join_response = owner_client.post(reverse("plan_join", args=[plan.pk]))
-    assert owner_join_response.url == reverse("plan_list")
+    assert (
+        owner_client.get(reverse("plan_participation_request", args=[plan.pk])).status_code
+        == 405
+    )
+    owner_request_response = owner_client.post(
+        reverse("plan_participation_request", args=[plan.pk])
+    )
+    assert owner_request_response.url == reverse("plan_list")
     assert not Participation.objects.filter(plan=plan, user=owner).exists()
 
     participant_client = Client()
@@ -564,17 +889,31 @@ def test_plan_http_join_leave_rejoin_and_cancel_preserve_history_and_lock():
     assert participation.left_at is not None
     assert plan.meeting_details_locked_at == first_lock
 
-    rejoin_response = participant_client.post(reverse("plan_join", args=[plan.pk]))
+    rejoin_response = participant_client.post(
+        reverse("plan_participation_request", args=[plan.pk])
+    )
     participation.refresh_from_db()
     assert rejoin_response.status_code == 302
-    assert participation.status == Participation.Status.JOINED
-    assert participation.joined_at >= first_join
+    assert participation.status == Participation.Status.PENDING
+    assert participation.joined_at is None
     assert participation.left_at is None
     assert Participation.objects.filter(plan=plan, user=participant).count() == 1
 
+    owner_client.post(
+        reverse(
+            "plan_participation_confirm",
+            args=[plan.pk, participation.pk],
+        )
+    )
+    participation.refresh_from_db()
+    assert participation.status == Participation.Status.JOINED
+    assert participation.joined_at >= first_join
+
     outsider_client = Client()
     outsider_client.force_login(outsider)
-    refused_full_response = outsider_client.post(reverse("plan_join", args=[plan.pk]))
+    refused_full_response = outsider_client.post(
+        reverse("plan_participation_request", args=[plan.pk])
+    )
     assert refused_full_response.url == reverse("plan_list")
     assert not Participation.objects.filter(plan=plan, user=outsider).exists()
 
@@ -591,6 +930,49 @@ def test_plan_http_join_leave_rejoin_and_cancel_preserve_history_and_lock():
         participant_client.get(reverse("plan_detail", args=[plan.pk])).status_code
         == 404
     )
+
+
+# WHY: Checks that withdrawal and decline preserve one request row without consuming capacity or locking details.
+def test_plan_http_withdraw_and_decline_pending_requests_without_joining():
+    owner = create_test_user()
+    create_verified_test_profile(user=owner)
+    requester = create_test_user()
+    create_verified_test_profile(user=requester)
+    plan = create_test_plan(owner=owner, status=Plan.Status.APPROVED, capacity=1)
+    requester_client = Client()
+    requester_client.force_login(requester)
+    owner_client = Client()
+    owner_client.force_login(owner)
+
+    requester_client.post(reverse("plan_participation_request", args=[plan.pk]))
+    participation = Participation.objects.get(plan=plan, user=requester)
+    withdraw_response = requester_client.post(
+        reverse("plan_participation_withdraw", args=[plan.pk])
+    )
+    participation.refresh_from_db()
+    plan.refresh_from_db()
+    assert withdraw_response.url == reverse("plan_detail", args=[plan.pk])
+    assert participation.status == Participation.Status.LEFT
+    assert participation.joined_at is None
+    assert participation.left_at is not None
+    assert plan.meeting_details_locked_at is None
+
+    requester_client.post(reverse("plan_participation_request", args=[plan.pk]))
+    participation.refresh_from_db()
+    decline_response = owner_client.post(
+        reverse(
+            "plan_participation_decline",
+            args=[plan.pk, participation.pk],
+        )
+    )
+    participation.refresh_from_db()
+    plan.refresh_from_db()
+    assert decline_response.url == reverse("plan_detail", args=[plan.pk])
+    assert participation.status == Participation.Status.DECLINED
+    assert participation.joined_at is None
+    assert participation.decided_at is not None
+    assert plan.meeting_details_locked_at is None
+    assert plan.participations.filter(status=Participation.Status.JOINED).count() == 0
 
 
 # WHY: Keeps the PlanCapacityJoinRaceTests information and its rules together so they stay consistent.
@@ -610,19 +992,32 @@ class PlanCapacityJoinRaceTests(TransactionTestCase):
         for participant in self.participants:
             create_verified_test_profile(user=participant)
 
-    # WHY: Checks that plan capacity join race allows only one participation so a future change cannot quietly break it.
-    def test_plan_capacity_join_race_allows_only_one_participation(self):
+    # WHY: Checks that concurrent owner confirmations cannot consume the final capacity place twice.
+    def test_plan_capacity_confirmation_race_allows_only_one_participation(self):
+        pending_requests = []
+        for participant in self.participants:
+            participation, _conversation = (
+                request_plan_participation_and_open_owner_conversation(
+                    participant,
+                    self.plan,
+                )
+            )
+            pending_requests.append(participation)
         start_together = Barrier(2)
 
-        # WHY: Keeps the attempt join steps in one named place so they can be understood, checked, and reused.
-        def attempt_join(user_id):
+        # WHY: Keeps each concurrent owner decision on a fresh database connection.
+        def attempt_confirm(participation_id):
             close_old_connections()
             try:
-                user = get_user_model().objects.get(pk=user_id)
+                owner = get_user_model().objects.get(pk=self.owner.pk)
                 plan = Plan.objects.get(pk=self.plan.pk)
                 start_together.wait(timeout=5)
                 try:
-                    join_approved_plan_and_lock_meeting_details(user, plan)
+                    confirm_requested_plan_participation(
+                        owner,
+                        plan,
+                        participation_id,
+                    )
                 except PermissionDenied:
                     return False
                 return True
@@ -632,8 +1027,8 @@ class PlanCapacityJoinRaceTests(TransactionTestCase):
         with ThreadPoolExecutor(max_workers=2) as executor:
             outcomes = list(
                 executor.map(
-                    attempt_join,
-                    [participant.pk for participant in self.participants],
+                    attempt_confirm,
+                    [participation.pk for participation in pending_requests],
                 )
             )
 
@@ -648,3 +1043,4 @@ class PlanCapacityJoinRaceTests(TransactionTestCase):
             1,
         )
         self.assertIsNotNone(self.plan.meeting_details_locked_at)
+        self.assertEqual(PlanChat.objects.filter(plan=self.plan).count(), 1)

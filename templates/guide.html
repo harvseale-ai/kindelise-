@@ -1,65 +1,202 @@
 {% extends "base.html" %}
-{# # KEYWORD: Django template — combines fixed HTML with checked values supplied by a view. #}
-{# # KEYWORD: template tag — an instruction inside {% %} that chooses, repeats, or loads page content. #}
-{# # KEYWORD: template value — a name inside {{ }} replaced with escaped page information. #}
-{# # WHY: Explains each main part of Kindelise in one short help page. #}
+{% load static %}
+{# # WHY: Introduces Kindlise through the product journey before providing its practical reference guide. #}
 
+{% block title %}How Kindlise works{% endblock %}
 
-{# # WHY: Supplies this page's title to the matching space in the shared base page. #}
-{% block title %}How to use Kindelise{% endblock %}
-
-{# # WHY: Supplies this page's content to the matching space in the shared base page. #}
 {% block content %}
-  {# ============================================================================= #}
-  {# GUIDE INTRODUCTION #}
-  {# Introduces the short explanation of Kindelise's main user journey. #}
-  {# ============================================================================= #}
+  <article class="guide-page" aria-labelledby="guide-title">
+    <section class="guide-hero" aria-labelledby="guide-title">
+      <div class="guide-hero-copy">
+        <p class="eyebrow">Small plans. Real company.</p>
+        <h1 id="guide-title">Stay connected in your area.</h1>
+        <p>Kindlise helps people turn shared interests into small, low-pressure plans. It handles the awkward coordination, so you can focus on meeting.</p>
+        <div class="guide-actions">
+          {% if user.is_authenticated %}
+            <a class="button" href="{% url 'plan_create' %}">Create a plan</a>
+            <a class="button secondary" href="{% url 'plan_list' %}">Find a plan</a>
+          {% else %}
+            <a class="button" href="{% url 'sign_up' %}">Get started</a>
+            <a class="button secondary" href="{% url 'sign_in' %}">Sign in</a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="guide-video-placeholder" data-guide-video-loop aria-label="People making plans and spending time together">
+        <video class="is-active" data-guide-video muted playsinline preload="auto" autoplay aria-hidden="true">
+          <source src="{% static 'guide-videos/people-arriving.m4v' %}" type="video/mp4">
+        </video>
+        <video data-guide-video data-guide-video-src="{% static 'guide-videos/shared-activity.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
+        <video data-guide-video data-guide-video-src="{% static 'guide-videos/meeting-up.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
+        <video data-guide-video data-guide-video-src="{% static 'guide-videos/conversation.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
+        <video data-guide-video data-guide-video-src="{% static 'guide-videos/out-together.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
+      </div>
+    </section>
 
-  <article class="private-profile-page guide-page" aria-labelledby="guide-title">
-    <header class="private-profile-header">
-      <a class="back-link" href="{% url 'home' %}">← Back</a>
-    </header>
+    <section class="guide-proof-points" aria-label="How Kindlise helps">
+      <div><strong>Small plans</strong><span>Low pressure by design.</span></div>
+      <div><strong>Public places</strong><span>Clear shared meeting points.</span></div>
+      <div><strong>Confirmed joins</strong><span>Capacity stays accurate.</span></div>
+      <div><strong>Plan chat</strong><span>Everyone stays aligned.</span></div>
+    </section>
 
-    <div class="private-profile-content">
-      <header class="private-profile-identity">
-        <h1 id="guide-title">How to use Kindelise</h1>
-        <p class="private-profile-title-statement">A quick guide to meeting people around shared interests and public plans.</p>
-      </header>
+    <section class="guide-purpose" aria-labelledby="guide-purpose-title">
+      <div class="guide-purpose-copy">
+        <p class="eyebrow">Start small</p>
+        <h2 id="guide-purpose-title">You don’t need a big event. Just one reason to meet.</h2>
+        <p data-guide-plan-video-trigger>A coffee you would like to try, a walk you keep putting off, or a show you would rather not see alone. Share the idea and see who wants to come.</p>
+      </div>
+      <div class="guide-purpose-visual" aria-hidden="true">
+        <svg viewBox="0 0 600 260" focusable="false">
+          <path class="guide-purpose-contour" d="M43 205 C24 146 72 77 148 69 C205 63 228 89 291 75 C367 58 401 70 465 91 C535 114 570 169 544 214 C503 244 432 238 369 230 C281 220 222 247 143 237 C91 231 59 221 43 205Z"></path>
+          <path class="guide-purpose-contour guide-purpose-contour--inner" d="M124 200 C94 160 132 112 191 106 C243 100 263 119 315 107 C379 92 453 112 477 153 C496 185 458 214 403 210 C345 206 309 188 251 207 C198 224 151 222 124 200Z"></path>
+          <path class="guide-purpose-route" d="M88 188 C178 188 202 122 300 134"></path>
+          <path class="guide-purpose-route" d="M512 150 C426 150 404 112 300 134"></path>
+          <g class="guide-purpose-footprint" opacity="0">
+            <ellipse cx="-3" cy="-5" rx="2.2" ry="4.2" transform="rotate(-14 -3 -5)"></ellipse>
+            <ellipse cx="3" cy="5" rx="2.2" ry="4.2" transform="rotate(14 3 5)"></ellipse>
+            <animateMotion dur="6s" begin="0s" repeatCount="indefinite" rotate="auto" path="M88 188 C178 188 202 122 300 134"></animateMotion>
+            <animate attributeName="opacity" dur="6s" begin="0s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;.08;.42;.5;1"></animate>
+          </g>
+          <g class="guide-purpose-footprint" opacity="0">
+            <ellipse cx="-3" cy="-5" rx="2.2" ry="4.2" transform="rotate(-14 -3 -5)"></ellipse>
+            <ellipse cx="3" cy="5" rx="2.2" ry="4.2" transform="rotate(14 3 5)"></ellipse>
+            <animateMotion dur="6s" begin="3s" repeatCount="indefinite" rotate="auto" path="M512 150 C426 150 404 112 300 134"></animateMotion>
+            <animate attributeName="opacity" dur="6s" begin="3s" repeatCount="indefinite" values="0;1;1;0;0" keyTimes="0;.08;.42;.5;1"></animate>
+          </g>
+          <path class="guide-purpose-compass" d="M530 221 L538 201 L546 221 L538 215Z M538 197 V225 M524 211 H552"></path>
+        </svg>
+        <span class="guide-purpose-person guide-purpose-person--one"></span>
+        <span class="guide-purpose-person guide-purpose-person--two"></span>
+        <span class="guide-purpose-idea">Coffee on Saturday?</span>
+        <img src="{% static 'kindlelise-mark.svg' %}" alt="">
+      </div>
+    </section>
 
-      {# --------------------------------------------------------------------------- #}
-      {# FEATURE GUIDE #}
-      {# Explains profiles, discovery, plans, messages, safety, and Premium. #}
-      {# --------------------------------------------------------------------------- #}
-
-      <section class="private-profile-section" aria-labelledby="guide-profile-title">
-        <h2 id="guide-profile-title">Profile</h2>
-        <p class="private-profile-about">Add a display name, broad areas, interests and availability. Staff verification is required before discovery, plans and messages become available.</p>
+    <div class="guide-feature-list">
+      <section class="guide-feature" aria-labelledby="guide-plans-title">
+        <div class="guide-feature-visual guide-plan-preview" aria-hidden="true">
+          <div class="guide-plan-preview-card--video" data-guide-plan-video-card>
+            <video data-guide-plan-video data-src="{% static 'guide-videos/cards-night.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
+            <span>Cards night in</span><small>Saturday · 10:00</small>
+          </div>
+          <div><span>Gallery visit</span><small>3 places left</small></div>
+          <div><span>Live music</span><small>Friday · 19:30</small></div>
+        </div>
+        <div class="guide-feature-copy">
+          <p class="eyebrow">Make a plan</p>
+          <h2 id="guide-plans-title">Plans to meet there and then, or in the future.</h2>
+          <p>Paste the public event information, say what you would like company for and choose the group size. Kindlise helps shape the details before you publish.</p>
+        </div>
       </section>
 
-      <section class="private-profile-section" aria-labelledby="guide-discover-title">
-        <h2 id="guide-discover-title">Discover</h2>
-        <p class="private-profile-about">Use broad-area, interest and Free now filters to find eligible profiles. Exact locations and distances are never shown.</p>
+      <section class="guide-feature guide-feature--reverse" aria-labelledby="guide-messages-title">
+        <div class="guide-feature-copy">
+          <p class="eyebrow">Connect</p>
+          <h2 id="guide-messages-title">Making connection easier.</h2>
+          <p>Message a plan owner first, confirm participation and then join the shared plan chat. Notifications keep arrangements visible when something changes.</p>
+        </div>
+        <div class="guide-feature-visual guide-message-preview" aria-hidden="true">
+          <div class="guide-message-list">
+            <span class="is-active"></span><span></span><span></span><span></span>
+          </div>
+          <div class="guide-message-thread">
+            <p>Would you like to join us?</p>
+            <p>Yes, that sounds good.</p>
+            <i></i>
+          </div>
+        </div>
       </section>
 
-      <section class="private-profile-section" aria-labelledby="guide-plans-title">
-        <h2 id="guide-plans-title">Plans</h2>
-        <p class="private-profile-about">Create a plan for an established public place, add its public information URL, time and capacity, then open approved plans to join or leave.</p>
-      </section>
-
-      <section class="private-profile-section" aria-labelledby="guide-messages-title">
-        <h2 id="guide-messages-title">Messages</h2>
-        <p class="private-profile-about">Open an eligible profile and choose Send message. Direct conversations are private to the two participants.</p>
-      </section>
-
-      <section class="private-profile-section" aria-labelledby="guide-safety-title">
-        <h2 id="guide-safety-title">Safety and privacy</h2>
-        <p class="private-profile-about">Meet only in public places, check plan details before attending, and use the profile actions to block or report privately when needed. Verification is an access gate, not a guarantee of identity or safety.</p>
-      </section>
-
-      <section class="private-profile-section" aria-labelledby="guide-premium-title">
-        <h2 id="guide-premium-title">Premium</h2>
-        <p class="private-profile-about">Premium expands discovery to nearby broad areas and up to five interest filters. Payment and subscription management use Stripe’s hosted pages.</p>
+      <section class="guide-feature" aria-labelledby="guide-people-title">
+        <div class="guide-feature-visual guide-people-preview"{% if guide_profile_cards %} data-guide-card-loop data-guide-visible-cards="4"{% endif %} aria-label="People you can discover">
+          {% for card in guide_profile_cards %}
+            <a class="guide-profile-preview-card" href="{% url 'profile_detail' card.profile.pk %}" data-guide-card{% if forloop.counter > 4 %} hidden{% endif %}>
+              {% if card.profile.profile_image %}
+                <img src="{% url 'profile_image' card.profile.pk %}?v={{ card.profile.profile_image.name|urlencode }}" alt="">
+              {% else %}
+                <i aria-hidden="true"></i>
+              {% endif %}
+              <strong>{{ card.profile.display_name }}</strong>
+              <span>
+                {% for interest in card.profile.interests.all|slice:":2" %}{{ interest.name }}{% if not forloop.last %} · {% endif %}{% empty %}{{ card.broad_area_label }}{% endfor %}{% if card.is_available_now %} · Open to company{% endif %}
+              </span>
+            </a>
+          {% empty %}
+            <div class="guide-profile-preview-empty">
+              <strong>Find people through shared interests.</strong>
+              <span>Sign in and complete your profile to start discovering people.</span>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="guide-feature-copy">
+          <p class="eyebrow">Discover</p>
+          <h2 id="guide-people-title">Find people you might click with.</h2>
+          <p>Browse broad areas and shared interests without exposing exact locations. Profiles give enough context to make starting a plan feel more natural.</p>
+        </div>
       </section>
     </div>
+
+    <section class="guide-overview" aria-labelledby="guide-overview-title">
+      <header>
+        <p class="eyebrow">The whole journey</p>
+        <h2 id="guide-overview-title">Platform overview</h2>
+        <p>Everything is designed to move a small idea towards a real, public meeting without turning it into a large event.</p>
+      </header>
+
+      <div class="guide-overview-list">
+        <details open>
+          <summary>Profile</summary>
+          <p>Add a display name, broad areas, interests and availability. Exact locations are never displayed.</p>
+        </details>
+        <details>
+          <summary>Discover</summary>
+          <p>Find people through shared interests and whether they are open to company.</p>
+        </details>
+        <details>
+          <summary>Plans</summary>
+          <p>Create or join plans at established public places, with capacity and participation kept clear.</p>
+        </details>
+        <details>
+          <summary>Messages</summary>
+          <p>Use direct conversation for the introduction and plan chat after participation is confirmed.</p>
+        </details>
+        <details>
+          <summary>Notifications</summary>
+          <p>See requests, confirmations, plan changes and new activity before arrangements fall apart.</p>
+        </details>
+        <details>
+          <summary>Safety and privacy</summary>
+          <p>Meet in public, check linked details and use private reporting or blocking controls when needed.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="guide-start" aria-labelledby="guide-start-title">
+      <div class="guide-start-copy">
+        <p class="eyebrow">Start somewhere small</p>
+        <h2 id="guide-start-title">One shared interest is enough.</h2>
+        <p>Find a person, choose a public activity and let Kindlise help with the rest.</p>
+      </div>
+      <ul class="plans-grid guide-featured-plans"{% if guide_plans %} data-guide-card-loop data-guide-visible-cards="4" aria-label="Plans you can explore"{% endif %}>
+        {% for plan in guide_plans %}
+          <li data-guide-card{% if forloop.counter > 4 %} hidden{% endif %}>
+            {% include "includes/plan_card.html" with selected_filter="all" plan_card_searchable=False %}
+          </li>
+        {% empty %}
+          <li class="plans-empty-state">
+            <strong>See the plans taking shape.</strong>
+            <p>Create your profile or sign in to explore current plans.</p>
+          </li>
+        {% endfor %}
+      </ul>
+      <div class="guide-actions">
+        {% if user.is_authenticated %}
+          <a class="button" href="{% url 'discover' %}">Discover people</a>
+          <a class="button secondary" href="{% url 'plan_list' %}">Explore plans</a>
+        {% else %}
+          <a class="button" href="{% url 'sign_up' %}">Create your profile</a>
+        {% endif %}
+      </div>
+    </section>
   </article>
 {% endblock %}

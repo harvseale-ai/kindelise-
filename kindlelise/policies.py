@@ -10,6 +10,7 @@ from django.db.models import Q
 from kindlelise.models import (
     Block,
     Participation,
+    PlanChat,
     PlatformSubscription,
     Profile,
 )
@@ -21,23 +22,23 @@ from kindlelise.models import (
 
 # WHY: Answers whether access discovery plans and messages so every page follows the same permission rule.
 def can_access_discovery_plans_and_messages(user):
-    """Return true only for an active account with a staff-verified profile.
+    """Return true for an active account with a profile.
 
     Inputs: a possible authenticated Django account.
     Returns: the social-feature access decision.
     Changes: none.
-    Refuses: anonymous, inactive, missing-profile and unverified states.
+    Refuses: anonymous, inactive and missing-profile states.
     Privacy: returns only a decision and no profile details.
     """
     # WHY: Treats missing, anonymous, and unsaved account values as not allowed without raising an error.
     if not getattr(user, "is_authenticated", False) or getattr(user, "pk", None) is None:
         return False
 
-    # WHY: Reads current saved account and profile state so staff removal takes effect immediately.
+    # WHY: Verification remains recorded for profile notices and future reuse, but does not gate launch access.
     return get_user_model().objects.filter(
         pk=user.pk,
         is_active=True,
-        profile__is_verified=True,
+        profile__isnull=False,
     ).exists()
 
 
@@ -126,7 +127,7 @@ def can_view_profile_page(viewer, profile):
     if profile is None or not can_access_discovery_plans_and_messages(viewer):
         return False
 
-    # WHY: Hides profiles whose owning account no longer has verified active access.
+    # WHY: Hides profiles whose owning account no longer has active platform access.
     if not can_access_discovery_plans_and_messages(profile.user):
         return False
 
@@ -174,21 +175,21 @@ def can_create_plan(user):
     Inputs: a possible authenticated Django account.
     Returns: whether a plan may be created for that account.
     Changes: none.
-    Refuses: anonymous, inactive, missing-profile and unverified states.
+    Refuses: anonymous, inactive and missing-profile states.
     Privacy: returns only a decision and no profile details.
     """
-    # WHY: Plan creation uses the same verified active-account gate as discovery and messages.
+    # WHY: Plan creation uses the same active-account gate as discovery and messages.
     return can_access_discovery_plans_and_messages(user)
 
 
-# WHY: Answers whether join approved plan so every page follows the same permission rule.
-def can_join_approved_plan(user, plan, at_time):
-    """Return true only when the account may join the approved plan now.
+# WHY: Answers whether request approved plan participation so every page follows the same permission rule.
+def can_request_plan_participation(user, plan, at_time):
+    """Return true only when the account may ask the owner to join now.
 
     Inputs: the server-known account, current plan and supplied aware time.
     Returns: whether a new or left participation may become joined.
     Changes: none.
-    Refuses: ineligible users, owners, closed/full plans and current participants.
+    Refuses: ineligible users, owners, closed/full plans, blocks and current requests/participants.
     Privacy: returns only a decision and no participant identities.
     """
     # WHY: Requires a real plan and current account access before checking plan-specific rules.
@@ -199,12 +200,35 @@ def can_join_approved_plan(user, plan, at_time):
     if plan.owner_id == user.pk or not plan.is_open_for_joining(at_time):
         return False
 
-    # WHY: Prevents a currently joined account occupying capacity twice.
+    # WHY: A request requires the same safe direct-message relationship used for the owner conversation.
+    if not can_start_or_continue_direct_messages(user, plan.owner):
+        return False
+
+    # WHY: Prevents duplicate pending requests and confirmed participation while allowing a declined or left person to ask again.
     return not Participation.objects.filter(
         plan=plan,
         user=user,
-        status=Participation.Status.JOINED,
+        status__in=(Participation.Status.PENDING, Participation.Status.JOINED),
     ).exists()
+
+
+# WHY: Keeps the former public policy name as an alias while callers move to request-specific wording.
+def can_join_approved_plan(user, plan, at_time):
+    """Return whether the account may submit a participation request."""
+    return can_request_plan_participation(user, plan, at_time)
+
+
+# WHY: Answers whether confirm plan participation so owner decisions use the same current rules as the service.
+def can_confirm_plan_participation(owner, participation, at_time):
+    """Return true only when an owner may confirm this pending request now."""
+    if participation is None or participation.status != Participation.Status.PENDING:
+        return False
+    plan = participation.plan
+    if plan.owner_id != getattr(owner, "pk", None):
+        return False
+    if not plan.is_open_for_joining(at_time):
+        return False
+    return can_start_or_continue_direct_messages(owner, participation.user)
 
 
 # =============================================================================
@@ -219,7 +243,7 @@ def can_start_or_continue_direct_messages(sender, recipient):
     Inputs: the server-known sender and intended different recipient accounts.
     Returns: whether the pair may start, open or continue direct messages.
     Changes: none.
-    Refuses: identical, inactive, unverified or either-direction-blocked accounts.
+    Refuses: identical, inactive, missing-profile or either-direction-blocked accounts.
     Privacy: returns one decision without revealing which condition refused access.
     """
     # WHY: Direct messages always require two different, known accounts.
@@ -236,6 +260,34 @@ def can_start_or_continue_direct_messages(sender, recipient):
         Q(blocker=sender, blocked_user=recipient)
         | Q(blocker=recipient, blocked_user=sender)
     ).exists()
+
+
+# WHY: Derives plan-chat membership from current ownership or confirmed participation instead of duplicating it.
+def can_read_plan_chat(user, chat, at_time=None):
+    """Return true for the plan owner or a currently confirmed participant."""
+    if (
+        chat is None
+        or not isinstance(chat, PlanChat)
+        or not can_access_discovery_plans_and_messages(user)
+    ):
+        return False
+    if chat.plan.owner_id == user.pk:
+        return True
+    return Participation.objects.filter(
+        plan_id=chat.plan_id,
+        user=user,
+        status=Participation.Status.JOINED,
+    ).exists()
+
+
+# WHY: Keeps archived plan chat readable while preventing new messages after cancellation or the start time.
+def can_send_plan_chat_message(user, chat, at_time):
+    """Return true only for a current member of an approved future plan chat."""
+    return (
+        can_read_plan_chat(user, chat, at_time)
+        and chat.plan.status == chat.plan.Status.APPROVED
+        and chat.plan.starts_at > at_time
+    )
 
 
 # =============================================================================

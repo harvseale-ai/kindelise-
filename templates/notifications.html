@@ -57,7 +57,27 @@
                   <span>Message from {{ notification.message.sender.profile.display_name }}</span>
                   <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
                 </a>
+              {% elif notification.kind == notification.Kind.PLAN_CHAT_MESSAGE %}
+                <a href="{% url 'plan_chat_detail' notification.plan_chat_message.chat.plan.pk %}">
+                  <span>{{ notification.plan_chat_message.sender.profile.display_name }} posted in {{ notification.plan_chat_message.chat.plan.title }}</span>
+                  <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
+                </a>
               {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
+              {% elif notification.kind == notification.Kind.PLAN_REQUEST %}
+                <a href="{% url 'plan_detail' notification.participation.plan.pk %}">
+                  <span>{{ notification.participation.user.profile.display_name }} asked to join {{ notification.participation.plan.title }}</span>
+                  <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
+                </a>
+              {% elif notification.kind == notification.Kind.PLAN_CONFIRMED %}
+                <a href="{% url 'plan_detail' notification.participation.plan.pk %}">
+                  <span>Your participation in {{ notification.participation.plan.title }} was confirmed</span>
+                  <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
+                </a>
+              {% elif notification.kind == notification.Kind.PLAN_DECLINED %}
+                <a href="{% url 'plan_detail' notification.participation.plan.pk %}">
+                  <span>Your request for {{ notification.participation.plan.title }} was declined</span>
+                  <span class="private-plan-state">{% if notification.read_at %}Seen{% else %}New{% endif %}</span>
+                </a>
               {% else %}
                 <a href="{% url 'plan_detail' notification.participation.plan.pk %}">
                   <span>{{ notification.participation.user.profile.display_name }} joined {{ notification.participation.plan.title }}</span>

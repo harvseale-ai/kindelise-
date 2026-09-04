@@ -1,0 +1,30 @@
+{# Shared escaped message history for direct conversations and plan chats. #}
+<ol class="conversation-thread" aria-label="{{ thread_aria_label }}">
+  {% for thread_message in thread_messages %}
+    <li class="conversation-message{% if thread_message.sender_id == user.pk %} is-own{% else %} is-other{% endif %}">
+      <div class="conversation-bubble">
+        <span class="conversation-sender">
+          {% if thread_message.sender_id == user.pk %}You{% elif thread_kind == "direct" %}{{ other_profile.display_name }}{% else %}{{ thread_message.sender.profile.display_name }}{% endif %}
+        </span>
+        <p>{{ thread_message.body }}</p>
+        <div class="conversation-message-meta">
+          <time datetime="{{ thread_message.sent_at|date:'Y-m-d\TH:i:s' }}">{{ thread_message.sent_at|date:"j M, H:i" }}</time>
+          {% if thread_kind == "direct" and thread_message.sender_id != user.pk %}
+            <a href="{% url 'report_create' other_profile.pk %}?context_type=message&amp;context_id={{ thread_message.pk }}&amp;context_conversation_id={{ conversation.pk }}">Report this message</a>
+          {% elif thread_kind == "plan" and thread_message.sender_id != user.pk %}
+            <a href="{% url 'report_create' thread_message.sender.profile.pk %}?context_type=plan_chat_message&amp;context_id={{ thread_message.pk }}">Report this message</a>
+            <form method="post" action="{% url 'profile_block_messages_and_discovery' thread_message.sender.profile.pk %}">
+              {% csrf_token %}
+              <button class="conversation-message-action" type="submit">Block this person</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+    </li>
+  {% empty %}
+    <li class="conversation-empty">
+      <strong>No messages yet.</strong>
+      <p class="state-label">{{ empty_thread_text }}</p>
+    </li>
+  {% endfor %}
+</ol>

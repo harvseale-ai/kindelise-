@@ -12,13 +12,16 @@ from kindlelise.ai_message_editor import get_edited_message_draft_suggestion
 from kindlelise.forms import MessageDraftForm, MessageEditRequestForm
 from kindlelise.policies import can_access_discovery_plans_and_messages
 from kindlelise.selectors import (
+    get_authorised_plan_chats_for_inbox,
     get_messages_if_user_can_open_conversation,
+    get_plan_chat_if_user_can_open,
     get_profile_page_if_viewer_is_allowed,
     get_unblocked_conversations_for_inbox,
 )
 from kindlelise.services.messages import (
     find_or_start_direct_conversation,
     send_direct_message,
+    send_plan_chat_message,
 )
 
 # =============================================================================
@@ -34,13 +37,13 @@ def _message_access_redirect(request):
         return None
     messages.info(
         request,
-        "Complete your profile and wait for staff verification to use messages.",
+        "Complete your profile to use messages.",
     )
     return redirect("account")
 
 # WHY: Keeps the render direct conversation steps in one named place so they can be understood, checked, and reused.
 def _render_direct_conversation(request, page_data, form):
-    """Render selector-authorised messages with the pair's other public profile."""
+    """Render selector-authorised messages inside the shared inbox shell."""
     # WHY: Derives the other person from the authorised pair rather than accepting a browser identity.
     conversation = page_data["conversation"]
     other_user = (
@@ -48,16 +51,20 @@ def _render_direct_conversation(request, page_data, form):
         if conversation.first_user_id == request.user.pk
         else conversation.first_user
     )
-    # WHY: Keeps authorised messages, the other public profile, and the bound send form together.
-    return render(
-        request,
-        "conversation.html",
+    # WHY: Reuses the privacy-filtered inbox rows around the authorised thread instead of duplicating messaging logic.
+    context = _get_inbox_context(request)
+    context.update(
         {
             "conversation": conversation,
             "conversation_messages": page_data["messages"],
             "other_profile": other_user.profile,
             "form": form,
-        },
+        }
+    )
+    return render(
+        request,
+        "inbox.html",
+        context,
     )
 
 # =============================================================================
@@ -65,22 +72,8 @@ def _render_direct_conversation(request, page_data, form):
 # Builds the permitted conversation list and interest filter.
 # =============================================================================
 
-# WHY: Keeps the inbox page steps in one named place so they can be understood, checked, and reused.
-@require_GET
-@login_required
-def inbox_page(request):
-    """Render only the current account's permitted direct conversations.
-
-    Inputs: a signed-in GET request with no browser-supplied member identity.
-    Returns: the recent permitted inbox or the generic account access redirect.
-    Changes: none.
-    Refuses: inactive, unverified or missing-profile accounts.
-    Privacy: blocked pairs are excluded before names or message text presentation.
-    """
-    access_redirect = _message_access_redirect(request)
-    if access_redirect is not None:
-        return access_redirect
-
+def _get_inbox_context(request):
+    """Return permitted inbox rows and fixed interest filters for the shared shell."""
     # WHY: Keeps the small inbox interest shortcuts fixed rather than accepting arbitrary query text.
     interest_names = ("Coffee", "Museums", "Cinema", "Walking", "Drinks", "Night out")
     selected_interest = request.GET.get("interest", "")
@@ -102,17 +95,50 @@ def inbox_page(request):
         conversation_rows.append(
             {"conversation": conversation, "other_profile": other_user.profile}
         )
-    return render(
-        request,
-        "inbox.html",
+    inbox_rows = [
         {
-            "conversation_rows": conversation_rows,
-            "interest_filters": (
-                (name, name == selected_interest) for name in interest_names
-            ),
-            "selected_interest": selected_interest,
-        },
+            "kind": "direct",
+            "conversation": row["conversation"],
+            "other_profile": row["other_profile"],
+            "updated_at": row["conversation"].updated_at,
+        }
+        for row in conversation_rows
+    ]
+    inbox_rows.extend(
+        {
+            "kind": "plan",
+            "plan_chat": chat,
+            "updated_at": chat.updated_at,
+        }
+        for chat in get_authorised_plan_chats_for_inbox(request.user)
     )
+    inbox_rows.sort(key=lambda row: (row["updated_at"], row.get("kind", "")), reverse=True)
+    return {
+        "conversation_rows": conversation_rows,
+        "inbox_rows": inbox_rows,
+        "interest_filters": tuple(
+            (name, name == selected_interest) for name in interest_names
+        ),
+        "selected_interest": selected_interest,
+    }
+
+
+# WHY: Keeps the inbox page steps in one named place so they can be understood, checked, and reused.
+@require_GET
+@login_required
+def inbox_page(request):
+    """Render only the current account's permitted direct conversations.
+
+    Inputs: a signed-in GET request with no browser-supplied member identity.
+    Returns: the recent permitted inbox or the generic account access redirect.
+    Changes: none.
+    Refuses: inactive or missing-profile accounts.
+    Privacy: blocked pairs are excluded before names or message text presentation.
+    """
+    access_redirect = _message_access_redirect(request)
+    if access_redirect is not None:
+        return access_redirect
+    return render(request, "inbox.html", _get_inbox_context(request))
 
 # =============================================================================
 # CONVERSATION PAGE
@@ -128,7 +154,7 @@ def conversation_page(request, conversation_id):
     Inputs: a signed-in GET request and an untrusted conversation route ID.
     Returns: chronological messages or one generic unavailable response.
     Changes: none.
-    Refuses: missing, unrelated, inactive, unverified or blocked conversations.
+    Refuses: missing, unrelated, inactive or blocked conversations.
     Privacy: reveals no pair identity or message content after any refusal.
     """
     access_redirect = _message_access_redirect(request)
@@ -157,7 +183,7 @@ def start_direct_conversation(request, profile_id):
     Inputs: a signed-in CSRF-validated POST and untrusted profile route ID.
     Returns: a redirect to the pair's single conversation or generic not found.
     Changes: calls the mapped service, which may create the ordered unique pair.
-    Refuses: missing, self, inactive, unverified or either-direction-blocked pairs.
+    Refuses: missing, self, inactive or either-direction-blocked pairs.
     Privacy: trusts no recipient identity beyond the authorised profile selector.
     """
     access_redirect = _message_access_redirect(request)
@@ -222,6 +248,72 @@ def send_conversation_message(request, conversation_id):
     messages.success(request, "Message sent.")
     return redirect("conversation_detail", conversation_id=conversation_id)
 
+
+# =============================================================================
+# PLAN CHAT
+# Reuses the existing escaped thread and composer for authorised plan members.
+# =============================================================================
+
+
+# WHY: Reads one shared plan conversation only after deriving membership from current plan state.
+@require_GET
+@login_required
+def plan_chat_page(request, plan_id):
+    """Render a plan chat for its owner or a currently confirmed participant."""
+    access_redirect = _message_access_redirect(request)
+    if access_redirect is not None:
+        return access_redirect
+    page_data = get_plan_chat_if_user_can_open(request.user, plan_id)
+    if page_data is None:
+        return HttpResponse("Plan chat unavailable.", status=404)
+    context = _get_inbox_context(request)
+    context.update(
+        {
+            "chat": page_data["chat"],
+            "plan_chat": page_data["chat"],
+            "plan_chat_messages": page_data["messages"],
+            "can_send": page_data["can_send"],
+            "form": MessageDraftForm(),
+        }
+    )
+    return render(request, "inbox.html", context)
+
+
+# WHY: Sends through a separate POST action and rechecks membership and plan state inside the locked service.
+@require_POST
+@login_required
+def send_plan_chat_message_view(request, plan_id):
+    """Validate and save one plan-chat message from the authenticated sender."""
+    access_redirect = _message_access_redirect(request)
+    if access_redirect is not None:
+        return access_redirect
+    page_data = get_plan_chat_if_user_can_open(request.user, plan_id)
+    if page_data is None or not page_data["can_send"]:
+        return HttpResponse("Plan chat unavailable.", status=404)
+    form = MessageDraftForm(request.POST)
+    if not form.is_valid():
+        context = _get_inbox_context(request)
+        context.update(
+            {
+                "chat": page_data["chat"],
+                "plan_chat": page_data["chat"],
+                "plan_chat_messages": page_data["messages"],
+                "can_send": page_data["can_send"],
+                "form": form,
+            }
+        )
+        return render(request, "inbox.html", context)
+    try:
+        send_plan_chat_message(
+            request.user,
+            page_data["chat"],
+            form.cleaned_data["body"],
+        )
+    except PermissionDenied:
+        return HttpResponse("Plan chat unavailable.", status=404)
+    messages.success(request, "Message sent to the plan chat.")
+    return redirect("plan_chat_detail", plan_id=plan_id)
+
 # =============================================================================
 # IMPROVE AN UNSENT DRAFT
 # Requests a wording suggestion without sending or storing the draft.
@@ -236,7 +328,7 @@ def request_conversation_message_edit_suggestion(request, conversation_id):
     Inputs: a signed-in CSRF-validated POST, route ID, draft and fixed goal.
     Returns: suggestion JSON, a generic unavailable response or quiet error JSON.
     Changes: calls the mapped Ollama editor; stores and sends no message or draft.
-    Refuses: invalid, unrelated, inactive, unverified or blocked conversations,
+    Refuses: invalid, unrelated, inactive or blocked conversations,
         invalid draft/goal values and every provider failure.
     Privacy: passes only validated draft and goal, never conversation history or
         account, profile, report, plan or recipient data.

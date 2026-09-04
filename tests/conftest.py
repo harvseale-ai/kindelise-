@@ -5,6 +5,7 @@
 
 from itertools import count
 
+import pytest
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
@@ -12,6 +13,18 @@ from kindlelise.models import Conversation, Interest, Plan, Profile
 
 _user_numbers = count(1)
 _interest_numbers = count(1)
+
+
+# WHY: Keeps template tests independent from an earlier local collectstatic manifest.
+@pytest.fixture(autouse=True)
+def use_test_staticfiles_storage(settings):
+    """Resolve source static files directly while each isolated test renders pages."""
+    settings.STORAGES = {
+        **settings.STORAGES,
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
+    }
 
 
 # WHY: Builds test user with all required starting values and checks applied.

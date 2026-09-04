@@ -37,6 +37,46 @@ from tests.conftest import (
 pytestmark = pytest.mark.django_db
 
 
+# WHY: Keeps the Guide features inside the same authorised boundaries as Plans and Discovery.
+def test_guide_loops_use_only_authorised_plans_and_profiles():
+    viewer = create_test_user()
+    create_verified_test_profile(
+        user=viewer,
+        display_name="Guide viewer",
+        broad_area="central",
+    )
+    target_user = create_test_user(username="guide_profile_target")
+    target = create_verified_test_profile(
+        user=target_user,
+        display_name="Visible Guide person",
+        broad_area="central",
+    )
+    target.interests.add(Interest.objects.get(name="Coffee"))
+    visible = create_test_plan(
+        status=Plan.Status.APPROVED,
+        title="Visible Guide plan",
+    )
+    hidden = create_test_plan(
+        status=Plan.Status.PENDING,
+        title="Hidden pending Guide plan",
+    )
+    client = Client()
+    client.force_login(viewer)
+
+    response = client.get(reverse("guide"), secure=True)
+
+    assert response.status_code == 200
+    assert b'data-guide-card-loop' in response.content
+    assert b'data-guide-card' in response.content
+    assert b'class="plan-card' in response.content
+    assert visible.title.encode() in response.content
+    assert reverse("plan_detail", args=[visible.pk]).encode() in response.content
+    assert hidden.title.encode() not in response.content
+    assert target.display_name.encode() in response.content
+    assert reverse("profile_detail", args=[target.pk]).encode() in response.content
+    assert b'class="guide-profile-preview-card"' in response.content
+
+
 # WHY: Checks that discovery http gates access and renders only authorized profiles so a future change cannot quietly break it.
 
 
@@ -93,7 +133,7 @@ def test_discovery_profile_http_is_safe_and_uses_one_generic_hidden_response():
     assert b"Public target name" in response.content
     assert b"West" in response.content
     assert b"Coffee" in response.content
-    assert b"Free now" in response.content
+    assert b"Open to company" in response.content
     assert visible_plan.title.encode() in response.content
     assert reverse("plan_detail", args=[visible_plan.pk]).encode() in response.content
     assert b"Hidden cancelled profile plan" not in response.content
@@ -102,9 +142,14 @@ def test_discovery_profile_http_is_safe_and_uses_one_generic_hidden_response():
     assert b"private_target_login" not in response.content
     assert b"cus_private_profile_http" not in response.content
 
+    unverified_response = client.get(
+        reverse("profile_detail", args=[unverified.pk])
+    )
+    assert unverified_response.status_code == 200
+    assert b"Hidden unverified profile" in unverified_response.content
+
     hidden_profile_ids = (
         999999,
-        unverified.pk,
         inactive.pk,
         blocked_by_viewer.pk,
         viewer_blocked_by.pk,
@@ -220,11 +265,12 @@ def test_discovery_selector_excludes_hidden_profiles_before_presentation():
         },
     )
 
-    assert list(available_profiles) == [eligible]
+    assert set(available_profiles) == {eligible, unverified}
     assert set(all_current_area_profiles) == {
         eligible,
         not_started,
         no_availability,
+        unverified,
     }
 
     # WHY: Confirms the page uses the same filtered result and does not reveal why other profiles are hidden.
@@ -235,14 +281,17 @@ def test_discovery_selector_excludes_hidden_profiles_before_presentation():
     assert eligible.display_name.encode() in response.content
     assert blocked_by_viewer.display_name.encode() not in response.content
     assert viewer_blocked_by.display_name.encode() not in response.content
-    assert unverified.display_name.encode() not in response.content
+    assert unverified.display_name.encode() in response.content
     assert inactive.display_name.encode() not in response.content
     assert client.post(reverse("discover")).status_code == 405
 
-    # WHY: Stops an unverified account before any discovery results are loaded.
+    # WHY: Confirms staff verification is retained as status but no longer gates discovery access.
     unverified_viewer = create_test_user()
-    Profile.objects.create(user=unverified_viewer)
+    Profile.objects.create(
+        user=unverified_viewer,
+        broad_area="central",
+        broad_areas=["central"],
+    )
     client.force_login(unverified_viewer)
-    refused_response = client.get(reverse("discover"))
-    assert refused_response.status_code == 302
-    assert refused_response.url == reverse("account")
+    unverified_viewer_response = client.get(reverse("discover"))
+    assert unverified_viewer_response.status_code == 200

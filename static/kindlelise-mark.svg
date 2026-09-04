@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="120 190 360 211" role="img" aria-labelledby="title description">
+  <title id="title">Kindelise bench mark</title>
+  <desc id="description">A sage green three-panel public bench with softly curved feet.</desc>
+  <defs><clipPath id="backrest-shape"><path d="M166 190H434C438.5 190 442.25 193.25 443 197.75L453 258.25C453.75 262.5 450.5 266 446 266H154C149.5 266 146.25 262.5 147 258.25L157 197.75C157.75 193.25 161.5 190 166 190Z"/></clipPath></defs>
+  <g fill="#5F806B">
+    <g clip-path="url(#backrest-shape)"><rect x="140" y="190" width="320" height="20"/><rect x="140" y="219" width="320" height="20"/><rect x="140" y="248" width="320" height="18"/></g>
+    <rect x="120" y="277" width="360" height="18" rx="3"/>
+    <path d="M120 307H140V401H132C125.373 401 120 395.627 120 389V307Z"/><path d="M174 307H193V371H186C179.373 371 174 365.627 174 359V307Z"/>
+    <path d="M407 307H426V359C426 365.627 420.627 371 414 371H407V307Z"/><path d="M460 307H480V389C480 395.627 474.627 401 468 401H460V307Z"/>
+  </g>
+</svg>

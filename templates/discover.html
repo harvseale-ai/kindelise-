@@ -17,14 +17,15 @@
 
   <section class="discovery-controls" aria-labelledby="discover-title">
     <h1 class="visually-hidden" id="discover-title">Discover profiles</h1>
+    <p class="discovery-intro">Find people who share your interests and are open to making a plan.</p>
     <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
     <form class="discovery-filter-form" method="get" aria-label="Discovery filters" novalidate>
       {{ form.non_field_errors }}
       <div class="filter-pill-scroller" role="group" aria-label="Open a discovery filter">
         <a class="filter-row-label" href="{% url 'discover' %}" aria-label="Clear all filters"><b aria-hidden="true">+</b> Filters</a>
-        <button class="filter-trigger" type="button" data-filter-target="broad-area-filter" aria-controls="broad-area-filter" aria-expanded="false">Broad areas</button>
+        <button class="filter-trigger" type="button" data-filter-target="broad-area-filter" aria-controls="broad-area-filter" aria-expanded="false">Areas</button>
         <button class="filter-trigger" type="button" data-filter-target="interest-filter" aria-controls="interest-filter" aria-expanded="false">Interests</button>
-        <button class="filter-trigger" type="button" data-filter-target="availability-filter" aria-controls="availability-filter" aria-expanded="false">Free now</button>
+        <button class="filter-trigger" type="button" data-filter-target="availability-filter" aria-controls="availability-filter" aria-expanded="false">Open to company</button>
       </div>
 
       {# --------------------------------------------------------------------------- #}
@@ -35,7 +36,7 @@
       <div class="discovery-filter-panel" id="broad-area-filter"{% if form.broad_area.errors %} data-filter-errors{% endif %}>
         <fieldset class="area-fieldset">
           {{ form.broad_area.errors }}
-          <legend>Broad areas</legend>
+          <legend>Areas</legend>
           <span class="helptext">Select one or more areas available to your account.</span>
           {{ form.broad_area }}
         </fieldset>
@@ -97,10 +98,10 @@
     <ul class="plain-list discovery-grid">
       {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
       {% for card in profile_cards %}
-        <li class="card discovery-profile-card{% if card.profile.profile_image %} discovery-profile-card--with-image{% endif %}"{% if card.profile.profile_image %} style="background: #19191e center / cover no-repeat url('{% url 'profile_image' card.profile.pk %}?v={{ card.profile.profile_image.name|urlencode }}')"{% endif %}>
+        <li class="card discovery-profile-card{% if card.profile.profile_image %} discovery-profile-card--with-image{% endif %}"{% if card.profile.profile_image %} style="background: var(--surface) center / cover no-repeat url('{% url 'profile_image' card.profile.pk %}?v={{ card.profile.profile_image.name|urlencode }}')"{% endif %}>
           <div>
             <strong><a href="{% url 'profile_detail' card.profile.pk %}">{{ card.profile.display_name }}</a></strong>
-            <p>{{ card.broad_area_label }} · Verified{% if card.is_available_now %} · Free now{% endif %}</p>
+            <p>{{ card.broad_area_label }} · Verified{% if card.is_available_now %} · Open to company{% endif %}</p>
             <ul class="chips" aria-label="Interests">
               {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
               {% for interest in card.profile.interests.all %}
@@ -115,8 +116,8 @@
       {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
       {% empty %}
         <li class="card empty-state">
-          <strong>No profiles match these area and interest filters.</strong>
-          <p class="muted">Try clearing or changing the permitted filters.</p>
+          <strong>No profiles match these filters yet.</strong>
+          <p class="muted">Try another area or interest.</p>
           <a class="button secondary" href="{% url 'discover' %}">Clear filters</a>
         </li>
       {% endfor %}

@@ -177,6 +177,8 @@ class Plan(models.Model):
     title = models.CharField(max_length=120)
     description = models.TextField(max_length=1_000)
     public_place = models.CharField(max_length=200)
+    # WHY: Keeps a directions-ready public venue address separate from its shorter display name.
+    public_address = models.CharField(max_length=300, blank=True, default="")
     public_url = models.URLField(max_length=500)
     # WHY: Stores an optional server-checked public-place image separately from the browser-supplied URL.
     thumbnail_image = models.ImageField(
@@ -261,11 +263,13 @@ class Plan(models.Model):
 
 # WHY: Keeps the Participation information and its rules together so they stay consistent.
 class Participation(models.Model):
-    """Store one account's joined or ended participation in one plan."""
+    """Store one account's request and confirmed participation in one plan."""
 
     # WHY: Keeps the permitted status values in one clear list so saved wording stays consistent.
     class Status(models.TextChoices):
-        JOINED = "joined", "Joined"
+        PENDING = "pending", "Pending"
+        JOINED = "joined", "Confirmed"
+        DECLINED = "declined", "Declined"
         LEFT = "left", "Left"
 
     # WHY: Protects both the plan and account links so participation history cannot become anonymous or detached.
@@ -281,12 +285,14 @@ class Participation(models.Model):
     )
     # WHY: Keeps one row across joining, leaving, and rejoining instead of creating duplicate history.
     status = models.CharField(
-        max_length=6,
+        max_length=8,
         choices=Status.choices,
         default=Status.JOINED,
     )
-    # WHY: Records when the current joined period began and, when applicable, when it ended.
-    joined_at = models.DateTimeField(default=timezone.now)
+    # WHY: Separates asking, owner decision and confirmed participation so pending requests never consume capacity.
+    requested_at = models.DateTimeField(default=timezone.now)
+    joined_at = models.DateTimeField(default=timezone.now, null=True, blank=True)
+    decided_at = models.DateTimeField(default=timezone.now, null=True, blank=True)
     left_at = models.DateTimeField(null=True, blank=True)
 
     # WHY: Keeps database or form rules beside the information they control.
@@ -297,13 +303,30 @@ class Participation(models.Model):
                 fields=["plan", "user"],
                 name="participation_plan_user_unique",
             ),
-            # WHY: Requires a leaving time only when the participation is marked Left.
+            # WHY: Keeps request, decision, confirmation and departure timestamps matched to the saved state.
             models.CheckConstraint(
                 condition=(
-                    Q(status="joined", left_at__isnull=True)
+                    Q(
+                        status="pending",
+                        joined_at__isnull=True,
+                        decided_at__isnull=True,
+                        left_at__isnull=True,
+                    )
+                    | Q(
+                        status="joined",
+                        joined_at__isnull=False,
+                        decided_at__isnull=False,
+                        left_at__isnull=True,
+                    )
+                    | Q(
+                        status="declined",
+                        joined_at__isnull=True,
+                        decided_at__isnull=False,
+                        left_at__isnull=True,
+                    )
                     | Q(status="left", left_at__isnull=False)
                 ),
-                name="participation_left_at_matches_status",
+                name="participation_timestamps_match_status",
             ),
         ]
         # WHY: Speeds capacity counts by plan and account pages that load current participation.
@@ -316,6 +339,45 @@ class Participation(models.Model):
                 fields=["user", "status"],
                 name="particip_user_status_idx",
             ),
+        ]
+
+
+# WHY: Keeps one shared conversation attached to one plan without weakening the direct-conversation model.
+class PlanChat(models.Model):
+    """Store the single shared chat created for a plan after confirmation."""
+
+    plan = models.OneToOneField(
+        Plan,
+        on_delete=models.PROTECT,
+        related_name="chat",
+    )
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+
+# WHY: Keeps bounded plan-chat messages separate from two-person direct messages.
+class PlanChatMessage(models.Model):
+    """Store one bounded plain-text message in a plan's shared chat."""
+
+    chat = models.ForeignKey(
+        PlanChat,
+        on_delete=models.PROTECT,
+        related_name="messages",
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="sent_plan_chat_messages",
+    )
+    body = models.TextField(max_length=1_000)
+    sent_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=["chat", "sent_at"],
+                name="plan_chat_message_sent_idx",
+            )
         ]
 
 
@@ -423,6 +485,10 @@ class Notification(models.Model):
     class Kind(models.TextChoices):
         MESSAGE = "message", "Message"
         PLAN_JOIN = "plan_join", "Plan join"
+        PLAN_REQUEST = "plan_request", "Plan request"
+        PLAN_CONFIRMED = "plan_confirmed", "Plan confirmed"
+        PLAN_DECLINED = "plan_declined", "Plan declined"
+        PLAN_CHAT_MESSAGE = "plan_chat_message", "Plan chat message"
 
     # WHY: Stores exactly which account may see this alert.
     recipient = models.ForeignKey(
@@ -430,7 +496,7 @@ class Notification(models.Model):
         on_delete=models.PROTECT,
         related_name="notifications",
     )
-    kind = models.CharField(max_length=9, choices=Kind.choices)
+    kind = models.CharField(max_length=17, choices=Kind.choices)
     # WHY: Links an alert to either one message or one plan participation, never both.
     message = models.ForeignKey(
         Message,
@@ -441,6 +507,13 @@ class Notification(models.Model):
     )
     participation = models.ForeignKey(
         Participation,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="notifications",
+    )
+    plan_chat_message = models.ForeignKey(
+        PlanChatMessage,
         on_delete=models.PROTECT,
         null=True,
         blank=True,
@@ -460,11 +533,24 @@ class Notification(models.Model):
                         kind="message",
                         message__isnull=False,
                         participation__isnull=True,
+                        plan_chat_message__isnull=True,
                     )
                     | Q(
-                        kind="plan_join",
+                        kind__in=(
+                            "plan_join",
+                            "plan_request",
+                            "plan_confirmed",
+                            "plan_declined",
+                        ),
                         message__isnull=True,
                         participation__isnull=False,
+                        plan_chat_message__isnull=True,
+                    )
+                    | Q(
+                        kind="plan_chat_message",
+                        message__isnull=True,
+                        participation__isnull=True,
+                        plan_chat_message__isnull=False,
                     )
                 ),
                 name="notification_context_matches_kind",
@@ -564,6 +650,13 @@ class Report(models.Model):
         blank=True,
         related_name="reports",
     )
+    reported_plan_chat_message = models.ForeignKey(
+        PlanChatMessage,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="reports",
+    )
     # WHY: Separates a newly received report from one staff have reviewed without changing the original statement.
     status = models.CharField(
         max_length=8,
@@ -576,7 +669,7 @@ class Report(models.Model):
     class Meta:
         # WHY: Prevents self-reporting and stops a single report pointing at several unrelated contexts.
         constraints = [
-            # WHY: Permits zero or one context reference by requiring at least two context fields to be empty.
+            # WHY: Permits no context or exactly one of the four supported context records.
             models.CheckConstraint(
                 condition=~Q(reporter=F("reported_user")),
                 name="report_users_differ",
@@ -586,14 +679,32 @@ class Report(models.Model):
                     Q(
                         reported_plan__isnull=True,
                         reported_conversation__isnull=True,
+                        reported_message__isnull=True,
+                        reported_plan_chat_message__isnull=True,
+                    )
+                    | Q(
+                        reported_plan__isnull=False,
+                        reported_conversation__isnull=True,
+                        reported_message__isnull=True,
+                        reported_plan_chat_message__isnull=True,
                     )
                     | Q(
                         reported_plan__isnull=True,
+                        reported_conversation__isnull=False,
                         reported_message__isnull=True,
+                        reported_plan_chat_message__isnull=True,
                     )
                     | Q(
+                        reported_plan__isnull=True,
+                        reported_conversation__isnull=True,
+                        reported_message__isnull=False,
+                        reported_plan_chat_message__isnull=True,
+                    )
+                    | Q(
+                        reported_plan__isnull=True,
                         reported_conversation__isnull=True,
                         reported_message__isnull=True,
+                        reported_plan_chat_message__isnull=False,
                     )
                 ),
                 name="report_at_most_one_context",

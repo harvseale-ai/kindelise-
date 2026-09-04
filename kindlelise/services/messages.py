@@ -1,12 +1,22 @@
 """Direct-conversation creation and message-sending workflows."""
 
 # WHY: Keeps private conversation changes together without mixing in page presentation.
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from kindlelise.models import Conversation, Message, Notification
-from kindlelise.policies import can_start_or_continue_direct_messages
+from kindlelise.models import (
+    Conversation,
+    Message,
+    Notification,
+    PlanChat,
+    PlanChatMessage,
+)
+from kindlelise.policies import (
+    can_send_plan_chat_message,
+    can_start_or_continue_direct_messages,
+)
 
 # =============================================================================
 # CONVERSATION CREATION
@@ -20,7 +30,7 @@ def find_or_start_direct_conversation(user, other_user):
     Inputs: two server-known Django accounts requesting a direct conversation.
     Returns: the pair's single database-authoritative Conversation.
     Changes: creates the ordered conversation only when it does not already exist.
-    Refuses: identical, inactive, unverified or either-direction-blocked accounts.
+    Refuses: identical, inactive, missing-profile or either-direction-blocked accounts.
     Privacy: returns no conversation unless the pair may currently message.
     """
     # WHY: Applies current account and block rules before creating or revealing the pair's conversation.
@@ -109,4 +119,61 @@ def send_direct_message(sender, conversation, message_text):
         created_at=sent_at,
     )
     # WHY: Gives the page the exact saved message and timestamp it should display.
+    return message
+
+
+# WHY: Stores a plan-chat message only after reloading the chat and rechecking derived membership and plan state.
+@transaction.atomic
+def send_plan_chat_message(sender, chat, message_text):
+    """Store one validated plain-text message in an authorised active plan chat."""
+    if chat is None or chat.pk is None:
+        raise PermissionDenied("Plan chat is unavailable")
+    try:
+        current_chat = (
+            PlanChat.objects.select_for_update()
+            .select_related("plan")
+            .get(pk=chat.pk)
+        )
+    except PlanChat.DoesNotExist as error:
+        raise PermissionDenied("Plan chat is unavailable") from error
+    sent_at = timezone.now()
+    if not can_send_plan_chat_message(sender, current_chat, sent_at):
+        raise PermissionDenied("Plan chat is unavailable")
+    message = PlanChatMessage.objects.create(
+        chat=current_chat,
+        sender=sender,
+        body=message_text,
+        sent_at=sent_at,
+    )
+    current_chat.updated_at = sent_at
+    current_chat.save(update_fields=["updated_at"])
+    # WHY: Alerts only the owner and currently confirmed members, never pending, former, unrelated or sending accounts.
+    recipient_ids = set(
+        current_chat.plan.participations.filter(
+            status="joined",
+            user__is_active=True,
+            user__profile__isnull=False,
+        ).values_list("user_id", flat=True)
+    )
+    if (
+        current_chat.plan.owner_id != sender.pk
+        and get_user_model().objects.filter(
+            pk=current_chat.plan.owner_id,
+            is_active=True,
+            profile__isnull=False,
+        ).exists()
+    ):
+        recipient_ids.add(current_chat.plan.owner_id)
+    recipient_ids.discard(sender.pk)
+    Notification.objects.bulk_create(
+        [
+            Notification(
+                recipient_id=recipient_id,
+                kind=Notification.Kind.PLAN_CHAT_MESSAGE,
+                plan_chat_message=message,
+                created_at=sent_at,
+            )
+            for recipient_id in recipient_ids
+        ]
+    )
     return message

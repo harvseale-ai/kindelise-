@@ -1,0 +1,30 @@
+{# Reuses the authorised message thread and composer inside the shared Messages shell. #}
+<section class="conversation-page" aria-labelledby="conversation-title">
+  <header class="conversation-page-header">
+    <a class="back-link" href="{% url 'inbox' %}">← Messages</a>
+    <div class="conversation-person">
+      {% if plan_chat.plan.thumbnail_image %}
+        <img class="profile-image inbox-avatar" src="{% url 'plan_thumbnail' plan_chat.plan.pk %}" alt="">
+      {% else %}
+        <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
+      {% endif %}
+      <div>
+        <h1 id="conversation-title"><a href="{% url 'plan_detail' plan_chat.plan.pk %}">{{ plan_chat.plan.title }}</a></h1>
+        <p class="eyebrow">Plan chat · {{ plan_chat.plan.starts_at|date:"j M Y, H:i" }}</p>
+      </div>
+    </div>
+
+    <details class="conversation-safety">
+      <summary>Safety</summary>
+      <div class="conversation-safety-panel">
+        <a href="{% url 'plan_detail' plan_chat.plan.pk %}">View plan details</a>
+        <p><strong>Keep personal information private.</strong> Do not share private addresses, telephone numbers or other sensitive information in the plan chat.</p>
+        <p>Use the controls beside a received message to report it privately or block its sender.</p>
+      </div>
+    </details>
+  </header>
+
+  {% include "includes/message_thread.html" with thread_messages=plan_chat_messages thread_kind="plan" thread_aria_label="Plan chat messages" empty_thread_text="Confirmed participants can use this chat to arrange the public plan." %}
+  {% url 'plan_chat_message_send' plan_chat.plan.pk as plan_chat_composer_action %}
+  {% include "includes/message_composer.html" with thread_kind="plan" can_send_thread_message=can_send composer_action=plan_chat_composer_action %}
+</section>

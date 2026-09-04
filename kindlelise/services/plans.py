@@ -5,12 +5,14 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
-from kindlelise.models import Notification, Participation, Plan
+from kindlelise.models import Notification, Participation, Plan, PlanChat
 from kindlelise.policies import (
     can_access_discovery_plans_and_messages,
+    can_confirm_plan_participation,
     can_create_plan,
-    can_join_approved_plan,
+    can_request_plan_participation,
 )
+from kindlelise.services.messages import find_or_start_direct_conversation
 
 # KEYWORD: atomic — all database changes in the function are kept together or rolled back together.
 # =============================================================================
@@ -29,15 +31,16 @@ def create_available_plan(owner, plan_details):
     Refuses: every account that lacks current plan access.
     Privacy: ignores browser-supplied owner, status and approval fields.
     """
-    # WHY: Rechecks current verified access here even if the page already hid the creation form.
+    # WHY: Rechecks current account access here even if the page already hid the creation form.
     if not can_create_plan(owner):
-        raise PermissionDenied("Current verification is required")
+        raise PermissionDenied("Current account access is required")
 
     # WHY: Copies only public meeting fields and ignores browser attempts to choose owner, status, or approver.
     editable_fields = (
         "title",
         "description",
         "public_place",
+        "public_address",
         "public_url",
         "starts_at",
         "capacity",
@@ -96,6 +99,7 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
         "title",
         "description",
         "public_place",
+        "public_address",
         "public_url",
         "starts_at",
         "capacity",
@@ -145,67 +149,174 @@ def update_owned_plan_before_first_join(owner, plan, plan_changes):
 
 # =============================================================================
 # PLAN PARTICIPATION
-# Handles joining and leaving while preserving participation history.
+# Handles requests, owner decisions and leaving while preserving participation history.
 # =============================================================================
 
-# WHY: Keeps participation, the first-join lock and the owner's alert together so none is left half-finished.
+# WHY: Stores the pending request and its private owner conversation as one deliberate workflow.
 @transaction.atomic
-def join_approved_plan_and_lock_meeting_details(user, plan):
-    """Join an approved plan and set its permanent first-join lock atomically.
+def request_plan_participation_and_open_owner_conversation(user, plan):
+    """Request participation and return the existing or new owner conversation.
 
     Inputs: the server-known account and plan selected by the request.
-    Returns: the newly created or reactivated Participation.
-    Changes: joins one participant and sets the plan lock on the first join.
-    Refuses: every current eligibility, ownership, state, time or capacity denial.
-    Privacy: recounts participation without returning other participant identities.
+    Returns: the pending Participation and authorised direct Conversation.
+    Changes: creates or resets one request and alerts the owner.
+    Refuses: every current eligibility, ownership, block, state, time or capacity denial.
+    Privacy: accepts no requester or owner identity from the browser.
     """
-    # WHY: Refuses missing or unsaved plan values before a database lock is attempted.
     if plan is None or plan.pk is None:
-        raise PermissionDenied("Plan joining is not permitted")
-    # WHY: Locks the current plan so simultaneous joins cannot both take the final capacity place.
+        raise PermissionDenied("Plan participation cannot be requested")
     try:
         current_plan = Plan.objects.select_for_update().get(pk=plan.pk)
     except Plan.DoesNotExist as error:
-        raise PermissionDenied("Plan joining is not permitted") from error
+        raise PermissionDenied("Plan participation cannot be requested") from error
 
-    # WHY: Uses one time for permission, participation, plan locking, and notification creation.
-    joined_at = timezone.now()
-    if not can_join_approved_plan(user, current_plan, joined_at):
-        raise PermissionDenied("Plan joining is not permitted")
+    requested_at = timezone.now()
+    if not can_request_plan_participation(user, current_plan, requested_at):
+        raise PermissionDenied("Plan participation cannot be requested")
 
-    # WHY: Reuses the account's one historical participation row when they previously left.
-    participation = Participation.objects.filter(
+    # WHY: Locks and reuses the one historical row after a decline or departure instead of creating duplicates.
+    participation = Participation.objects.select_for_update().filter(
         plan=current_plan,
         user=user,
     ).first()
-    # WHY: Creates first-time participation or reactivates the existing row without duplicating history.
     if participation is None:
         participation = Participation.objects.create(
             plan=current_plan,
             user=user,
-            status=Participation.Status.JOINED,
-            joined_at=joined_at,
+            status=Participation.Status.PENDING,
+            requested_at=requested_at,
+            joined_at=None,
+            decided_at=None,
             left_at=None,
         )
     else:
-        # WHY: Rejoining restores the old row so the person's earlier history is not duplicated or lost.
-        participation.status = Participation.Status.JOINED
-        participation.joined_at = joined_at
+        participation.status = Participation.Status.PENDING
+        participation.requested_at = requested_at
+        participation.joined_at = None
+        participation.decided_at = None
         participation.left_at = None
-        participation.save(update_fields=["status", "joined_at", "left_at"])
+        participation.save(
+            update_fields=[
+                "status",
+                "requested_at",
+                "joined_at",
+                "decided_at",
+                "left_at",
+            ]
+        )
 
-    # WHY: The first successful join permanently locks meeting details; later joins preserve that original time.
-    if current_plan.meeting_details_locked_at is None:
-        current_plan.meeting_details_locked_at = joined_at
-        current_plan.save(update_fields=["meeting_details_locked_at"])
-    # WHY: Alerts only the plan owner that this account joined and keeps the notification tied to participation.
+    # WHY: Reuses the existing safe pair conversation instead of adding a request-specific messaging system.
+    conversation = find_or_start_direct_conversation(user, current_plan.owner)
     Notification.objects.create(
         recipient=current_plan.owner,
-        kind=Notification.Kind.PLAN_JOIN,
+        kind=Notification.Kind.PLAN_REQUEST,
         participation=participation,
-        created_at=joined_at,
+        created_at=requested_at,
     )
-    # WHY: Returns the stored participation so the page can confirm the person's current joined state.
+    return participation, conversation
+
+
+# WHY: Confirms one exact pending request under the same lock that protects capacity and meeting details.
+@transaction.atomic
+def confirm_requested_plan_participation(owner, plan, participation_id):
+    """Confirm one pending request without allowing capacity races."""
+    if plan is None or plan.pk is None:
+        raise PermissionDenied("Plan participation cannot be confirmed")
+    try:
+        current_plan = Plan.objects.select_for_update().get(pk=plan.pk)
+    except Plan.DoesNotExist as error:
+        raise PermissionDenied("Plan participation cannot be confirmed") from error
+    participation = (
+        Participation.objects.select_for_update()
+        .select_related("user", "plan")
+        .filter(pk=participation_id, plan=current_plan)
+        .first()
+    )
+    decided_at = timezone.now()
+    if not can_confirm_plan_participation(owner, participation, decided_at):
+        raise PermissionDenied("Plan participation cannot be confirmed")
+
+    participation.status = Participation.Status.JOINED
+    participation.joined_at = decided_at
+    participation.decided_at = decided_at
+    participation.left_at = None
+    participation.save(
+        update_fields=["status", "joined_at", "decided_at", "left_at"]
+    )
+    if current_plan.meeting_details_locked_at is None:
+        current_plan.meeting_details_locked_at = decided_at
+        current_plan.save(update_fields=["meeting_details_locked_at"])
+    # WHY: The first confirmation creates the plan's one shared chat; later confirmations reuse it.
+    chat, _created = PlanChat.objects.get_or_create(plan=current_plan)
+    Notification.objects.create(
+        recipient=participation.user,
+        kind=Notification.Kind.PLAN_CONFIRMED,
+        participation=participation,
+        created_at=decided_at,
+    )
+    return participation, chat
+
+
+# WHY: Lets only the owner close one pending request without changing capacity or meeting details.
+@transaction.atomic
+def decline_requested_plan_participation(owner, plan, participation_id):
+    """Decline one pending request belonging to the owner's plan."""
+    if plan is None or plan.pk is None or not can_access_discovery_plans_and_messages(owner):
+        raise PermissionDenied("Plan participation cannot be declined")
+    try:
+        current_plan = Plan.objects.select_for_update().get(pk=plan.pk)
+    except Plan.DoesNotExist as error:
+        raise PermissionDenied("Plan participation cannot be declined") from error
+    participation = (
+        Participation.objects.select_for_update()
+        .select_related("user")
+        .filter(
+            pk=participation_id,
+            plan=current_plan,
+            status=Participation.Status.PENDING,
+        )
+        .first()
+    )
+    if participation is None or current_plan.owner_id != owner.pk:
+        raise PermissionDenied("Plan participation cannot be declined")
+    decided_at = timezone.now()
+    participation.status = Participation.Status.DECLINED
+    participation.joined_at = None
+    participation.decided_at = decided_at
+    participation.left_at = None
+    participation.save(
+        update_fields=["status", "joined_at", "decided_at", "left_at"]
+    )
+    Notification.objects.create(
+        recipient=participation.user,
+        kind=Notification.Kind.PLAN_DECLINED,
+        participation=participation,
+        created_at=decided_at,
+    )
+    return participation
+
+
+# WHY: Lets a requester remove only their own pending request before the owner decides it.
+@transaction.atomic
+def withdraw_pending_plan_participation(user, plan):
+    """Withdraw the caller's pending request while retaining its history row."""
+    if plan is None or not can_access_discovery_plans_and_messages(user):
+        raise PermissionDenied("Plan participation cannot be withdrawn")
+    participation = (
+        Participation.objects.select_for_update()
+        .filter(plan=plan, user=user, status=Participation.Status.PENDING)
+        .first()
+    )
+    if participation is None:
+        raise PermissionDenied("Pending participation is required")
+    withdrawn_at = timezone.now()
+    participation.status = Participation.Status.LEFT
+    participation.joined_at = None
+    participation.decided_at = withdrawn_at
+    participation.left_at = withdrawn_at
+    participation.save(
+        update_fields=["status", "joined_at", "decided_at", "left_at"]
+    )
     return participation
 
 # WHY: Saves leaving as one complete change while deliberately keeping the original join history.

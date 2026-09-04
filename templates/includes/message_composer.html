@@ -1,0 +1,42 @@
+{# Shared bounded message composer; direct-only draft assistance stays attached to direct conversations. #}
+{% if can_send_thread_message %}
+  <form id="message-composer" class="conversation-composer" method="post" action="{{ composer_action }}" novalidate>
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="conversation-compose-row">
+      <label class="visually-hidden" for="{{ form.body.id_for_label }}">Message</label>
+      {{ form.body }}
+      <button type="submit">Send</button>
+    </div>
+    {{ form.body.errors }}
+
+    {% if thread_kind == "direct" %}
+      <details class="conversation-draft-tools">
+        <summary>Edit this unsent draft</summary>
+        <div>
+          <p class="state-label">Only this draft and your chosen editing goal go to Ollama. No profile or previous messages are included.</p>
+          <div class="action-row">
+            <button type="button" data-message-edit-goal="fix_grammar" data-conversation-id="{{ conversation.pk }}" aria-controls="message-edit-suggestion">Fix grammar</button>
+            <button type="button" class="secondary" data-message-edit-goal="improve_clarity" data-conversation-id="{{ conversation.pk }}" aria-controls="message-edit-suggestion">Improve clarity</button>
+          </div>
+          <p id="message-edit-status" class="state-label" role="status" aria-live="polite"></p>
+        </div>
+      </details>
+
+      <section id="message-edit-suggestion" class="state-panel" aria-labelledby="message-edit-title" aria-live="polite" hidden>
+        <h2 id="message-edit-title">Edit unsent draft</h2>
+        <p><strong>Original draft</strong></p>
+        <p id="message-edit-original"></p>
+        <p><strong>Suggested draft</strong></p>
+        <p id="message-edit-suggested"></p>
+        <button id="message-edit-keep" class="secondary" type="button">Keep original</button>
+        <button id="message-edit-use" type="button">Use suggestion</button>
+      </section>
+    {% endif %}
+  </form>
+{% else %}
+  <div class="conversation-composer" role="status">
+    <strong>This plan chat is now read-only.</strong>
+    <p class="state-label">The saved conversation remains available after the plan starts or is cancelled.</p>
+  </div>
+{% endif %}

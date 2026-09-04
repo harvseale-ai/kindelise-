@@ -1,6 +1,14 @@
 """Read notifications and private account information."""
 
-from kindlelise.models import Notification, Plan, PlatformSubscription, Profile
+from django.db.models import Q
+
+from kindlelise.models import (
+    Notification,
+    Participation,
+    Plan,
+    PlatformSubscription,
+    Profile,
+)
 
 # =============================================================================
 # NOTIFICATION READS
@@ -8,15 +16,31 @@ from kindlelise.models import Notification, Plan, PlatformSubscription, Profile
 # =============================================================================
 
 
+# WHY: Removes plan-chat alerts as soon as current owner/confirmed membership no longer permits that chat.
+def _notifications_visible_to_user(user):
+    return (
+        Notification.objects.filter(recipient=user)
+        .filter(
+            ~Q(kind=Notification.Kind.PLAN_CHAT_MESSAGE)
+            | Q(plan_chat_message__chat__plan__owner=user)
+            | Q(
+                plan_chat_message__chat__plan__participations__user=user,
+                plan_chat_message__chat__plan__participations__status=Participation.Status.JOINED,
+            )
+        )
+        .distinct()
+    )
+
+
 # WHY: Finds the unread notification count information in one place so callers receive the same result.
 def get_unread_notification_count(user):
-    """Return only the signed-in account's unread message and plan-join count."""
+    """Return only the signed-in account's unread message and plan activity count."""
     # WHY: Shared templates may run for anonymous pages, which should simply show no badge.
     if not getattr(user, "is_authenticated", False) or not user.is_active:
         return 0
 
     # WHY: Counts only this recipient's rows that have no recorded reading time.
-    return Notification.objects.filter(recipient=user, read_at__isnull=True).count()
+    return _notifications_visible_to_user(user).filter(read_at__isnull=True).count()
 
 
 # WHY: Finds the recent notifications information in one place so callers receive the same result.
@@ -28,12 +52,14 @@ def get_recent_notifications(user, limit=30):
 
     # WHY: Loads only related names and plan details needed to display each permitted alert without extra queries.
     return (
-        Notification.objects.filter(recipient=user)
+        _notifications_visible_to_user(user)
         .select_related(
             "message__conversation",
             "message__sender__profile",
             "participation__plan",
             "participation__user__profile",
+            "plan_chat_message__chat__plan",
+            "plan_chat_message__sender__profile",
         )
         # WHY: Shows newest alerts first and uses the row ID to keep equal-time results stable.
         .order_by("-created_at", "-pk")[:limit]

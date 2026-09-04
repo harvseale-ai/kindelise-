@@ -23,15 +23,19 @@ from kindlelise.services.billing import (
 from kindlelise.services.messages import (
     find_or_start_direct_conversation,
     send_direct_message,
+    send_plan_chat_message,
 )
 
 # WHY: Plan pages can find every plan-changing action together under the original import path.
 from kindlelise.services.plans import (
     cancel_owned_plan_and_hide_it_from_discovery,
+    confirm_requested_plan_participation,
     create_available_plan,
-    join_approved_plan_and_lock_meeting_details,
+    decline_requested_plan_participation,
     leave_plan_and_keep_participation_history,
+    request_plan_participation_and_open_owner_conversation,
     update_owned_plan_before_first_join,
+    withdraw_pending_plan_participation,
 )
 
 # WHY: Blocking and reporting stay available without exposing their private helper details.
@@ -55,17 +59,21 @@ from kindlelise.services.stripe_events import (
 __all__ = [
     "block_user_from_discovery_and_messages",
     "cancel_owned_plan_and_hide_it_from_discovery",
+    "confirm_requested_plan_participation",
     "create_account_and_profile",
     "create_available_plan",
     "find_or_start_direct_conversation",
-    "join_approved_plan_and_lock_meeting_details",
+    "decline_requested_plan_participation",
     "leave_plan_and_keep_participation_history",
     "mark_all_notifications_read",
     "open_stripe_customer_portal",
+    "request_plan_participation_and_open_owner_conversation",
     "send_direct_message",
+    "send_plan_chat_message",
     "start_stripe_subscription_checkout",
     "submit_private_report_about_user",
     "update_owned_plan_before_first_join",
     "update_premium_access_from_verified_stripe_event",
     "update_signed_in_user_profile",
+    "withdraw_pending_plan_participation",
 ]

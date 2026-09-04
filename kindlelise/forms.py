@@ -17,7 +17,11 @@ from django.utils import timezone
 from PIL import Image, ImageOps
 
 from kindlelise.models import Interest, Plan, Profile, Report
-from kindlelise.plan_metadata import normalise_public_https_url
+from kindlelise.plan_metadata import (
+    PlanMetadataUnavailable,
+    normalise_public_https_url,
+    thumbnail_from_uploaded_file,
+)
 
 # =============================================================================
 # PLAN DATE AND TIME CONTROL
@@ -146,8 +150,8 @@ class ProfileDetailsForm(forms.ModelForm):
     # WHY: Gives visitors one quick switch for immediate availability without asking for a date.
     free_now = forms.BooleanField(
         required=False,
-        label="Free now",
-        help_text="Turn this off and leave Available from unset to clear it.",
+        label="Open to company",
+        help_text="Turn this off and leave Available from unset to clear your availability.",
         widget=forms.CheckboxInput(attrs={"class": "availability-toggle"}),
     )
     # WHY: Offers only the relative availability choices understood by the saved profile rules.
@@ -325,7 +329,7 @@ class DiscoveryFiltersForm(forms.Form):
     # WHY: Requires at least one server-approved broad area to keep discovery deliberately broad.
     broad_area = forms.MultipleChoiceField(
         choices=(),
-        label="Broad areas",
+        label="Areas",
         widget=forms.CheckboxSelectMultiple(
             attrs={"class": "area-checkboxes"}
         ),
@@ -339,7 +343,7 @@ class DiscoveryFiltersForm(forms.Form):
         ),
     )
     # WHY: Adds an optional current-availability filter without changing who is permitted to appear.
-    available_now = forms.BooleanField(required=False, label="Free now")
+    available_now = forms.BooleanField(required=False, label="Open to company")
 
     # WHY: Prepares this object with the values it needs before any other step uses it.
     def __init__(self, *args, allowed_areas, interest_limit, **kwargs):
@@ -375,6 +379,10 @@ class DiscoveryFiltersForm(forms.Form):
 # Checks plan details and the public URL used to request optional place metadata.
 # =============================================================================
 
+# WHY: Gives new plans exact participant limits while keeping the owner outside the selected number.
+PLAN_CAPACITY_CHOICES = tuple((value, str(value)) for value in range(1, 16))
+
+
 # WHY: Keeps the PlanDetailsForm information and its rules together so they stay consistent.
 class PlanDetailsForm(forms.ModelForm):
     """Validate bounded future plan details and a normal HTTPS evidence URL."""
@@ -387,20 +395,39 @@ class PlanDetailsForm(forms.ModelForm):
         help_text="Choose a future date and start time.",
         widget=PlanStartDateTimeWidget(),
     )
-    # WHY: Prevents a plan with no possible attendees before model rules are reached.
-    capacity = forms.IntegerField(min_value=1)
+    # WHY: Makes the exact number of people who may join explicit and bounded for new plans.
+    capacity = forms.TypedChoiceField(
+        choices=PLAN_CAPACITY_CHOICES,
+        coerce=int,
+        initial=1,
+        help_text="Choose how many people can join you.",
+    )
+
+    # WHY: Preserves an older plan's larger capacity during unrelated edits without offering it to new plans.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["starts_at"].widget.widgets[0].attrs["min"] = (
+            timezone.localdate().isoformat()
+        )
+        current_capacity = getattr(self.instance, "capacity", None)
+        if self.instance.pk and current_capacity and current_capacity > 15:
+            self.fields["capacity"].choices = (
+                *PLAN_CAPACITY_CHOICES,
+                (current_capacity, f"{current_capacity} (current capacity)"),
+            )
 
     # WHY: Keeps database or form rules beside the information they control.
     class Meta:
         # WHY: Allows only the owner-editable public plan facts, never status or approval fields.
         model = Plan
         fields = (
-            "title",
-            "description",
             "public_url",
             "public_place",
-            "starts_at",
+            "public_address",
             "capacity",
+            "starts_at",
+            "title",
+            "description",
         )
 
     # WHY: Checks and tidies the public url value before the site trusts or saves it.
@@ -422,6 +449,39 @@ class PlanDetailsForm(forms.ModelForm):
         return starts_at
 
 
+# WHY: Adds one optional manually chosen image to the existing create and edit plan facts.
+class PlanImageDetailsForm(PlanDetailsForm):
+    """Validate plan details and an optional replacement card image."""
+
+    plan_image = forms.ImageField(
+        required=False,
+        label="Plan photo",
+        help_text="Optional. JPG, PNG or WebP, up to 5 MB.",
+        widget=forms.FileInput(
+            attrs={
+                "accept": "image/jpeg,image/png,image/webp",
+                "data-plan-image-input": "",
+                "aria-label": "Upload a plan photo",
+            }
+        ),
+    )
+
+    class Meta(PlanDetailsForm.Meta):
+        fields = (*PlanDetailsForm.Meta.fields, "plan_image")
+
+    def clean_plan_image(self):
+        """Return the same normalized JPEG used by fetched plan thumbnails."""
+        uploaded_image = self.cleaned_data.get("plan_image")
+        if not uploaded_image:
+            return None
+        try:
+            return thumbnail_from_uploaded_file(uploaded_image)
+        except PlanMetadataUnavailable as error:
+            raise forms.ValidationError(
+                "Choose a valid JPG, PNG or WebP image no larger than 5 MB."
+            ) from error
+
+
 # WHY: Keeps the PlanMetadataRequestForm information and its rules together so they stay consistent.
 class PlanMetadataRequestForm(forms.Form):
     """Validate the sole URL accepted by the explicit metadata fetch action."""
@@ -432,6 +492,24 @@ class PlanMetadataRequestForm(forms.Form):
     # WHY: Checks and tidies the public url value before the site trusts or saves it.
     def clean_public_url(self):
         """Apply the same URL syntax boundary as the eventual plan submission."""
+        try:
+            return normalise_public_https_url(self.cleaned_data["public_url"])
+        except ValueError as error:
+            raise forms.ValidationError(str(error)) from error
+
+
+# WHY: Validates only the bounded facts an authorised visitor may send for an optional plan-writing suggestion.
+class PlanDraftRequestForm(forms.Form):
+    """Validate the three inputs used to extract an editable plan draft."""
+
+    idea = forms.CharField(max_length=6_000, strip=True)
+    public_url = forms.URLField(max_length=500, assume_scheme="http")
+    capacity = forms.TypedChoiceField(choices=PLAN_CAPACITY_CHOICES, coerce=int)
+    public_place = forms.CharField(max_length=200, strip=True, required=False)
+    public_address = forms.CharField(max_length=300, strip=True, required=False)
+
+    def clean_public_url(self):
+        """Apply the normal public HTTPS boundary before including the URL as draft context."""
         try:
             return normalise_public_https_url(self.cleaned_data["public_url"])
         except ValueError as error:

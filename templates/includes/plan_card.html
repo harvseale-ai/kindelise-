@@ -1,0 +1,39 @@
+{# # WHY: Keeps every standard plan card identical wherever the authorised plan list is featured. #}
+<a class="plan-card{% if plan.thumbnail_image %} plan-card--with-image{% endif %}" href="{% url 'plan_detail' plan.pk %}"{% if plan.thumbnail_image %} style="--plan-card-image: url('{% url 'plan_thumbnail' plan.pk %}')"{% endif %}{% if plan_card_searchable and selected_filter != "done" and plan.status == plan.Status.APPROVED and plan.joined_count < plan.capacity %} data-plan-searchable data-plan-title="{{ plan.title }}" data-plan-place="{{ plan.public_place }}" data-plan-date="{{ plan.starts_at|date:'j M · H:i' }}" data-plan-search-text="{{ plan.title }} {{ plan.description }} {{ plan.public_place }}"{% if plan.thumbnail_image %} data-plan-image="{% url 'plan_thumbnail' plan.pk %}"{% endif %}{% endif %}>
+  <span class="plan-card-content">
+    <strong class="plan-card-title">{{ plan.title }}</strong>
+    <span class="plan-card-description">{{ plan.description }}</span>
+    <span class="plan-card-detail">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4.5 9.5h15M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2Zm3 9a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/></svg>
+      <time datetime="{{ plan.starts_at|date:'Y-m-d\TH:i:s' }}">{{ plan.starts_at|date:"j M" }} · {{ plan.starts_at|date:"H:i" }}</time>
+    </span>
+    <span class="plan-card-detail">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v18H8zM5 8h3v13H5zm11 4h3v9h-3M11 7h2m-2 4h2m-2 4h2m-2 4h2"/></svg>
+      <span>{{ plan.public_place }}</span>
+    </span>
+    <span class="plan-card-footer">
+      {% if selected_filter == "done" %}
+        <span class="plan-state">Done</span>
+      {% elif plan.status == plan.Status.APPROVED and plan.owner_id == user.pk %}
+        <span class="plan-state plan-state--available plan-state--yours">Your plan</span>
+      {% elif plan.status == plan.Status.APPROVED and plan.viewer_has_joined %}
+        <span class="plan-state plan-state--available plan-state--joined">Joined</span>
+      {% elif plan.status == plan.Status.APPROVED and plan.joined_count >= plan.capacity %}
+        <span class="plan-state plan-state--full">Full</span>
+      {% elif plan.status == plan.Status.APPROVED %}
+        <span class="plan-state plan-state--available">Open</span>
+      {% elif plan.status == plan.Status.PENDING %}
+        <span class="plan-state plan-state--pending">Pending</span>
+      {% elif plan.status == plan.Status.REJECTED %}
+        <span class="plan-state">Rejected</span>
+      {% else %}
+        <span class="plan-state">Cancelled</span>
+      {% endif %}
+      <span class="plan-capacity">
+        <span class="visually-hidden">Capacity:</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-1a2.5 2.5 0 1 0 0-5M3.5 19v-2a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4v2M15 13h1.5a4 4 0 0 1 4 4v2"/></svg>
+        {{ plan.capacity }}
+      </span>
+    </span>
+  </span>
+</a>

@@ -11,8 +11,8 @@ from django.views.decorators.http import require_http_methods, require_POST
 from kindlelise.forms import PrivateReportForm
 from kindlelise.selectors import (
     get_messages_if_user_can_open_conversation,
+    get_plan_chat_message_if_reporter_is_allowed,
     get_plan_page_if_viewer_is_allowed,
-    get_profile_page_if_viewer_is_allowed,
     get_report_target_profile_if_reporter_is_allowed,
 )
 from kindlelise.services.safety import (
@@ -37,7 +37,7 @@ def _get_private_report_context(request, target_profile):
     if not context_type and not context_id and not conversation_id:
         return {"service_values": {}, "hidden_values": {}, "label": None}
     # WHY: Refuses unknown context kinds and invalid IDs before any selector is called.
-    if context_type not in {"plan", "conversation", "message"}:
+    if context_type not in {"plan", "conversation", "message", "plan_chat_message"}:
         return None
     if not context_id.isdecimal() or int(context_id) < 1:
         return None
@@ -57,6 +57,25 @@ def _get_private_report_context(request, target_profile):
                 "context_id": context_id,
             },
             "label": f"Plan: {plan_page['plan'].title}",
+        }
+
+    if context_type == "plan_chat_message":
+        plan_chat_message = get_plan_chat_message_if_reporter_is_allowed(
+            request.user,
+            int(context_id),
+            target_profile.user,
+        )
+        if plan_chat_message is None:
+            return None
+        return {
+            "service_values": {
+                "reported_plan_chat_message": plan_chat_message,
+            },
+            "hidden_values": {
+                "context_type": context_type,
+                "context_id": context_id,
+            },
+            "label": f"A message in plan chat: {plan_chat_message.chat.plan.title}",
         }
 
     # WHY: Conversation reports use their own ID; message reports carry the containing conversation separately.
@@ -126,11 +145,14 @@ def block_profile_from_discovery_and_messages(request, profile_id):
     Inputs: a signed-in CSRF-validated POST and untrusted profile route ID.
     Returns: a discovery redirect or the same generic profile-not-found response.
     Changes: calls the idempotent directional block service once.
-    Refuses: missing, self, inactive, unverified or already-hidden profiles.
+    Refuses: missing, self, inactive or already-hidden profiles.
     Privacy: never notifies the blocked account or reveals block state to it.
     """
     # WHY: Requires current interaction visibility before accepting a directional block action from this page.
-    profile = get_profile_page_if_viewer_is_allowed(request.user, profile_id)
+    profile = get_report_target_profile_if_reporter_is_allowed(
+        request.user,
+        profile_id,
+    )
     if profile is None:
         return HttpResponse("Profile unavailable.", status=404)
     try:

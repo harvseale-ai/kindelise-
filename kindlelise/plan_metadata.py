@@ -313,6 +313,26 @@ def _image_value(value):
     return None
 
 
+# WHY: Turns common Schema.org PostalAddress values into one short editable directions address.
+def _address_value(value):
+    if isinstance(value, str):
+        return " ".join(value.split())[:300] or None
+    if not isinstance(value, dict):
+        return None
+    country = value.get("addressCountry")
+    if isinstance(country, dict):
+        country = country.get("name")
+    parts = (
+        value.get("streetAddress"),
+        value.get("addressLocality"),
+        value.get("addressRegion"),
+        value.get("postalCode"),
+        country,
+    )
+    cleaned_parts = [" ".join(str(part).split()) for part in parts if part]
+    return ", ".join(dict.fromkeys(cleaned_parts))[:300] or None
+
+
 # WHY: Keeps the extract metadata steps in one named place so they can be understood, checked, and reused.
 def _extract_metadata(html_bytes, document_url):
     # WHY: Uses the narrow parser above so only supported public place details are collected.
@@ -332,6 +352,7 @@ def _extract_metadata(html_bytes, document_url):
 
     # WHY: Looks for an event location first because it is usually more precise than the page publisher's name.
     place_name = None
+    public_address = None
     image_url = None
     for node in nodes:
         if "Event" not in _node_types(node):
@@ -344,10 +365,11 @@ def _extract_metadata(html_bytes, document_url):
             if not isinstance(location, dict):
                 continue
             place_name = _clean_place_name(location.get("name"))
+            public_address = _address_value(location.get("address"))
             image_url = _image_value(location.get("image")) or _image_value(node.get("image"))
-            if place_name:
+            if place_name or public_address:
                 break
-        if place_name:
+        if place_name or public_address:
             break
 
     # WHY: Limits the next search to recognised kinds of established public places.
@@ -367,6 +389,7 @@ def _extract_metadata(html_bytes, document_url):
             if not (_node_types(node) & place_types):
                 continue
             place_name = _clean_place_name(node.get("name"))
+            public_address = public_address or _address_value(node.get("address"))
             image_url = image_url or _image_value(node.get("image"))
             if place_name:
                 break
@@ -382,7 +405,7 @@ def _extract_metadata(html_bytes, document_url):
             image_url = normalise_public_https_url(urljoin(document_url, image_url))
         except ValueError:
             image_url = None
-    return place_name, image_url
+    return place_name, public_address, image_url
 
 
 # =============================================================================
@@ -421,6 +444,21 @@ def _normalise_thumbnail(source_bytes):
     return image_bytes
 
 
+# WHY: Lets a visitor-supplied fallback use the exact same safe plan-card image pipeline as fetched metadata.
+def thumbnail_from_uploaded_file(uploaded_file):
+    """Return one normalized JPEG ContentFile from a bounded uploaded plan image."""
+    if not uploaded_file or uploaded_file.size > SOURCE_IMAGE_BYTES_LIMIT:
+        raise PlanMetadataUnavailable
+    uploaded_file.seek(0)
+    source_bytes = uploaded_file.read(SOURCE_IMAGE_BYTES_LIMIT + 1)
+    if len(source_bytes) > SOURCE_IMAGE_BYTES_LIMIT:
+        raise PlanMetadataUnavailable
+    return ContentFile(
+        _normalise_thumbnail(source_bytes),
+        name="uploaded-plan-thumbnail.jpg",
+    )
+
+
 # =============================================================================
 # PLAN METADATA RESULT
 # Combines the place suggestion and optional image proof returned to the form.
@@ -441,7 +479,7 @@ def fetch_plan_metadata(public_url, user_id):
             PAGE_BYTES_LIMIT,
         )
         # WHY: Extracts an editable name suggestion and optional separately checked image address.
-        public_place, image_url = _extract_metadata(html_bytes, document_url)
+        public_place, public_address, image_url = _extract_metadata(html_bytes, document_url)
         image_bytes = None
         if image_url:
             # WHY: Image failure does not discard a useful place name; it simply returns no thumbnail.
@@ -457,7 +495,7 @@ def fetch_plan_metadata(public_url, user_id):
     except (PlanMetadataUnavailable, ValueError):
         return None
     # WHY: Returns no result when the public page provided neither useful part of the feature.
-    if not public_place and not image_bytes:
+    if not public_place and not public_address and not image_bytes:
         return None
 
     # WHY: Turns the small clean image into text so it can be previewed and placed inside signed proof.
@@ -479,6 +517,7 @@ def fetch_plan_metadata(public_url, user_id):
     # WHY: Returns only the values needed to fill and preview the still-editable plan form.
     return {
         "public_place": public_place or "",
+        "public_address": public_address or "",
         "thumbnail_found": bool(image_bytes),
         "thumbnail_preview": f"data:image/jpeg;base64,{encoded_image}" if image_bytes else "",
         "metadata_token": token,

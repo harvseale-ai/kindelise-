@@ -5,8 +5,8 @@
 Kindelise is a server-rendered Django application for meeting people through
 shared interests and arranging activities at established public places. It
 includes verified profiles, broad-area discovery, public plans, direct
-messages, notifications, private safety controls, Stripe Premium and an
-optional Ollama writing assistant.
+messages, confirmed-member plan chats, notifications, private safety controls,
+Stripe Premium and optional Ollama writing assistance.
 
 Kindelise is currently intended for supervised accounts. Staff verification
 controls access to its social features, but it is not proof of identity, age or
@@ -16,19 +16,38 @@ Repository: [github.com/harvseale-ai/kindelise-](https://github.com/harvseale-ai
 
 ## Contents
 
-- [Main features](#main-features)
-- [User stories](#user-stories)
-- [Screenshots](#screenshots)
-- [Technical design](#technical-design)
-- [Run locally](#run-locally)
-- [Environment variables](#environment-variables)
-- [Staff setup](#staff-setup)
-- [Stripe and Ollama](#stripe-and-ollama)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Security and limitations](#security-and-limitations)
-- [Further development](#further-development)
-- [Project documentation](#project-documentation)
+- [Kindelise](#kindelise)
+  - [Contents](#contents)
+  - [Main features](#main-features)
+  - [User stories](#user-stories)
+  - [Screenshots](#screenshots)
+    - [Discover profiles](#discover-profiles)
+    - [Browse plans](#browse-plans)
+    - [View a public profile](#view-a-public-profile)
+  - [Technical design](#technical-design)
+    - [Request flow](#request-flow)
+    - [Main data](#main-data)
+    - [Main technical choices](#main-technical-choices)
+  - [Run locally](#run-locally)
+    - [Requirements](#requirements)
+    - [1. Install the project](#1-install-the-project)
+    - [2. Create PostgreSQL settings](#2-create-postgresql-settings)
+    - [3. Add a Django secret](#3-add-a-django-secret)
+    - [4. Start Django](#4-start-django)
+  - [Environment variables](#environment-variables)
+  - [Staff setup](#staff-setup)
+  - [Stripe and Ollama](#stripe-and-ollama)
+    - [Stripe test mode](#stripe-test-mode)
+    - [Ollama writing assistant](#ollama-writing-assistant)
+  - [Testing](#testing)
+    - [Recorded results](#recorded-results)
+  - [Deployment](#deployment)
+  - [Security and limitations](#security-and-limitations)
+    - [Main protections](#main-protections)
+    - [Current limitations](#current-limitations)
+  - [Further development](#further-development)
+  - [Project documentation](#project-documentation)
+  - [AI assistance](#ai-assistance)
 
 ## Main features
 
@@ -37,19 +56,21 @@ Repository: [github.com/harvseale-ai/kindelise-](https://github.com/harvseale-ai
 - Staff verification before discovery, plans and messaging become available.
 - Profile discovery using broad-area, interest and **Free now** filters.
 - Public-place plans with time, capacity, participation and image metadata.
-- Safe join, leave, rejoin and owner cancellation actions.
+- Owner-reviewed participation requests that consume capacity only after confirmation.
+- Shared plan chats for owners and confirmed participants.
 - One private direct conversation between each permitted pair of users.
-- Notifications for new messages and people joining an owned plan.
+- Notifications for messages, participation requests, owner decisions and plan-chat activity.
 - Private blocking and reporting controls.
 - Stripe-hosted yearly Premium payment and account management.
-- Ollama grammar and clarity suggestions for an unsent message draft.
+- Ollama suggestions for copied plan details and unsent message drafts.
 - Responsive, accessible pages with several optional colour themes.
 
 The main journey is:
 
 ```text
 register → complete profile → staff verification → discover people
-→ create or join plans → send messages → receive notifications
+→ create a plan or request to join one → owner confirmation
+→ coordinate in direct or plan chat → receive notifications
 ```
 
 ## User stories
@@ -61,11 +82,11 @@ register → complete profile → staff verification → discover people
 | 3 | Be verified by authorised staff | Incomplete profiles cannot receive product access. |
 | 4 | Find people with shared interests | Discovery respects areas, filters and blocks. |
 | 5 | Create a plan at a public place | Plans require a future time, capacity and public HTTPS evidence. |
-| 6 | Join, leave or rejoin a plan | Capacity and participation history remain correct. |
+| 6 | Request, confirm, leave or rejoin a plan | Owners control membership while capacity and history remain correct. |
 | 7 | Message another eligible person | Each pair has one private plain-text conversation. |
 | 8 | Block or privately report someone | Contact stops immediately while staff can receive private context. |
 | 9 | Purchase optional Premium access | Stripe manages payment and Kindelise applies verified subscription events. |
-| 10 | Improve an unsent message | The user compares both drafts and must still press **Send** manually. |
+| 10 | Draft a plan or improve an unsent message | AI suggestions remain editable and never publish or send automatically. |
 
 ## Screenshots
 
@@ -120,15 +141,19 @@ Browser request
 
 ### Main data
 
-The core models are `Profile`, `Interest`, `Plan`, `Participation`,
-`Conversation`, `Message`, `Notification`, `Block`, `Report`,
+The core models are `Profile`, `Interest`, `Plan`, `Participation`, `PlanChat`,
+`PlanChatMessage`, `Conversation`, `Message`, `Notification`, `Block`, `Report`,
 `PlatformSubscription` and `StripeWebhookReceipt`. They use PostgreSQL
 relationships and constraints to support the checks made in Python.
 
+[View the Kindelise Entity Relationship Diagram](docs/ERD.md) for a visual map
+of these records and their connections.
+
 Important examples include one profile per account, one participation per
-person and plan, one conversation per account pair, positive plan capacity and
-unique Stripe event receipts. Plan joining also locks the current database row
-before checking capacity so simultaneous joins cannot overfill a plan.
+person and plan, one shared chat per plan, one direct conversation per account
+pair, positive plan capacity and unique Stripe event receipts. Confirmation
+locks the current plan row before checking capacity so simultaneous owner
+decisions cannot overfill a plan.
 
 ### Main technical choices
 
@@ -137,9 +162,9 @@ before checking capacity so simultaneous joins cannot overfill a plan.
 | Interface | Server-rendered Django keeps permissions and private data on the server. |
 | Database | PostgreSQL supports the required constraints, arrays and row locking. |
 | Discovery | Broad named areas provide useful matching without exact locations. |
-| Messaging | Plain-text server-rendered messages keep the first version understandable and safe. |
+| Messaging | Plain-text direct and confirmed-member plan chats keep coordination understandable and safe. |
 | Payments | Stripe Checkout and Customer Portal prevent card details entering Kindelise. |
-| AI editing | Ollama receives only the unsent draft and one fixed editing goal. |
+| AI assistance | Ollama receives only bounded copied plan facts or one unsent message draft. |
 | Images | Files are checked and re-encoded; Cloudinary provides durable hosted storage when configured. |
 | Static files | WhiteNoise serves compressed versioned CSS and JavaScript on Heroku. |
 
@@ -280,10 +305,11 @@ OLLAMA_MODEL=gpt-oss:20b
 OLLAMA_TIMEOUT_SECONDS=10
 ```
 
-After restarting Django, open a permitted conversation and expand **Edit this
-unsent draft**. **Fix grammar** preserves the original structure, while
-**Improve clarity** may reorganise it. The user must choose **Use suggestion**
-and then press **Send**; Ollama cannot send a message itself.
+After restarting Django, the create-plan page can turn bounded copied event
+details into editable form suggestions. A permitted direct or plan conversation
+can also expand **Edit this unsent draft**: **Fix grammar** preserves the
+original structure, while **Improve clarity** may reorganise it. The user must
+review and submit every plan or message; Ollama cannot publish or send anything.
 
 ## Testing
 
@@ -318,7 +344,7 @@ pip-audit --local --skip-editable
 | --- | --- |
 | Django system and deployment checks | Passed with 0 issues |
 | Migration drift check | Passed |
-| Focused PostgreSQL pytest suite | **30 tests passed** |
+| Focused PostgreSQL pytest suite | **48 tests passed** |
 | Branch-aware Coverage.py report | **80%**, meeting the configured minimum |
 | Ruff | Passed |
 | Bandit | Passed with no unsuppressed findings |
@@ -332,8 +358,9 @@ pip-audit --local --skip-editable
 
 The focused automated suite covers authentication, profile ownership, staff
 verification, discovery limits, images, plan capacity and concurrency,
-participation, messaging, notifications, blocks, private reports, Stripe
-events, Ollama boundaries, CSRF and privacy responses. External provider calls
+participation requests and decisions, direct and plan-chat messaging,
+notifications, blocks, private reports, Stripe events, Ollama boundaries, CSRF
+and privacy responses. External provider calls
 use controlled replacements during automated tests. The configured coverage
 total focuses on the core application and omits generated migrations plus the
 Django Admin, public metadata fetcher and Ollama provider adapter. Their key
@@ -401,7 +428,7 @@ Stripe test mode, Ollama and application logs.
 - Staff verification is an access gate, not an identity or safety guarantee.
 - Broad areas intentionally replace exact location and distance tracking.
 - Public-place metadata can become outdated and must be checked by the user.
-- Messaging uses page refreshes rather than live sockets or read receipts.
+- Direct and plan-chat messaging use page refreshes rather than live sockets or read receipts.
 - Reports support staff review but are not an emergency-response service.
 - Premium currently has one yearly product.
 - Provider-backed features depend on Stripe, Ollama and Cloudinary availability.
@@ -410,17 +437,14 @@ Stripe test mode, Ollama and application logs.
 
 ## Further development
 
-The main planned feature is owner-approved plan membership. Instead of joining
-immediately, a user would send a request and the owner would accept or decline
-it. Capacity would change only after approval, and both people would receive a
-notification when the request changes state.
+The next priorities are production monitoring, background reconciliation for
+provider-backed features, stronger staff moderation workflows and optional
+live message updates without weakening the current permission boundaries.
 
 ## Project documentation
 
-- [`docs/DJANGO_REVISION_GUIDE.md`](docs/DJANGO_REVISION_GUIDE.md) — concise
-  presentation revision guide explaining the Django files and design.
-- [`docs/DECISIONS.md`](docs/DECISIONS.md) — important technical decisions and
-  their reasons.
+- [`docs/ERD.md`](docs/ERD.md) — simple diagram showing the stored information
+  and its database relationships.
 - [`docs/MANUAL_TESTING.md`](docs/MANUAL_TESTING.md) — browser tests, findings
   and outcomes.
 - [`docs/RUNTIME.md`](docs/RUNTIME.md) — source for the application flowcharts.

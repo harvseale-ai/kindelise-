@@ -14,9 +14,15 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from kindlelise.forms import AccountSignUpForm, ProfileDetailsForm
-from kindlelise.policies import can_access_discovery_plans_and_messages
+from kindlelise.models import Plan
+from kindlelise.policies import (
+    can_access_discovery_plans_and_messages,
+    get_allowed_discovery_areas_and_interest_limit,
+)
 from kindlelise.selectors import (
+    get_plans_for_plan_list,
     get_profile_image_if_viewer_is_allowed,
+    get_profiles_for_discovery_grid,
     get_recent_notifications,
     get_signed_in_user_account_summary,
 )
@@ -38,24 +44,63 @@ def home_page(request):
     """Redirect the visitor to the page allowed by current account state.
 
     Inputs: the current Django request and its server-authenticated account.
-    Returns: a redirect to sign-in, the private account or discovery.
+    Returns: a redirect to sign-in, the private account or plans.
     Changes: none.
-    Refuses: missing authentication or verification by choosing the safer page.
+    Refuses: missing authentication or active profile access by choosing the safer page.
     Privacy: returns no profile or account details.
     """
     # WHY: Sends each visitor straight to the safest useful starting point for their current account state.
     if not request.user.is_authenticated:
         return redirect("sign_in")
     if can_access_discovery_plans_and_messages(request.user):
-        return redirect("discover")
+        return redirect("plan_list")
     return redirect("account")
 
 # WHY: Keeps the app guide page steps in one named place so they can be understood, checked, and reused.
 @require_GET
 def app_guide_page(request):
     """Show the compact public guide to the implemented Kindelise journey."""
-    # WHY: The guide is public and needs no private account information.
-    return render(request, "guide.html")
+    # WHY: Anonymous and incomplete accounts receive no private app rows from the public Guide.
+    guide_plans = []
+    guide_profile_cards = []
+    if request.user.is_authenticated and can_access_discovery_plans_and_messages(
+        request.user
+    ):
+        # WHY: Reuses the exact authorised list and annotations that power the Plans page cards.
+        guide_plans = get_plans_for_plan_list(request.user).filter(
+            status=Plan.Status.APPROVED,
+        )[:12]
+
+        # WHY: Reuses Discovery's privacy-aware selector so the Guide never invents a second profile-access path.
+        allowed_areas, _interest_limit = (
+            get_allowed_discovery_areas_and_interest_limit(request.user)
+        )
+        profiles = get_profiles_for_discovery_grid(
+            request.user,
+            {
+                "broad_area": list(allowed_areas),
+                "interests": (),
+                "available_now": False,
+            },
+        )[:12]
+        current_time = timezone.now()
+        guide_profile_cards = [
+            {
+                "profile": profile,
+                "broad_area_label": _profile_broad_area_label(profile),
+                "is_available_now": profile.is_available_now(current_time),
+            }
+            for profile in profiles
+        ]
+
+    return render(
+        request,
+        "guide.html",
+        {
+            "guide_plans": guide_plans,
+            "guide_profile_cards": guide_profile_cards,
+        },
+    )
 
 
 # =============================================================================

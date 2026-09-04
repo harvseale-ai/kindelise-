@@ -25,7 +25,7 @@
         <h1 id="sign-up-title">Create an account</h1>
       </header>
       <div class="brand-form-intro">
-        <p>Use your email address and a password. Staff verification is required before discovery, plans or messages become available.</p>
+        <p>Use your email address and a password. You can start using discovery, plans and messages after signing in.</p>
       </div>
       <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
       <form class="profile-edit-form plan-details-form" method="post" novalidate>
@@ -176,7 +176,7 @@
         </fieldset>
 
         <fieldset class="profile-edit-field profile-area-field">
-          <legend>Broad areas</legend>
+          <legend>Areas</legend>
           <span class="helptext">Your broad areas help people discover you. Your exact location and distance are never shown.</span>
           <div class="profile-choice-list">
             {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
@@ -200,7 +200,7 @@
           <div class="profile-availability-panel">
             <div class="free-now-row">
               <div>
-                <label for="{{ form.free_now.id_for_label }}">Free now</label>
+                <label for="{{ form.free_now.id_for_label }}">Open to company</label>
                 <span class="helptext">Turn this on when you are available from now.</span>
                 <span class="helptext">This is availability, not online or login status.</span>
               </div>
@@ -224,7 +224,7 @@
               </div>
               <p class="availability-status-note">
                 {# # WHY: Shows the following part only when its stated page condition is true. #}
-                {% if form.free_now.value %}Free now is on. Availability starts immediately when saved.{% else %}Choose when your availability starts, or add it later.{% endif %}
+                {% if form.free_now.value %}Open to company is on. Availability starts immediately when saved.{% else %}Choose when your availability starts, or add it later.{% endif %}
               </p>
               {{ form.availability_start.errors }}
             </div>
@@ -241,8 +241,8 @@
           <div class="verification-panel">
             <span class="verification-icon" aria-hidden="true">{% if profile.is_verified %}✓{% else %}…{% endif %}</span>
             <div>
-              <strong>{% if profile.is_verified %}Staff access approved for the current Kindelise product.{% else %}Staff access review pending.{% endif %}</strong>
-              <p>This is an access gate, not proof of identity, age, character or safety.</p>
+              <strong>{% if profile.is_verified %}This profile has been staff verified.{% else %}This profile has not been staff verified yet.{% endif %}</strong>
+              <p>Verification does not affect platform access and is not proof of identity, age, character or safety.</p>
             </div>
           </div>
         </section>
@@ -258,12 +258,13 @@
 
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% elif mode == "public_profile" %}
-    <article class="private-profile-page" aria-labelledby="public-profile-title">
+    <article class="private-profile-page private-profile-split-page" aria-labelledby="public-profile-title">
       {# --------------------------------------------------------------------------- #}
       {# PROFILE IMAGE #}
       {# Displays the person's protected picture or the neutral placeholder. #}
       {# --------------------------------------------------------------------------- #}
 
+      <div class="private-profile-split-stage">
       <div class="private-profile-hero">
         <a class="private-profile-back" href="{% url 'discover' %}" aria-label="Back to Discover"></a>
         {# # WHY: Shows the following part only when its stated page condition is true. #}
@@ -275,7 +276,8 @@
         {% endif %}
       </div>
 
-      <div class="private-profile-content">
+      <div class="private-profile-content private-profile-split-content">
+        <div class="private-profile-split-summary">
         {# --------------------------------------------------------------------------- #}
         {# PROFILE SUMMARY #}
         {# Shows the person's name, title statement, area, and current availability. #}
@@ -285,7 +287,7 @@
           <div class="private-profile-identity-heading">
             <div class="private-profile-name">
               <h1 id="public-profile-title">{{ profile.display_name }}</h1>
-              <span class="private-profile-status-dot{% if is_available_now %} is-online{% endif %}" role="img" aria-label="{% if is_available_now %}Free now{% else %}Availability not active{% endif %}"></span>
+              <span class="private-profile-status-dot{% if is_available_now %} is-online{% endif %}" role="img" aria-label="{% if is_available_now %}Open to company{% else %}Availability not active{% endif %}"></span>
             </div>
           </div>
           <p class="private-profile-title-statement" title="{{ profile.title_statement }}">{{ profile.title_statement|default:"No title statement added." }}</p>
@@ -297,7 +299,7 @@
             <span>
               {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if is_available_now %}
-                Free now
+                Open to company
               {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif profile.available_from %}
                 Available from {{ profile.available_from|date:"j M, H:i" }}
@@ -308,6 +310,9 @@
             </span>
           </div>
         </header>
+        </div>
+
+        <div class="private-profile-split-details">
 
         {# --------------------------------------------------------------------------- #}
         {# PROFILE INFORMATION #}
@@ -334,13 +339,12 @@
 
         <section class="private-profile-section" aria-labelledby="public-availability-title">
           <h2 id="public-availability-title">Availability</h2>
-          <dl class="private-profile-availability">
+          <div class="private-profile-availability private-profile-availability--status">
             <div>
-              <dt>Status</dt>
-              <dd>
+              <p>
                 {# # WHY: Shows the following part only when its stated page condition is true. #}
                 {% if is_available_now %}
-                  Free now · {{ profile.get_availability_start_display }}
+                  Open to company · {{ profile.get_availability_start_display }}
                 {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                 {% elif profile.available_from %}
                   Starts {{ profile.available_from|date:"j M Y, H:i" }}
@@ -348,9 +352,9 @@
                 {% else %}
                   Not set
                 {% endif %}
-              </dd>
+              </p>
             </div>
-          </dl>
+          </div>
         </section>
 
         {# --------------------------------------------------------------------------- #}
@@ -366,7 +370,7 @@
               <li>
                 <a href="{% url 'plan_detail' plan.pk %}">
                   <span>{{ plan.title }}</span>
-                  <span class="private-plan-state private-plan-state--approved">Available</span>
+                  <span class="private-plan-state private-plan-state--approved">Open</span>
                 </a>
               </li>
             {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
@@ -384,7 +388,7 @@
         <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
         <form class="public-profile-message" method="post" action="{% url 'direct_conversation_start' profile.pk %}">
           {% csrf_token %}
-          <button type="submit">Send Message</button>
+          <button type="submit">Send message</button>
         </form>
 
         <details>
@@ -402,6 +406,8 @@
             </details>
           </div>
         </details>
+        </div>
+      </div>
       </div>
     </article>
 
@@ -412,7 +418,7 @@
 
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% else %}
-    <article class="private-profile-page" aria-labelledby="profile-page-title">
+    <article class="private-profile-page private-profile-split-page" aria-labelledby="profile-page-title">
       <header class="plans-page-header">
         <h1 id="profile-page-title">Profile</h1>
         <a class="button secondary plans-create-button" href="{% url 'discover' %}">Discover</a>
@@ -423,6 +429,7 @@
       {# Displays the signed-in person's protected picture or placeholder. #}
       {# --------------------------------------------------------------------------- #}
 
+      <div class="private-profile-account-stage private-profile-split-stage">
       <div class="private-profile-hero">
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if summary.profile.profile_image %}
@@ -433,7 +440,8 @@
         {% endif %}
       </div>
 
-      <div class="private-profile-content">
+      <div class="private-profile-content private-profile-account-content private-profile-split-content">
+        <div class="private-profile-account-summary private-profile-split-summary">
         {# --------------------------------------------------------------------------- #}
         {# ACCOUNT SUMMARY #}
         {# Shows the signed-in person's public identity and profile-edit action. #}
@@ -444,7 +452,7 @@
             <div class="private-profile-name">
               <h1 id="profile-title">{{ summary.profile.display_name|default:"Profile incomplete" }}</h1>
               {# # WHY: Shows the following part only when its stated page condition is true. #}
-              {% if summary.profile.is_verified %}<span class="private-profile-status-dot{% if is_available_now %} is-online{% endif %}" role="img" aria-label="{% if is_available_now %}Free now{% else %}Availability not active{% endif %}"></span>{% endif %}
+              <span class="private-profile-status-dot{% if is_available_now %} is-online{% endif %}" role="img" aria-label="{% if is_available_now %}Open to company{% else %}Availability not active{% endif %}"></span>
             </div>
             <a class="private-profile-identity-edit" href="{% url 'profile_edit' %}">Edit</a>
           </div>
@@ -457,7 +465,7 @@
             <span>
               {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if is_available_now %}
-                Free now
+                Open to company
               {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif summary.profile.available_from %}
                 Available from {{ summary.profile.available_from|date:"j M, H:i" }}
@@ -477,10 +485,13 @@
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if not summary.profile.is_verified %}
           <div class="private-profile-notice" role="status">
-            <strong>Your profile is waiting for staff verification.</strong>
-            <p>Complete your display name and broad area first. This is an access gate, not proof of identity, age, character or safety.</p>
+            <strong>Your profile has not been staff verified yet.</strong>
+            <p>You can still use Kindelise normally. Verification is not proof of identity, age, character or safety.</p>
           </div>
         {% endif %}
+        </div>
+
+        <div class="private-profile-account-details private-profile-split-details">
 
         {# --------------------------------------------------------------------------- #}
         {# PROFILE INFORMATION #}
@@ -507,13 +518,12 @@
 
         <section class="private-profile-section" aria-labelledby="availability-title">
           <h2 id="availability-title">Availability</h2>
-          <dl class="private-profile-availability">
+          <div class="private-profile-availability private-profile-availability--status">
             <div>
-              <dt>Status</dt>
-              <dd>
+              <p>
                 {# # WHY: Shows the following part only when its stated page condition is true. #}
                 {% if is_available_now %}
-                  Free now · {{ summary.profile.get_availability_start_display }}
+                  Open to company · {{ summary.profile.get_availability_start_display }}
                 {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
                 {% elif summary.profile.available_from %}
                   Starts {{ summary.profile.available_from|date:"j M Y, H:i" }}
@@ -521,32 +531,9 @@
                 {% else %}
                   Not set
                 {% endif %}
-              </dd>
+              </p>
             </div>
-          </dl>
-        </section>
-
-        {# --------------------------------------------------------------------------- #}
-        {# ACCOUNT PLANS #}
-        {# Lists every plan owned by the signed-in account and its current state. #}
-        {# --------------------------------------------------------------------------- #}
-
-        <section class="private-profile-section" aria-labelledby="plans-title">
-          <h2 id="plans-title">My plans</h2>
-          <ul class="private-profile-plans private-profile-plan-links">
-            {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
-            {% for plan in summary.plans %}
-              <li>
-                <a href="{% url 'plan_detail' plan.pk %}">
-                  <span>{{ plan.title }}</span>
-                  <span class="private-plan-state private-plan-state--{{ plan.status }}">{% if plan.status == plan.Status.APPROVED %}Available{% else %}{{ plan.get_status_display }}{% endif %}</span>
-                </a>
-              </li>
-            {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
-            {% empty %}
-              <li class="private-profile-plan-empty"><span>No plans yet.</span></li>
-            {% endfor %}
-          </ul>
+          </div>
         </section>
 
         {# --------------------------------------------------------------------------- #}
@@ -611,7 +598,61 @@
           {% csrf_token %}
           <button type="submit">Sign out</button>
         </form>
+        </div>
       </div>
+      </div>
+
+      {# --------------------------------------------------------------------------- #}
+      {# VISUAL PLAN HISTORY #}
+      {# Keeps every owned plan visible to its owner without crowding the profile details panel. #}
+      {# --------------------------------------------------------------------------- #}
+
+      <section class="private-profile-section profile-plan-history" aria-labelledby="plans-title">
+        <h2 id="plans-title">My plans</h2>
+        <ul class="plans-grid profile-plans-grid">
+          {# # WHY: Reuses the established plan-card structure for every current and historic owned plan. #}
+          {% for plan in summary.plans %}
+            <li>
+              <a class="plan-card{% if plan.thumbnail_image %} plan-card--with-image{% endif %}" href="{% url 'plan_detail' plan.pk %}"{% if plan.thumbnail_image %} style="--plan-card-image: url('{% url 'plan_thumbnail' plan.pk %}')"{% endif %}>
+                <span class="plan-card-content">
+                  <strong class="plan-card-title">{{ plan.title }}</strong>
+                  <span class="plan-card-description">{{ plan.description }}</span>
+                  <span class="plan-card-detail">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4.5 9.5h15M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2Zm3 9a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/></svg>
+                    <time datetime="{{ plan.starts_at|date:'Y-m-d\TH:i:s' }}">{{ plan.starts_at|date:"j M" }} · {{ plan.starts_at|date:"H:i" }}</time>
+                  </span>
+                  <span class="plan-card-detail">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v18H8zM5 8h3v13H5zm11 4h3v9h-3M11 7h2m-2 4h2m-2 4h2m-2 4h2"/></svg>
+                    <span>{{ plan.public_place }}</span>
+                  </span>
+                  <span class="plan-card-footer">
+                    {% if plan.status == plan.Status.APPROVED %}
+                      <span class="plan-state plan-state--available plan-state--yours">Your plan</span>
+                    {% elif plan.status == plan.Status.PENDING %}
+                      <span class="plan-state plan-state--pending">Pending</span>
+                    {% elif plan.status == plan.Status.REJECTED %}
+                      <span class="plan-state">Rejected</span>
+                    {% else %}
+                      <span class="plan-state">Cancelled</span>
+                    {% endif %}
+                    <span class="plan-capacity">
+                      <span class="visually-hidden">Capacity:</span>
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-1a2.5 2.5 0 1 0 0-5M3.5 19v-2a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4v2M15 13h1.5a4 4 0 0 1 4 4v2"/></svg>
+                      {{ plan.capacity }}
+                    </span>
+                  </span>
+                </span>
+              </a>
+            </li>
+          {% empty %}
+            <li class="plans-empty-state">
+              <strong>No plans yet.</strong>
+              <p>Create your first plan when you would like some company.</p>
+              <a class="button secondary" href="{% url 'plan_create' %}">Create a plan</a>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
     </article>
   {% endif %}
 {% endblock %}

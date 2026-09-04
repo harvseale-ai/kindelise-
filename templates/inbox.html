@@ -15,7 +15,9 @@
   {# Groups the page heading, conversation filters, and permitted inbox rows. #}
   {# ============================================================================= #}
 
-  <section class="inbox-page" aria-labelledby="inbox-title">
+  <section class="inbox-page{% if conversation or plan_chat %} messages-has-selection{% endif %}" aria-labelledby="inbox-title">
+    <div class="messages-split-layout">
+    <div class="inbox-list-pane">
     <header class="plans-page-header">
       <h1 id="inbox-title">Messages</h1>
       <a class="button secondary plans-create-button" href="{% url 'discover' %}">Discover</a>
@@ -35,7 +37,7 @@
           </li>
         {% endfor %}
       </ul>
-      <p>Messages refresh when you open a conversation. Only permitted direct conversations appear here.</p>
+      <p>Direct conversations and plan chats appear here. Interest filters apply to direct conversations.</p>
     </div>
 
     {# --------------------------------------------------------------------------- #}
@@ -44,11 +46,12 @@
     {# --------------------------------------------------------------------------- #}
 
     {% now "Y-m-d" as today %}
-    <ul class="inbox-conversation-list" aria-label="Recent direct conversations">
+    <ul class="inbox-conversation-list" aria-label="Recent messages">
       {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
-      {% for row in conversation_rows %}
+      {% for row in inbox_rows %}
         <li>
-          <a class="inbox-conversation-row" href="{% url 'conversation_detail' row.conversation.pk %}">
+          {% if row.kind == "direct" %}
+          <a class="inbox-conversation-row{% if conversation.pk == row.conversation.pk %} is-selected{% endif %}" href="{% url 'conversation_detail' row.conversation.pk %}"{% if conversation.pk == row.conversation.pk %} aria-current="page"{% endif %}>
             {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if row.other_profile.profile_image %}
               <img class="profile-image inbox-avatar" src="{% url 'profile_image' row.other_profile.pk %}" alt="">
@@ -62,6 +65,20 @@
             </span>
             <time datetime="{{ row.conversation.updated_at|date:'Y-m-d\TH:i:s' }}">{% if row.conversation.updated_at|date:"Y-m-d" == today %}{{ row.conversation.updated_at|date:"H:i" }}{% else %}{{ row.conversation.updated_at|date:"j M" }}{% endif %}</time>
           </a>
+          {% else %}
+          <a class="inbox-conversation-row{% if plan_chat.pk == row.plan_chat.pk %} is-selected{% endif %}" href="{% url 'plan_chat_detail' row.plan_chat.plan.pk %}"{% if plan_chat.pk == row.plan_chat.pk %} aria-current="page"{% endif %}>
+            {% if row.plan_chat.plan.thumbnail_image %}
+              <img class="profile-image inbox-avatar" src="{% url 'plan_thumbnail' row.plan_chat.plan.pk %}" alt="">
+            {% else %}
+              <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
+            {% endif %}
+            <span class="inbox-conversation-copy">
+              <strong>{{ row.plan_chat.plan.title }}</strong>
+              <span class="state-label">Plan chat · {{ row.plan_chat.plan.starts_at|date:"j M" }}</span>
+            </span>
+            <time datetime="{{ row.plan_chat.updated_at|date:'Y-m-d\TH:i:s' }}">{% if row.plan_chat.updated_at|date:"Y-m-d" == today %}{{ row.plan_chat.updated_at|date:"H:i" }}{% else %}{{ row.plan_chat.updated_at|date:"j M" }}{% endif %}</time>
+          </a>
+          {% endif %}
         </li>
       {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
       {% empty %}
@@ -74,13 +91,28 @@
               <a class="button secondary" href="{% url 'inbox' %}">Show all conversations</a>
             {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
             {% else %}
-              <strong>No direct conversations yet.</strong>
-              <p class="state-label">Open a verified profile to start a direct conversation.</p>
+              <strong>No messages yet.</strong>
+              <p class="state-label">Open a profile or join a plan to start a conversation.</p>
               <a class="button secondary" href="{% url 'discover' %}">Return to Discover</a>
             {% endif %}
           </div>
         </li>
       {% endfor %}
     </ul>
+    </div>
+
+    <div class="inbox-thread-pane" aria-live="polite">
+      {% if conversation %}
+        {% include "includes/conversation_panel.html" %}
+      {% elif plan_chat %}
+        {% include "includes/plan_chat_panel.html" %}
+      {% else %}
+        <div class="inbox-thread-empty">
+          <strong>Select a conversation</strong>
+          <p>Choose a person from the list to open your messages here.</p>
+        </div>
+      {% endif %}
+    </div>
+    </div>
   </section>
 {% endblock %}

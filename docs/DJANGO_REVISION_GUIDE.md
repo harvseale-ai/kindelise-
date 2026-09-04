@@ -50,6 +50,7 @@ The main request path is:
 | `kindlelise/admin.py` | Configures Django Admin for authorised staff. Staff can verify profiles, review plans and reports, and inspect subscription records without building a second staff website. |
 | `kindlelise/context_processors.py` | Adds the unread-notification count to every rendered page, allowing the shared top bar to show one consistent badge. |
 | `kindlelise/plan_metadata.py` | Safely reads a public-place URL and extracts a place name and image. It limits addresses, redirects, content types and download size because the server is fetching an outside website. |
+| `kindlelise/ai_plan_drafter.py` | Turns bounded copied event details into an editable plan suggestion without saving or publishing it. |
 | `kindlelise/ai_message_editor.py` | Sends only an unsent draft and the chosen editing goal to Ollama. It keeps the optional writing aid separate from sending or storing the message. |
 | `kindlelise/__init__.py` | Marks the folder as an importable Python package. |
 
@@ -63,15 +64,15 @@ connected Django app while giving each workflow a clear home.
 | --- | --- |
 | `views/accounts.py` | Home, guide, notifications, sign-up, sign-in, sign-out, private profile editing and protected profile images. |
 | `views/discovery.py` | Discovery results and other people's public profile pages. |
-| `views/plans.py` | Plan lists, metadata fetching, creation, images, details, editing, joining, leaving and cancellation. |
-| `views/messages.py` | Inbox, conversations, message sending and unsent-draft suggestions. |
+| `views/plans.py` | Plan lists, search, drafting, metadata, creation, details, editing, participation decisions, leaving and cancellation. |
+| `views/messages.py` | Mixed direct/plan-chat inboxes, conversation pages, message sending and unsent-draft suggestions. |
 | `views/safety.py` | Blocking and private reporting pages and actions. |
 | `views/billing.py` | Stripe Checkout, customer portal and signed webhook endpoints. |
 | `views/common.py` | Small display and safe-redirect helpers shared by more than one view. |
 | `views/__init__.py` | Makes the split view package available from one familiar import location and preserves the public view names. |
 | `services/accounts.py` | Creates accounts and profiles together, saves profile edits and marks notifications read. |
-| `services/plans.py` | Safely changes plans and participation, including capacity locking and owner notifications. |
-| `services/messages.py` | Creates one conversation per pair and saves messages with recipient notifications. |
+| `services/plans.py` | Safely changes plans and participation requests, including owner decisions, capacity locking and shared-chat creation. |
+| `services/messages.py` | Creates direct conversations and saves direct or authorised plan-chat messages with notifications. |
 | `services/safety.py` | Saves blocks and private reports while preserving the correct relationships. |
 | `services/billing.py` | Creates Stripe-hosted Checkout and account-management sessions. Card details never pass through Kindelise. |
 | `services/stripe_events.py` | Turns verified Stripe events into local Premium access and records processed events so repeats are harmless. |
@@ -107,7 +108,7 @@ connected Django app while giving each workflow a clear home.
 | `tests/test_billing.py` | Checks Stripe Checkout, webhooks and Premium access. |
 | `tests/conftest.py` | Shared pytest setup used before tests run. |
 | `README.md` | Main product, setup, architecture, testing and deployment guide. |
-| `docs/DECISIONS.md` | Records the reasons behind important technical choices. |
+| `docs/ERD.md` | Shows the main database records and how they connect. |
 | `docs/MANUAL_TESTING.md` | Records browser checks and their results. |
 | `docs/RUNTIME.md` | Source for the clickable runtime flowcharts. |
 | `tools/build-runtime-explorer.mjs` | Checks the flowchart links and generates `runtime-explorer.html`. This is a study tool, not part of the live app. |

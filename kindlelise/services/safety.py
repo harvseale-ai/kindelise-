@@ -3,8 +3,17 @@
 # WHY: Keeps protective account changes separate from ordinary social actions.
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
+from django.utils import timezone
 
-from kindlelise.models import Block, Conversation, Message, Participation, Plan, Report
+from kindlelise.models import (
+    Block,
+    Conversation,
+    Message,
+    Participation,
+    Plan,
+    PlanChatMessage,
+    Report,
+)
 from kindlelise.policies import can_report_another_user
 
 # KEYWORD: atomic — the function's database work is kept fully or not kept at all.
@@ -38,6 +47,41 @@ def block_user_from_discovery_and_messages(blocker, blocked_user):
         blocker=blocker,
         blocked_user=blocked_user,
     )
+    blocked_at = timezone.now()
+    # WHY: An owner blocking a confirmed participant removes that participant from every owned plan immediately.
+    participations_to_leave = list(
+        Participation.objects.select_for_update().filter(
+            user=blocked_user,
+            status=Participation.Status.JOINED,
+            plan__owner=blocker,
+        )
+    )
+    # WHY: A participant blocking an owner leaves every plan owned by that account immediately.
+    participations_to_leave.extend(
+        Participation.objects.select_for_update().filter(
+            user=blocker,
+            status=Participation.Status.JOINED,
+            plan__owner=blocked_user,
+        )
+    )
+    # WHY: Between two participants, the person creating the block leaves their shared active future plans.
+    participations_to_leave.extend(
+        Participation.objects.select_for_update()
+        .filter(
+            user=blocker,
+            status=Participation.Status.JOINED,
+            plan__status=Plan.Status.APPROVED,
+            plan__starts_at__gt=blocked_at,
+            plan__participations__user=blocked_user,
+            plan__participations__status=Participation.Status.JOINED,
+        )
+        .exclude(plan__owner__in=(blocker, blocked_user))
+    )
+    # WHY: De-duplicates rows reached through more than one relationship before preserving each participation as left.
+    for participation in {row.pk: row for row in participations_to_leave}.values():
+        participation.status = Participation.Status.LEFT
+        participation.left_at = blocked_at
+        participation.save(update_fields=["status", "left_at"])
     # WHY: Returns the same block for first and repeated requests so callers have one predictable result.
     return block
 
@@ -56,6 +100,7 @@ def submit_private_report_about_user(
     reported_plan=None,
     reported_conversation=None,
     reported_message=None,
+    reported_plan_chat_message=None,
 ):
     """Create one private report with at most one validated context reference.
 
@@ -75,6 +120,7 @@ def submit_private_report_about_user(
         reported_plan,
         reported_conversation,
         reported_message,
+        reported_plan_chat_message,
     )
     if sum(context is not None for context in supplied_contexts) > 1:
         raise PermissionDenied("Only one report context is permitted")
@@ -131,6 +177,43 @@ def submit_private_report_about_user(
         } != {reporter.pk, reported_user.pk}:
             raise PermissionDenied("Report context is not permitted")
         context_values["reported_message"] = current_message
+
+    if reported_plan_chat_message is not None:
+        # WHY: Reloads the exact group message and proves both authorship and the reporter's current or historical visibility.
+        current_plan_chat_message = (
+            PlanChatMessage.objects.select_related("chat", "chat__plan")
+            .filter(pk=getattr(reported_plan_chat_message, "pk", None))
+            .first()
+        )
+        if (
+            current_plan_chat_message is None
+            or current_plan_chat_message.sender_id != reported_user.pk
+        ):
+            raise PermissionDenied("Report context is not permitted")
+        plan = current_plan_chat_message.chat.plan
+        reporter_participation = Participation.objects.filter(
+            plan=plan,
+            user=reporter,
+        ).first()
+        reporter_could_see_message = plan.owner_id == reporter.pk or (
+            reporter_participation is not None
+            and (
+                reporter_participation.status == Participation.Status.JOINED
+                or (
+                    reporter_participation.joined_at is not None
+                    and reporter_participation.joined_at
+                    <= current_plan_chat_message.sent_at
+                    and (
+                        reporter_participation.left_at is None
+                        or reporter_participation.left_at
+                        >= current_plan_chat_message.sent_at
+                    )
+                )
+            )
+        )
+        if not reporter_could_see_message:
+            raise PermissionDenied("Report context is not permitted")
+        context_values["reported_plan_chat_message"] = current_plan_chat_message
 
     # WHY: Stores the reporter's checked statement as Received without notifying or judging the reported account.
     # WHY: Returns the saved report so the page can confirm that the private report was received.

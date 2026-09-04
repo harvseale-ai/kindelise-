@@ -34,14 +34,14 @@ def discovery_page(request):
     Inputs: a signed-in GET request with untrusted area/interest/availability filters.
     Returns: the discovery grid or a redirect to the private account page.
     Changes: none.
-    Refuses: inactive, unverified or invalid-area accounts and invalid filters.
+    Refuses: inactive, missing-profile or invalid-area accounts and invalid filters.
     Privacy: exposes no hidden counts, exclusion reasons, coordinates or distance.
     """
-    # WHY: Stops before calculating filters or loading profiles when current verified access is absent.
+    # WHY: Stops before calculating filters or loading profiles when current account access is absent.
     if not can_access_discovery_plans_and_messages(request.user):
         messages.info(
             request,
-            "Complete your profile and wait for staff verification to use discovery.",
+            "Complete your profile to use discovery.",
         )
         return redirect("account")
 
@@ -49,11 +49,11 @@ def discovery_page(request):
     allowed_areas, interest_limit = get_allowed_discovery_areas_and_interest_limit(
         request.user
     )
-    # WHY: A verified account with no valid configured area still receives no discovery access.
+    # WHY: An account with no valid configured area still receives no discovery access.
     if not allowed_areas:
         messages.info(
             request,
-            "Complete your profile and wait for staff verification to use discovery.",
+            "Complete your profile to use discovery.",
         )
         return redirect("account")
 
@@ -109,18 +109,18 @@ def profile_page(request, profile_id):
     Inputs: a signed-in GET request and an untrusted profile route identifier.
     Returns: the safe public-profile mode or one generic not-found response.
     Changes: none.
-    Refuses: ineligible viewers and missing, inactive, unverified or blocked targets.
+    Refuses: ineligible viewers and missing, inactive or blocked targets.
     Privacy: reveals no target existence, block direction or private account state.
     """
     # WHY: Applies the viewer's current access gate before attempting to find the target profile.
     if not can_access_discovery_plans_and_messages(request.user):
         messages.info(
             request,
-            "Complete your profile and wait for staff verification to use discovery.",
+            "Complete your profile to use discovery.",
         )
         return redirect("account")
 
-    # WHY: Uses the same not-found outcome for missing, blocked, inactive, and unverified profiles.
+    # WHY: Uses the same not-found outcome for missing, blocked and inactive profiles.
     profile = get_profile_page_if_viewer_is_allowed(request.user, profile_id)
     if profile is None:
         return HttpResponse("Profile unavailable.", status=404)

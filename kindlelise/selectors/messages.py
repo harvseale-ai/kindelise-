@@ -1,10 +1,13 @@
 """Read permitted inbox rows and private conversation histories."""
 
 from django.db.models import Q
+from django.utils import timezone
 
-from kindlelise.models import Block, Conversation
+from kindlelise.models import Block, Conversation, PlanChat
 from kindlelise.policies import (
     can_access_discovery_plans_and_messages,
+    can_read_plan_chat,
+    can_send_plan_chat_message,
     can_start_or_continue_direct_messages,
 )
 
@@ -31,7 +34,7 @@ def get_unblocked_conversations_for_inbox(user, interest_name=""):
     # WHY: Finds blocks in both directions so a closed pair cannot appear in either inbox.
     blocked_by_user = Block.objects.filter(blocker=user).values("blocked_user_id")
     users_blocking_user = Block.objects.filter(blocked_user=user).values("blocker_id")
-    # WHY: Loads both member profiles together and removes inactive, unverified, and blocked pairs in the database.
+    # WHY: Loads both member profiles together and removes inactive and blocked pairs in the database.
     conversations = (
         Conversation.objects.select_related(
             "first_user",
@@ -42,9 +45,7 @@ def get_unblocked_conversations_for_inbox(user, interest_name=""):
         .filter(
             Q(first_user=user) | Q(second_user=user),
             first_user__is_active=True,
-            first_user__profile__is_verified=True,
             second_user__is_active=True,
-            second_user__profile__is_verified=True,
         )
         .exclude(
             Q(first_user_id__in=blocked_by_user)
@@ -67,6 +68,25 @@ def get_unblocked_conversations_for_inbox(user, interest_name=""):
         )
     # WHY: Shows the most recently active conversations first with stable equal-time ordering.
     return conversations.order_by("-updated_at", "-pk")
+
+
+# WHY: Lists only plan chats whose membership is currently derived from ownership or confirmed participation.
+def get_authorised_plan_chats_for_inbox(user):
+    """Return current owner/confirmed plan chats in recent-activity order."""
+    if not can_access_discovery_plans_and_messages(user):
+        return PlanChat.objects.none()
+    return (
+        PlanChat.objects.select_related("plan", "plan__owner", "plan__owner__profile")
+        .filter(
+            Q(plan__owner=user)
+            | Q(
+                plan__participations__user=user,
+                plan__participations__status="joined",
+            )
+        )
+        .distinct()
+        .order_by("-updated_at", "-pk")
+    )
 
 
 # WHY: Finds the messages if user can open conversation information in one place so callers receive the same result.
@@ -113,4 +133,27 @@ def get_messages_if_user_can_open_conversation(user, conversation_id):
             "sent_at",
             "pk",
         ),
+    }
+
+
+# WHY: Returns one plan chat only after deriving current membership from its plan and participation rows.
+def get_plan_chat_if_user_can_open(user, plan_id):
+    """Return an authorised plan chat and chronological messages, or none."""
+    if not can_access_discovery_plans_and_messages(user):
+        return None
+    chat = (
+        PlanChat.objects.select_related("plan", "plan__owner", "plan__owner__profile")
+        .filter(plan_id=plan_id)
+        .first()
+    )
+    at_time = timezone.now()
+    if chat is None or not can_read_plan_chat(user, chat, at_time):
+        return None
+    return {
+        "chat": chat,
+        "messages": chat.messages.select_related("sender", "sender__profile").order_by(
+            "sent_at",
+            "pk",
+        ),
+        "can_send": can_send_plan_chat_message(user, chat, at_time),
     }

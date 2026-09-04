@@ -8,7 +8,7 @@
 {# # WHY: Supplies this page's title to the matching space in the shared base page. #}
 {% block title %}
   {# # WHY: Shows the following part only when its stated page condition is true. #}
-  {% if mode == "create" %}Create plan{% elif mode == "edit" %}Edit plan{% elif mode == "detail" %}{{ summary.plan.title }}{% else %}Plans{% endif %} · Kindelise
+  {% if mode == "create" %}Create a plan{% elif mode == "edit" %}Edit plan{% elif mode == "detail" %}{{ summary.plan.title }}{% else %}Plans{% endif %} · Kindelise
 {% endblock %}
 
 {# # WHY: Supplies this page's content to the matching space in the shared base page. #}
@@ -20,92 +20,120 @@
 
   {# # WHY: Shows the following part only when its stated page condition is true. #}
   {% if mode == "list" %}
-    <section class="plans-page" aria-labelledby="plans-title">
-      <header class="plans-page-header">
-        <h1 id="plans-title">Plans</h1>
-        <a class="button secondary plans-create-button" href="{% url 'plan_create' %}">Create plan <span aria-hidden="true">+</span></a>
-      </header>
+    <section class="discovery-controls plans-controls" aria-labelledby="plans-title">
+      <h1 class="visually-hidden" id="plans-title">Plans</h1>
+      <p class="discovery-intro">Find a plan that sounds good, or create something you would like company for.</p>
 
       {# --------------------------------------------------------------------------- #}
       {# PLAN FILTERS AND INTRODUCTION #}
       {# Selects which plan state is shown and explains what each card contains. #}
       {# --------------------------------------------------------------------------- #}
 
-      <div class="plans-intro">
-        <nav class="plans-filter-strip" aria-label="Filter plans">
-          <a href="{% url 'plan_list' %}"{% if selected_filter == "all" %} aria-current="page"{% endif %}>All</a>
-          <a href="{% url 'plan_list' %}?filter=available"{% if selected_filter == "available" %} aria-current="page"{% endif %}>Available</a>
-          <a href="{% url 'plan_list' %}?filter=mine"{% if selected_filter == "mine" %} aria-current="page"{% endif %}>My plans</a>
-          <a href="{% url 'plan_list' %}?filter=pending"{% if selected_filter == "pending" %} aria-current="page"{% endif %}>Pending</a>
-          <a href="{% url 'plan_list' %}?filter=done"{% if selected_filter == "done" %} aria-current="page"{% endif %}>Done</a>
-          <a href="{% url 'plan_list' %}?filter=cancelled"{% if selected_filter == "cancelled" %} aria-current="page"{% endif %}>Cancelled</a>
-        </nav>
-        <p>Future plans are available as soon as they are created. Open a plan to see its public place, start time and full details.</p>
-      </div>
+      <form class="discovery-filter-form plan-filter-form" method="get" aria-label="Plan filters" novalidate>
+          {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
+          <div class="filter-pill-scroller" role="group" aria-label="Open a plan filter">
+            <a class="filter-row-label" href="{% url 'plan_create' %}"><b aria-hidden="true">+</b> Create a plan</a>
+            <a class="filter-trigger filter-reset-link" href="{% url 'plan_list' %}">Remove filters</a>
+            <button class="filter-trigger{% if selected_filter == 'available' or selected_filter == 'full' %} is-filtered{% endif %}" type="button" data-filter-target="plan-availability-filter" aria-controls="plan-availability-filter" aria-expanded="false">Availability</button>
+            <button class="filter-trigger{% if selected_filter == 'mine' or selected_filter == 'joined' %} is-filtered{% endif %}" type="button" data-filter-target="plan-owner-filter" aria-controls="plan-owner-filter" aria-expanded="false">Your plans</button>
+            <button class="filter-trigger{% if selected_filter == 'this_week' or selected_filter == 'this_month' %} is-filtered{% endif %}" type="button" data-filter-target="plan-time-filter" aria-controls="plan-time-filter" aria-expanded="false">When</button>
+            <button class="filter-trigger{% if selected_filter == 'pending' or selected_filter == 'done' or selected_filter == 'rejected' or selected_filter == 'cancelled' %} is-filtered{% endif %}" type="button" data-filter-target="plan-status-filter" aria-controls="plan-status-filter" aria-expanded="false">Status</button>
+          </div>
+
+          <div class="discovery-filter-panel plan-filter-panel" id="plan-availability-filter">
+            <fieldset class="interest-fieldset">
+              <legend>Availability</legend>
+              <span class="helptext">Choose whether to see every plan, plans with space, or full plans.</span>
+              <div class="interest-checkboxes plan-filter-choices">
+                <div><label for="plan-filter-all"><input id="plan-filter-all" type="radio" name="filter" value="all"{% if selected_filter == "all" %} checked{% endif %}> All plans</label></div>
+                <div><label for="plan-filter-available"><input id="plan-filter-available" type="radio" name="filter" value="available"{% if selected_filter == "available" %} checked{% endif %}> Open</label></div>
+                <div><label for="plan-filter-full"><input id="plan-filter-full" type="radio" name="filter" value="full"{% if selected_filter == "full" %} checked{% endif %}> Full</label></div>
+              </div>
+            </fieldset>
+            <div class="action-row">
+              <button type="submit">Apply filters</button>
+              <a class="button secondary" href="{% url 'plan_list' %}">Clear filters</a>
+              <button class="secondary" type="button" data-filter-close>Close</button>
+            </div>
+          </div>
+
+          <div class="discovery-filter-panel plan-filter-panel" id="plan-owner-filter">
+            <fieldset class="interest-fieldset">
+              <legend>Your plans</legend>
+              <span class="helptext">Show plans you created or plans you joined.</span>
+              <div class="interest-checkboxes plan-filter-choices">
+                <div><label for="plan-filter-mine"><input id="plan-filter-mine" type="radio" name="filter" value="mine"{% if selected_filter == "mine" %} checked{% endif %}> Created by me</label></div>
+                <div><label for="plan-filter-joined"><input id="plan-filter-joined" type="radio" name="filter" value="joined"{% if selected_filter == "joined" %} checked{% endif %}> Joined by me</label></div>
+              </div>
+            </fieldset>
+            <div class="action-row">
+              <button type="submit">Apply filters</button>
+              <a class="button secondary" href="{% url 'plan_list' %}">Clear filters</a>
+              <button class="secondary" type="button" data-filter-close>Close</button>
+            </div>
+          </div>
+
+          <div class="discovery-filter-panel plan-filter-panel" id="plan-time-filter">
+            <fieldset class="interest-fieldset">
+              <legend>When</legend>
+              <span class="helptext">Choose a useful upcoming period.</span>
+              <div class="interest-checkboxes plan-filter-choices">
+                <div><label for="plan-filter-week"><input id="plan-filter-week" type="radio" name="filter" value="this_week"{% if selected_filter == "this_week" %} checked{% endif %}> Next 7 days</label></div>
+                <div><label for="plan-filter-month"><input id="plan-filter-month" type="radio" name="filter" value="this_month"{% if selected_filter == "this_month" %} checked{% endif %}> Next 30 days</label></div>
+              </div>
+            </fieldset>
+            <div class="action-row">
+              <button type="submit">Apply filters</button>
+              <a class="button secondary" href="{% url 'plan_list' %}">Clear filters</a>
+              <button class="secondary" type="button" data-filter-close>Close</button>
+            </div>
+          </div>
+
+          <div class="discovery-filter-panel plan-filter-panel" id="plan-status-filter">
+            <fieldset class="interest-fieldset">
+              <legend>Status</legend>
+              <span class="helptext">Review plans that are waiting, completed, cancelled, or rejected.</span>
+              <div class="interest-checkboxes plan-filter-choices">
+                <div><label for="plan-filter-pending"><input id="plan-filter-pending" type="radio" name="filter" value="pending"{% if selected_filter == "pending" %} checked{% endif %}> Pending</label></div>
+                <div><label for="plan-filter-done"><input id="plan-filter-done" type="radio" name="filter" value="done"{% if selected_filter == "done" %} checked{% endif %}> Done</label></div>
+                <div><label for="plan-filter-cancelled"><input id="plan-filter-cancelled" type="radio" name="filter" value="cancelled"{% if selected_filter == "cancelled" %} checked{% endif %}> Cancelled</label></div>
+                <div><label for="plan-filter-rejected"><input id="plan-filter-rejected" type="radio" name="filter" value="rejected"{% if selected_filter == "rejected" %} checked{% endif %}> Rejected</label></div>
+              </div>
+            </fieldset>
+            <div class="action-row">
+              <button type="submit">Apply filters</button>
+              <a class="button secondary" href="{% url 'plan_list' %}">Clear filters</a>
+              <button class="secondary" type="button" data-filter-close>Close</button>
+            </div>
+          </div>
+      </form>
+    </section>
 
       {# --------------------------------------------------------------------------- #}
       {# PLAN CARDS #}
       {# Lists each matching plan with its image, place, time, state, and capacity. #}
       {# --------------------------------------------------------------------------- #}
 
-      <section aria-labelledby="plan-list-title">
+      <section class="plans-results" aria-labelledby="plan-list-title">
         <h2 class="visually-hidden" id="plan-list-title">Plans</h2>
         <ul class="plans-grid">
         {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for plan in plans %}
           <li>
-            <a class="plan-card{% if plan.thumbnail_image %} plan-card--with-image{% endif %}" href="{% url 'plan_detail' plan.pk %}"{% if plan.thumbnail_image %} style="--plan-card-image: url('{% url 'plan_thumbnail' plan.pk %}')"{% endif %}>
-              <span class="plan-card-content">
-                <strong class="plan-card-title">{{ plan.title }}</strong>
-                <span class="plan-card-description">{{ plan.description }}</span>
-                <span class="plan-card-detail">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4.5 9.5h15M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2Zm3 9a3 3 0 1 0 6 0 3 3 0 0 0-6 0Z"/></svg>
-                  <time datetime="{{ plan.starts_at|date:'Y-m-d\TH:i:s' }}">{{ plan.starts_at|date:"j M" }} · {{ plan.starts_at|date:"H:i" }}</time>
-                </span>
-                <span class="plan-card-detail">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v18H8zM5 8h3v13H5zm11 4h3v9h-3M11 7h2m-2 4h2m-2 4h2m-2 4h2"/></svg>
-                  <span>{{ plan.public_place }}</span>
-                </span>
-                <span class="plan-card-footer">
-                  {# # WHY: Shows the following part only when its stated page condition is true. #}
-                  {% if selected_filter == "done" %}
-                    <span class="plan-state">Done</span>
-                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
-                  {% elif plan.status == plan.Status.APPROVED and plan.owner_id == user.pk %}
-                    <span class="plan-state plan-state--available plan-state--yours">Your plan</span>
-                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
-                  {% elif plan.status == plan.Status.APPROVED and plan.joined_count >= plan.capacity %}
-                    <span class="plan-state plan-state--full">Full</span>
-                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
-                  {% elif plan.status == plan.Status.APPROVED %}
-                    <span class="plan-state plan-state--available">Available</span>
-                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
-                  {% elif plan.status == plan.Status.PENDING %}
-                    <span class="plan-state plan-state--pending">Pending</span>
-                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
-                  {% elif plan.status == plan.Status.REJECTED %}
-                    <span class="plan-state">Rejected</span>
-                  {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
-                  {% else %}
-                    <span class="plan-state">Cancelled</span>
-                  {% endif %}
-                  <span class="plan-capacity">
-                    <span class="visually-hidden">Capacity:</span>
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7-1a2.5 2.5 0 1 0 0-5M3.5 19v-2a4 4 0 0 1 4-4h3a4 4 0 0 1 4 4v2M15 13h1.5a4 4 0 0 1 4 4v2"/></svg>
-                    {{ plan.capacity }}
-                  </span>
-                </span>
-              </span>
-            </a>
+            {% include "includes/plan_card.html" with plan_card_searchable=True %}
           </li>
         {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
         {% empty %}
           <li class="plans-empty-state">
-            <strong>No plans match this filter.</strong>
-            <p>{% if selected_filter == "done" %}Plans you hosted or joined will appear here after their start time.{% else %}New future plans will appear here as soon as they are created.{% endif %}</p>
+            <strong>No plans match these filters.</strong>
+            <p>{% if selected_filter == "done" %}Plans you hosted or joined will appear here after their start time.{% else %}Try another filter or create a plan.{% endif %}</p>
             <a class="button secondary" href="{% url 'plan_create' %}">Create a plan</a>
           </li>
         {% endfor %}
+          <li class="plans-empty-state" data-plan-search-empty hidden>
+            <strong>No open plans match that search.</strong>
+            <p>Try another word or clear the search.</p>
+          </li>
         </ul>
       </section>
 
@@ -116,9 +144,8 @@
 
       <footer class="plans-safety-note">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v6m0-9h.01"/></svg>
-        <p>Kindelise does not verify venues or guarantee that linked public-place information remains accurate. Check the details before attending.</p>
+        <p>Plans take place at established public places. Kindelise does not verify venues or guarantee that linked information remains accurate, so check the details before attending.</p>
       </footer>
-    </section>
 
   {# ============================================================================= #}
   {# CREATE OR EDIT PLAN PAGE #}
@@ -130,7 +157,7 @@
     <section class="profile-edit-page plan-form-page" aria-labelledby="plan-form-title">
       <header class="profile-edit-header">
         <a class="private-profile-back" href="{% url 'plan_list' %}" aria-label="Back to plans"></a>
-        <h1 id="plan-form-title">{% if mode == "edit" %}Edit plan{% else %}Create plan{% endif %}</h1>
+        <h1 id="plan-form-title">{% if mode == "edit" %}Edit plan{% else %}Create a plan{% endif %}</h1>
       </header>
 
       {# --------------------------------------------------------------------------- #}
@@ -139,7 +166,7 @@
       {# --------------------------------------------------------------------------- #}
 
       <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
-      <form class="profile-edit-form plan-details-form" method="post" novalidate>
+      <form class="profile-edit-form plan-details-form{% if mode == 'create' %} plan-create-flow{% endif %}" method="post" enctype="multipart/form-data"{% if mode == "create" %} data-plan-create-flow data-draft-url="{% url 'plan_draft_suggestion' %}"{% endif %} novalidate>
         {% csrf_token %}
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if form.errors %}<p class="error-summary" role="alert">Please correct the labelled fields below.</p>{% endif %}
@@ -148,8 +175,88 @@
           <div class="state-panel" role="status">Saving this plan makes the revised version available.</div>
         {% endif %}
 
-        {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
+        {% if mode == "create" %}
+          <div class="plan-compact-row plan-create-quick-fields">
+            <section class="profile-edit-field plan-form-field plan-form-field--public_url" aria-labelledby="{{ form.public_url.id_for_label }}-label">
+              <h2 id="{{ form.public_url.id_for_label }}-label"><label for="{{ form.public_url.id_for_label }}">Public information URL</label></h2>
+              <span class="helptext">Use a normal HTTPS information page for the established public place.</span>
+              <div class="profile-field-panel">{{ form.public_url }}</div>
+              {{ form.public_url.errors }}
+              <span class="helptext plan-generation-status" data-plan-metadata-status role="status" aria-live="polite">The venue name and image will be added when you generate the plan.</span>
+              <input type="hidden" name="fetched_metadata" value="{{ request.POST.fetched_metadata|default:'' }}" data-plan-metadata-token>
+            </section>
+
+            <section class="profile-edit-field plan-form-field plan-form-field--capacity" aria-labelledby="{{ form.capacity.id_for_label }}-label">
+              <h2 id="{{ form.capacity.id_for_label }}-label"><label for="{{ form.capacity.id_for_label }}">Capacity</label></h2>
+              <span class="helptext">Number of people who can join you.</span>
+              <div class="profile-field-panel">{{ form.capacity }}</div>
+              {{ form.capacity.errors }}
+            </section>
+          </div>
+
+          <section class="profile-edit-field plan-form-field plan-form-field--idea biography-field" aria-labelledby="plan-idea-label">
+            <h2 id="plan-idea-label"><label for="plan-idea">What would you like company for?</label></h2>
+            <span class="helptext">Paste the event details or describe what you want to do. Kindlise will extract an editable draft.</span>
+            <div class="profile-field-panel">
+              <textarea id="plan-idea" name="plan_idea" rows="8" maxlength="6000" placeholder="Paste the event title, venue, date, time and overview here—or simply describe your idea.">{{ request.POST.plan_idea|default:'' }}</textarea>
+            </div>
+          </section>
+
+          <button class="secondary plan-generate-button" type="button" data-plan-generate data-fetch-url="{% url 'plan_metadata_fetch' %}">Generate plan draft</button>
+
+          <section class="plan-draft-review" data-plan-draft-review aria-labelledby="plan-draft-review-title" aria-live="polite">
+            <h2 id="plan-draft-review-title">Review and edit your plan</h2>
+            <div class="plan-draft-card-preview" aria-label="Preview of your plan card">
+              <img class="plan-metadata-preview" data-plan-metadata-preview src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" hidden>
+              <div class="plan-image-dropzone" data-plan-image-dropzone>
+                {{ form.plan_image }}
+                <span aria-hidden="true">＋</span>
+                <strong>Drag a plan photo here</strong>
+                <small>or choose a JPG, PNG or WebP</small>
+              </div>
+              <div class="plan-draft-card-content">
+                <strong data-plan-preview-title>Your plan title</strong>
+                <span data-plan-preview-description>Your generated plan description will appear here.</span>
+                <span data-plan-preview-place>Public place</span>
+              </div>
+            </div>
+            {{ form.plan_image.errors }}
+            <div class="plan-compact-row">
+              <section class="profile-edit-field plan-form-field plan-form-field--public_place" aria-labelledby="{{ form.public_place.id_for_label }}-label">
+                <h2 id="{{ form.public_place.id_for_label }}-label"><label for="{{ form.public_place.id_for_label }}">Public place</label></h2>
+                <span class="helptext">Check the extracted venue name.</span>
+                <div class="profile-field-panel">{{ form.public_place }}</div>
+                {{ form.public_place.errors }}
+              </section>
+              <section class="profile-edit-field plan-form-field plan-form-field--public_address" aria-labelledby="{{ form.public_address.id_for_label }}-label">
+                <h2 id="{{ form.public_address.id_for_label }}-label"><label for="{{ form.public_address.id_for_label }}">Venue address</label></h2>
+                <span class="helptext">Check the address used for directions.</span>
+                <div class="profile-field-panel">{{ form.public_address }}</div>
+                {{ form.public_address.errors }}
+              </section>
+            </div>
+            <section class="profile-edit-field plan-form-field plan-form-field--starts_at" aria-labelledby="{{ form.starts_at.id_for_label }}-label">
+              <h2 id="{{ form.starts_at.id_for_label }}-label"><label for="{{ form.starts_at.id_for_label }}">Starts at</label></h2>
+              <span class="helptext">Check the extracted future date and start time.</span>
+              <div class="profile-field-panel">{{ form.starts_at }}</div>
+              {{ form.starts_at.errors }}
+            </section>
+            <section class="profile-edit-field plan-form-field plan-form-field--title" aria-labelledby="{{ form.title.id_for_label }}-label">
+              <h2 id="{{ form.title.id_for_label }}-label"><label for="{{ form.title.id_for_label }}">Plan title</label></h2>
+              <div class="profile-field-panel">{{ form.title }}</div>
+              {{ form.title.errors }}
+            </section>
+            <section class="profile-edit-field plan-form-field plan-form-field--description biography-field" aria-labelledby="{{ form.description.id_for_label }}-label">
+              <h2 id="{{ form.description.id_for_label }}-label"><label for="{{ form.description.id_for_label }}">Plan description</label></h2>
+              <div class="profile-field-panel">{{ form.description }}</div>
+              {{ form.description.errors }}
+            </section>
+            <button type="submit">Create a plan</button>
+          </section>
+        {% else %}
+        {# # WHY: Repeats the conventional editable fields for an existing plan without forcing AI regeneration. #}
         {% for field in form %}
+          {% if field.name != "plan_image" %}
           <section class="profile-edit-field plan-form-field plan-form-field--{{ field.name }}{% if field.name == 'description' %} biography-field{% endif %}" aria-labelledby="{{ field.id_for_label }}-label">
             <h2 id="{{ field.id_for_label }}-label"><label for="{{ field.id_for_label }}">{{ field.label }}</label></h2>
             {# # WHY: Shows the following part only when its stated page condition is true. #}
@@ -165,7 +272,7 @@
             {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if field.name == "public_url" %}
               <div class="plan-metadata-actions">
-                <button class="secondary" type="button" data-plan-metadata-fetch data-fetch-url="{% url 'plan_metadata_fetch' %}">Fetch details</button>
+                <button class="secondary" type="button" data-plan-metadata-fetch data-fetch-url="{% url 'plan_metadata_fetch' %}">Add venue details</button>
                 <span class="helptext" data-plan-metadata-status role="status" aria-live="polite">Add the URL, then fetch its public place and image.</span>
               </div>
               <img class="plan-metadata-preview" data-plan-metadata-preview src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="" hidden>
@@ -173,9 +280,27 @@
             {% endif %}
             {{ field.errors }}
           </section>
+          {% if field.name == "public_url" %}
+            <section class="profile-edit-field plan-form-field plan-form-field--plan_image" aria-labelledby="plan-image-edit-title" data-plan-image-editor>
+              <h2 id="plan-image-edit-title">Plan photo</h2>
+              <span class="helptext">Keep the current image, or drag and drop a replacement.</span>
+              <div class="plan-draft-card-preview plan-edit-image-preview">
+                <img class="plan-metadata-preview" data-plan-edit-image-preview src="{% if plan.thumbnail_image %}{% url 'plan_thumbnail' plan.pk %}{% else %}data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw=={% endif %}" alt=""{% if not plan.thumbnail_image %} hidden{% endif %}>
+              </div>
+              <div class="plan-image-dropzone plan-image-dropzone--edit" data-plan-edit-image-dropzone>
+                {{ form.plan_image }}
+                <span aria-hidden="true">＋</span>
+                <strong>{% if plan.thumbnail_image %}Replace the plan photo{% else %}Drag a plan photo here{% endif %}</strong>
+                <small>or choose a JPG, PNG or WebP</small>
+              </div>
+              {{ form.plan_image.errors }}
+            </section>
+          {% endif %}
+          {% endif %}
         {% endfor %}
 
-        <button type="submit">{% if mode == "edit" %}Save changes{% else %}Create plan{% endif %}</button>
+        <button type="submit">Save changes</button>
+        {% endif %}
       </form>
     </section>
 
@@ -186,29 +311,31 @@
 
   {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
   {% else %}
-    <article class="private-profile-page" aria-labelledby="plan-title">
+    <article class="private-profile-page private-profile-split-page" aria-labelledby="plan-title">
       {# --------------------------------------------------------------------------- #}
       {# PLAN IMAGE #}
       {# Displays the protected image found from the plan's public information page. #}
       {# --------------------------------------------------------------------------- #}
 
+      <div class="private-profile-split-stage">
       <div class="private-profile-hero">
         <a class="private-profile-back" href="{% url 'plan_list' %}" aria-label="Back to plans"></a>
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if summary.plan.thumbnail_image %}<img src="{% url 'plan_thumbnail' summary.plan.pk %}" alt="">{% endif %}
       </div>
 
-      <div class="private-profile-content">
+      <div class="private-profile-content private-profile-split-content">
+        <div class="private-profile-split-summary">
         {# --------------------------------------------------------------------------- #}
         {# PLAN SUMMARY #}
         {# Shows the title, state, owner, public place, start time, and edit action. #}
         {# --------------------------------------------------------------------------- #}
 
         <header class="private-profile-identity">
-          <div class="private-profile-identity-heading">
+          <div class="private-profile-identity-heading private-plan-identity-heading">
             <div class="private-profile-name private-plan-name">
               <h1 id="plan-title">{{ summary.plan.title }}</h1>
-              <span class="private-plan-state private-plan-state--{{ summary.plan.status }}">{% if is_past %}Past{% elif summary.plan.status == summary.plan.Status.APPROVED %}Available{% else %}{{ summary.plan.get_status_display }}{% endif %}</span>
+              <span class="private-plan-state private-plan-state--{{ summary.plan.status }}">{% if is_past %}Past{% elif summary.plan.status == summary.plan.Status.APPROVED %}Open{% else %}{{ summary.plan.get_status_display }}{% endif %}</span>
             </div>
             {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if can_edit %}<a class="private-profile-identity-edit" href="{% url 'plan_edit' summary.plan.pk %}">Edit</a>{% endif %}
@@ -222,6 +349,9 @@
             <span>{{ summary.plan.starts_at|date:"j M Y, H:i" }}</span>
           </div>
         </header>
+        </div>
+
+        <div class="private-profile-split-details">
 
         {# --------------------------------------------------------------------------- #}
         {# PLAN INFORMATION #}
@@ -238,9 +368,15 @@
           <ul class="private-profile-plans">
             <li><span>Owner</span><span>{{ summary.plan.owner.profile.display_name }}</span></li>
             <li><span>Public place</span><span>{{ summary.plan.public_place }}</span></li>
+            {% if summary.plan.public_address %}<li><span>Address</span><span>{{ summary.plan.public_address }}</span></li>{% endif %}
             <li><span>Starts</span><span>{{ summary.plan.starts_at|date:"j M Y, H:i" }}</span></li>
             <li><span>Capacity</span><span>{{ summary.joined_count }} joined / {{ summary.plan.capacity }}</span></li>
-            <li><span>Your participation</span><span>{{ summary.viewer_participation_status|default:"Not joined"|title }}</span></li>
+            <li>
+              <span>Your participation</span>
+              <span>
+                {% if summary.viewer_participation_status == "joined" %}Confirmed{% else %}{{ summary.viewer_participation_status|default:"Not requested"|title }}{% endif %}
+              </span>
+            </li>
           </ul>
         </section>
 
@@ -254,7 +390,10 @@
           <dl class="private-profile-availability">
             <div>
               <dt>{{ summary.plan.public_place }}</dt>
-              <dd><a href="{{ summary.plan.public_url }}" target="_blank" rel="noopener noreferrer">Open public evidence URL</a></dd>
+              <dd>
+                {% if directions_url %}<a href="{{ directions_url }}" target="_blank" rel="noopener noreferrer">Directions</a>{% endif %}
+                <a href="{{ summary.plan.public_url }}" target="_blank" rel="noopener noreferrer">View original page</a>
+              </dd>
             </div>
           </dl>
         </section>
@@ -266,7 +405,34 @@
 
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if summary.plan.meeting_details_locked_at %}
-          <div class="private-profile-notice" role="status"><strong>This plan can no longer be edited because someone has joined.</strong></div>
+          <div class="private-profile-notice" role="status"><strong>This plan can no longer be edited because someone has been confirmed.</strong></div>
+        {% endif %}
+
+        {# # WHY: Shows requester identities only inside the exact plan owner's authorised page. #}
+        {% if pending_requests %}
+          <section class="private-profile-section" aria-labelledby="pending-requests-title">
+            <h2 id="pending-requests-title">Pending requests</h2>
+            {% for participation in pending_requests %}
+              <div class="private-profile-notice">
+                <strong>{{ participation.user.profile.display_name }} asked to join.</strong>
+                <p>Message them privately before deciding whether to confirm their participation.</p>
+                <div class="action-row">
+                  <form method="post" action="{% url 'direct_conversation_start' participation.user.profile.pk %}">
+                    {% csrf_token %}
+                    <button class="secondary" type="submit">Open conversation</button>
+                  </form>
+                  <form method="post" action="{% url 'plan_participation_confirm' summary.plan.pk participation.pk %}">
+                    {% csrf_token %}
+                    <button type="submit">Confirm</button>
+                  </form>
+                  <form method="post" action="{% url 'plan_participation_decline' summary.plan.pk participation.pk %}">
+                    {% csrf_token %}
+                    <button class="secondary" type="submit">Decline</button>
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </section>
         {% endif %}
 
         {# --------------------------------------------------------------------------- #}
@@ -275,16 +441,25 @@
         {# --------------------------------------------------------------------------- #}
 
         {# # WHY: Shows the following part only when its stated page condition is true. #}
-        {% if can_join or summary.viewer_participation_status == "joined" or not is_owner %}
+        {% if plan_chat_available or can_request_participation or summary.viewer_participation_status == "pending" or summary.viewer_participation_status == "joined" or not is_owner %}
           <section class="private-profile-section" aria-labelledby="plan-actions-title">
             <h2 id="plan-actions-title">Actions</h2>
             <div class="action-row">
+              {% if plan_chat_available %}
+                <a class="button" href="{% url 'plan_chat_detail' summary.plan.pk %}">Open plan chat</a>
+              {% endif %}
               {# # WHY: Shows the following part only when its stated page condition is true. #}
-              {% if can_join %}
+              {% if can_request_participation %}
                 <!-- # WHY: Groups the controls and private form token needed to submit this page action safely. -->
-                <form method="post" action="{% url 'plan_join' summary.plan.pk %}">
+                <form method="post" action="{% url 'plan_participation_request' summary.plan.pk %}">
                   {% csrf_token %}
-                  <button type="submit">{% if summary.viewer_participation_status == "left" %}Join again{% else %}Join plan{% endif %}</button>
+                  <button type="submit">{% if summary.viewer_participation_status == "left" or summary.viewer_participation_status == "declined" %}Ask to join again{% else %}Ask to join and message owner{% endif %}</button>
+                </form>
+              {% elif summary.viewer_participation_status == "pending" %}
+                <span class="state-label">Waiting for the plan owner to confirm.</span>
+                <form method="post" action="{% url 'plan_participation_withdraw' summary.plan.pk %}">
+                  {% csrf_token %}
+                  <button class="secondary" type="submit">Withdraw request</button>
                 </form>
               {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% elif summary.viewer_participation_status == "joined" %}
@@ -324,6 +499,8 @@
             </form>
           </details>
         {% endif %}
+        </div>
+      </div>
       </div>
     </article>
   {% endif %}

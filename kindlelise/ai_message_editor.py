@@ -46,6 +46,93 @@ _EDITING_INSTRUCTIONS = {
 # Sends one bounded unsent draft and returns one suggestion for review.
 # =============================================================================
 
+# WHY: Gives plan and message wording tools one bounded provider request without duplicating credential and transport rules.
+def request_ollama_text(prompt, system_instruction, maximum_length):
+    """Return one complete bounded plain-text Ollama response, or None safely."""
+    if (
+        not isinstance(prompt, str)
+        or not isinstance(system_instruction, str)
+        or not isinstance(maximum_length, int)
+    ):
+        return None
+    clean_prompt = prompt.strip()
+    if not clean_prompt or not system_instruction or maximum_length < 1:
+        return None
+
+    api_url = settings.OLLAMA_API_URL
+    api_key = settings.OLLAMA_API_KEY
+    model = settings.OLLAMA_MODEL
+    if not all(isinstance(value, str) and value for value in (api_url, model)):
+        return None
+
+    parsed_url = urlsplit(api_url)
+    is_local_http = (
+        parsed_url.scheme == "http"
+        and parsed_url.hostname in {"127.0.0.1", "localhost", "::1"}
+    )
+    if (
+        parsed_url.scheme != "https" and not is_local_http
+        or not parsed_url.netloc
+        or parsed_url.username
+        or parsed_url.password
+        or parsed_url.fragment
+    ):
+        return None
+    if parsed_url.scheme == "https" and not api_key:
+        return None
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    request_body = json.dumps(
+        {
+            "model": model,
+            "prompt": clean_prompt,
+            "system": system_instruction,
+            "stream": False,
+        }
+    ).encode("utf-8")
+    provider_request = Request(
+        api_url,
+        data=request_body,
+        headers=headers,
+        method="POST",
+    )
+
+    try:
+        provider_response = urlopen(  # nosec B310
+            provider_request,
+            timeout=settings.OLLAMA_TIMEOUT_SECONDS,
+            context=ssl.create_default_context(cafile=certifi.where()),
+        )
+        try:
+            raw_response = provider_response.read(_MAX_RESPONSE_BYTES + 1)
+        finally:
+            provider_response.close()
+        if len(raw_response) > _MAX_RESPONSE_BYTES:
+            return None
+        response_values = json.loads(raw_response.decode("utf-8"))
+    except (
+        HTTPError,
+        URLError,
+        TimeoutError,
+        OSError,
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+    ):
+        return None
+
+    if not isinstance(response_values, dict) or response_values.get("done") is not True:
+        return None
+    response_text = response_values.get("response")
+    if not isinstance(response_text, str):
+        return None
+    response_text = response_text.strip()
+    if not response_text or len(response_text) > maximum_length:
+        return None
+    return response_text
+
+
 # WHY: Finds the edited message draft suggestion information in one place so callers receive the same result.
 def get_edited_message_draft_suggestion(draft, editing_goal):
     """Send only one bounded unsent draft and fixed goal to Ollama Cloud.
@@ -68,99 +155,9 @@ def get_edited_message_draft_suggestion(draft, editing_goal):
     if not clean_draft or len(clean_draft) > _MAX_MESSAGE_LENGTH:
         return None
 
-    # WHY: Reads the changeable service details from deployment settings rather than saving secrets here.
-    api_url = settings.OLLAMA_API_URL
-    api_key = settings.OLLAMA_API_KEY
-    model = settings.OLLAMA_MODEL
-    # WHY: Stops quietly when the service address or chosen model has not been configured.
-    if not all(isinstance(value, str) and value for value in (api_url, model)):
-        return None
-
-    # WHY: Separates the address into parts so unsafe forms can be refused explicitly.
-    parsed_url = urlsplit(api_url)
-
-    # WHY: Allows unencrypted HTTP only for a service running on the same computer during development.
-    is_local_http = (
-        parsed_url.scheme == "http"
-        and parsed_url.hostname in {"127.0.0.1", "localhost", "::1"}
+    # WHY: Reuses the shared transport while retaining this feature's fixed instruction and message-sized boundary.
+    return request_ollama_text(
+        clean_draft,
+        _EDITING_INSTRUCTIONS[editing_goal],
+        _MAX_MESSAGE_LENGTH,
     )
-    # WHY: Refuses public unencrypted addresses, embedded passwords, fragments, and incomplete hosts.
-    if (
-        parsed_url.scheme != "https" and not is_local_http
-        or not parsed_url.netloc
-        or parsed_url.username
-        or parsed_url.password
-        or parsed_url.fragment
-    ):
-        return None
-    # WHY: Requires the private service key whenever a request leaves the local computer.
-    if parsed_url.scheme == "https" and not api_key:
-        return None
-
-    # WHY: Labels the body as JSON and adds the private key only when one is configured.
-    headers = {"Content-Type": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    # WHY: Sends only the model, unsent draft, fixed goal, and a request for one complete reply.
-    request_body = json.dumps(
-        {
-            "model": model,
-            "prompt": clean_draft,
-            "system": _EDITING_INSTRUCTIONS[editing_goal],
-            "stream": False,
-        }
-    ).encode("utf-8")
-    # WHY: Prepares one POST request without including any account, recipient, or message history.
-    provider_request = Request(
-        api_url,
-        data=request_body,
-        headers=headers,
-        method="POST",
-    )
-
-    try:
-        # WHY: The URL scheme, host, and embedded credentials were restricted above.
-        provider_response = urlopen(  # nosec B310
-            provider_request,
-            timeout=settings.OLLAMA_TIMEOUT_SECONDS,
-            context=ssl.create_default_context(cafile=certifi.where()),
-        )
-        # WHY: Reads one byte beyond the limit so an oversized reply can be detected and refused.
-        try:
-            raw_response = provider_response.read(_MAX_RESPONSE_BYTES + 1)
-        finally:
-            # WHY: Closes the network response even if reading it fails.
-            provider_response.close()
-
-        # WHY: Refuses an oversized reply rather than attempting to use partial wording.
-        if len(raw_response) > _MAX_RESPONSE_BYTES:
-            return None
-
-        # WHY: Converts the service's labelled text response into values this code can check.
-        response_values = json.loads(raw_response.decode("utf-8"))
-    # WHY: Treats network, timeout, decoding, and invalid-response failures alike without exposing private details.
-    except (
-        HTTPError,
-        URLError,
-        TimeoutError,
-        OSError,
-        UnicodeDecodeError,
-        json.JSONDecodeError,
-    ):
-        return None
-
-    # WHY: Accepts only a complete labelled response rather than an unfinished streamed reply.
-    if not isinstance(response_values, dict) or response_values.get("done") is not True:
-        return None
-
-    # WHY: Reads only the expected suggestion field from the checked response.
-    suggestion = response_values.get("response")
-    if not isinstance(suggestion, str):
-        return None
-    # WHY: Removes surrounding space and applies the same size rule as the original draft.
-    suggestion = suggestion.strip()
-    if not suggestion or len(suggestion) > _MAX_MESSAGE_LENGTH:
-        return None
-    # WHY: Returns wording for review only; this function never saves or sends the message.
-    return suggestion

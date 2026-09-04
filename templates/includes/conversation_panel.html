@@ -1,0 +1,33 @@
+{# Reusable authorised conversation panel for the desktop inbox and mobile thread view. #}
+<section class="conversation-page" aria-labelledby="conversation-title">
+  <header class="conversation-page-header">
+    <a class="back-link" href="{% url 'inbox' %}">← Messages</a>
+    <div class="conversation-person">
+      {% if other_profile.profile_image %}
+        <img class="profile-image inbox-avatar" src="{% url 'profile_image' other_profile.pk %}" alt="">
+      {% else %}
+        <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
+      {% endif %}
+      <div>
+        <h1 id="conversation-title"><a href="{% url 'profile_detail' other_profile.pk %}">{{ other_profile.display_name }}</a></h1>
+        <p class="eyebrow">direct conversation</p>
+      </div>
+    </div>
+
+    <details class="conversation-safety">
+      <summary>Safety</summary>
+      <div class="conversation-safety-panel">
+        <a href="{% url 'report_create' other_profile.pk %}?context_type=conversation&amp;context_id={{ conversation.pk }}">Report this conversation privately</a>
+        <p>Blocking removes both profiles from each other's discovery and stops direct messages. The other account is not notified.</p>
+        <form method="post" action="{% url 'profile_block_messages_and_discovery' other_profile.pk %}">
+          {% csrf_token %}
+          <button class="danger secondary" type="submit">Confirm block</button>
+        </form>
+      </div>
+    </details>
+  </header>
+
+  {% url 'conversation_message_send' conversation.pk as direct_composer_action %}
+  {% include "includes/message_thread.html" with thread_messages=conversation_messages thread_kind="direct" thread_aria_label="Conversation messages" empty_thread_text="Open a profile to start a conversation, or write the first message below." %}
+  {% include "includes/message_composer.html" with thread_kind="direct" can_send_thread_message=True composer_action=direct_composer_action %}
+</section>

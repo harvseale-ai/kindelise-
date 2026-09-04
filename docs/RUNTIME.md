@@ -287,42 +287,49 @@ flowchart LR
   click O "kindlelise/views/accounts.py#Sprofile_image_file" "Open protected file response"
 ```
 
-## Joining, leaving or cancelling a plan
+## Requesting, confirming, leaving or cancelling a plan
 
-Each action checks the latest plan details first. Joining updates the space
-count and tells the owner. Leaving or cancelling keeps the earlier history.
+A request starts or reuses a direct conversation with the owner but does not
+consume capacity. The owner confirms or declines it; confirmation rechecks
+capacity, locks the meeting details and opens the shared plan chat. Withdrawing,
+leaving and cancellation preserve the earlier participation history.
 
 ```mermaid
 flowchart LR
   A["Open plan"] --> B["Check plan can be viewed"]
   B --> C["Show plan details"]
   C --> D{"Choose an action"}
-  D -->|Join| E["Send join request"]
-  E --> F["Check space and permission"]
-  F --> G["Join and lock plan details"]
-  G --> H["Update plan and attendance"]
-  G --> I["Tell plan owner"]
-  D -->|Leave| J["Send leave request"]
-  J --> K["Mark attendance as left"]
-  K --> H
-  D -->|Cancel as owner| L["Send cancel request"]
-  L --> M["Cancel and hide plan"]
-  M --> H
-  H --> N["Show updated plan"]
+  D -->|Request| E["Save pending request and open owner conversation"]
+  E --> F{"Owner decision"}
+  F -->|Confirm| G["Recheck capacity and lock plan"]
+  G --> H["Confirm participant and open shared plan chat"]
+  F -->|Decline| I["Mark request declined"]
+  D -->|Withdraw| J["Mark pending request withdrawn"]
+  D -->|Leave| K["Mark confirmed participation left"]
+  D -->|Cancel as owner| L["Cancel and hide plan"]
+  H --> M["Notify participant"]
+  I --> M
+  E --> N["Notify plan owner"]
+  J --> O["Show updated plan"]
+  K --> O
+  L --> O
+  M --> O
+  N --> O
   click A "kindlelise/urls.py#L1" "Open plan routes"
   click B "kindlelise/selectors/plans.py#Sget_plan_page_if_viewer_is_allowed" "Open plan visibility read"
   click C "kindlelise/views/plans.py#Splan_detail_page" "Open plan detail coordination"
   click D "templates/plan.html#L1" "Open plan action controls"
-  click E "kindlelise/views/plans.py#Sjoin_plan" "Open join endpoint"
-  click F "kindlelise/policies.py#Scan_join_approved_plan" "Open join policy"
-  click G "kindlelise/services/plans.py#Sjoin_approved_plan_and_lock_meeting_details" "Open atomic join"
-  click H "kindlelise/models.py#SParticipation" "Open participation history model"
-  click I "kindlelise/models.py#SNotification" "Open notification model"
-  click J "kindlelise/views/plans.py#Sleave_plan" "Open leave endpoint"
+  click E "kindlelise/services/plans.py#Srequest_plan_participation_and_open_owner_conversation" "Open request workflow"
+  click F "kindlelise/views/plans.py#Sconfirm_plan_participation" "Open owner confirmation endpoint"
+  click G "kindlelise/services/plans.py#Sconfirm_requested_plan_participation" "Open locked confirmation service"
+  click H "kindlelise/models.py#SPlanChat" "Open shared plan chat model"
+  click I "kindlelise/services/plans.py#Sdecline_requested_plan_participation" "Open decline service"
+  click J "kindlelise/services/plans.py#Swithdraw_pending_plan_participation" "Open withdrawal service"
   click K "kindlelise/services/plans.py#Sleave_plan_and_keep_participation_history" "Open leave service"
-  click L "kindlelise/views/plans.py#Scancel_plan" "Open cancellation endpoint"
-  click M "kindlelise/services/plans.py#Scancel_owned_plan_and_hide_it_from_discovery" "Open cancellation service"
-  click N "templates/plan.html#L1" "Open plan detail template"
+  click L "kindlelise/services/plans.py#Scancel_owned_plan_and_hide_it_from_discovery" "Open cancellation service"
+  click M "kindlelise/models.py#SNotification" "Open notification model"
+  click N "kindlelise/models.py#SNotification" "Open owner notification model"
+  click O "templates/plan.html#L1" "Open plan detail template"
 ```
 
 ## Starting a conversation and sending a message
@@ -396,33 +403,36 @@ flowchart LR
 
 ## Seeing and clearing notifications
 
-New messages and plan joins create notifications. The top bar shows how many are
-unread. Opening the notifications page lets the user mark them as read.
+Direct messages, plan-chat messages and participation changes create
+notifications. The top bar shows how many are unread. Opening the notifications
+page lets the user mark them as read.
 
 ```mermaid
 flowchart LR
-  A["New message"] --> C["Save notification"]
-  B["New plan join"] --> C
-  C --> D["Prepare top-bar count"]
-  D --> E["Count unread items"]
-  E --> F["Show number in top bar"]
-  F --> G["Open notifications page"]
-  G --> H["Load recent notifications"]
-  H --> I["Show notification list"]
-  I --> J["Choose Mark all read"]
-  J --> K["Mark all as read"]
-  K --> C
+  A["New direct message"] --> D["Save notification"]
+  B["Participation request or decision"] --> D
+  C["New plan-chat message"] --> D
+  D --> E["Prepare top-bar count"]
+  E --> F["Count unread items"]
+  F --> G["Show number in top bar"]
+  G --> H["Open notifications page"]
+  H --> I["Load recent notifications"]
+  I --> J["Show notification list"]
+  J --> K["Choose Mark all read"]
+  K --> L["Mark all as read"]
+  L --> D
   click A "kindlelise/services/messages.py#Ssend_direct_message" "Open message notification creation"
-  click B "kindlelise/services/plans.py#Sjoin_approved_plan_and_lock_meeting_details" "Open plan-join notification creation"
-  click C "kindlelise/models.py#SNotification" "Open Notification model"
-  click D "kindlelise/context_processors.py#Snotification_badge" "Open shared context processor"
-  click E "kindlelise/selectors/accounts.py#Sget_unread_notification_count" "Open unread count query"
-  click F "templates/base.html#L1" "Open the notification icon"
-  click G "kindlelise/views/accounts.py#Snotifications_page" "Open notifications page"
-  click H "kindlelise/selectors/accounts.py#Sget_recent_notifications" "Open recent alerts query"
-  click I "templates/notifications.html#L1" "Open notifications template"
-  click J "kindlelise/views/accounts.py#Smark_notifications_read" "Open mark-read endpoint"
-  click K "kindlelise/services/accounts.py#Smark_all_notifications_read" "Open mark-read update"
+  click B "kindlelise/services/plans.py#Srequest_plan_participation_and_open_owner_conversation" "Open participation notification creation"
+  click C "kindlelise/services/messages.py#Ssend_plan_chat_message" "Open plan-chat notification creation"
+  click D "kindlelise/models.py#SNotification" "Open Notification model"
+  click E "kindlelise/context_processors.py#Snotification_badge" "Open shared context processor"
+  click F "kindlelise/selectors/accounts.py#Sget_unread_notification_count" "Open unread count query"
+  click G "templates/base.html#L1" "Open the notification icon"
+  click H "kindlelise/views/accounts.py#Snotifications_page" "Open notifications page"
+  click I "kindlelise/selectors/accounts.py#Sget_recent_notifications" "Open recent alerts query"
+  click J "templates/notifications.html#L1" "Open notifications template"
+  click K "kindlelise/views/accounts.py#Smark_notifications_read" "Open mark-read endpoint"
+  click L "kindlelise/services/accounts.py#Smark_all_notifications_read" "Open mark-read update"
 ```
 
 ## Blocking someone or sending a private report

@@ -17,7 +17,7 @@ from kindlelise.policies import (
 
 # WHY: Finds the profiles for discovery grid information in one place so callers receive the same result.
 def get_profiles_for_discovery_grid(viewer, selected_filters):
-    """Return only verified, permitted and unblocked discovery profiles.
+    """Return only permitted, active and unblocked discovery profiles.
 
     Inputs: the server-known viewer and validated DiscoveryFiltersForm values.
     Returns: an ordered Profile queryset containing only presentable rows.
@@ -65,7 +65,6 @@ def get_profiles_for_discovery_grid(viewer, selected_filters):
         .filter(
             Q(broad_areas__overlap=list(selected_area_keys))
             | Q(broad_area__in=selected_area_keys),
-            is_verified=True,
             user__is_active=True,
         )
         .exclude(user=viewer)
@@ -88,7 +87,7 @@ def get_profile_page_if_viewer_is_allowed(viewer, profile_id):
     Inputs: the server-known viewer and an untrusted route profile ID.
     Returns: the permitted Profile, or none for every missing or refused target.
     Changes: none.
-    Refuses: missing, inactive, unverified and either-direction-blocked targets.
+    Refuses: missing, inactive and either-direction-blocked targets.
     Privacy: uses the same no-result outcome for absence and every denial reason.
     """
     # WHY: Loads the possible target and its display interests before applying the single page policy.
@@ -98,7 +97,7 @@ def get_profile_page_if_viewer_is_allowed(viewer, profile_id):
         .filter(pk=profile_id)
         .first()
     )
-    # WHY: Returns the same empty result for missing, inactive, unverified, and blocked targets.
+    # WHY: Returns the same empty result for missing, inactive and blocked targets.
     if not can_view_profile_page(viewer, profile):
         return None
     return profile

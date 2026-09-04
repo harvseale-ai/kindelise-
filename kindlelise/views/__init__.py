@@ -44,8 +44,10 @@ from kindlelise.views.discovery import discovery_page, profile_page
 from kindlelise.views.messages import (
     conversation_page,
     inbox_page,
+    plan_chat_page,
     request_conversation_message_edit_suggestion,
     send_conversation_message,
+    send_plan_chat_message_view,
     start_direct_conversation,
 )
 
@@ -54,14 +56,18 @@ from kindlelise.views.messages import (
 # -----------------------------------------------------------------------------
 from kindlelise.views.plans import (
     cancel_plan,
+    confirm_plan_participation,
     create_plan_page,
+    decline_plan_participation,
     edit_plan_page,
-    join_plan,
     leave_plan,
     plan_detail_page,
     plan_list_page,
     plan_thumbnail_file,
+    request_plan_draft,
     request_plan_metadata,
+    request_plan_participation,
+    withdraw_plan_participation,
 )
 
 # -----------------------------------------------------------------------------
@@ -84,18 +90,20 @@ __all__ = [
     "app_guide_page",
     "block_profile_from_discovery_and_messages",
     "cancel_plan",
+    "confirm_plan_participation",
     "conversation_page",
     "create_plan_page",
+    "decline_plan_participation",
     "discovery_page",
     "edit_plan_page",
     "edit_profile_page",
     "home_page",
     "inbox_page",
-    "join_plan",
     "leave_plan",
     "mark_notifications_read",
     "notifications_page",
     "open_premium_subscription_portal",
+    "plan_chat_page",
     "plan_detail_page",
     "plan_list_page",
     "plan_thumbnail_file",
@@ -104,11 +112,15 @@ __all__ = [
     "receive_and_verify_stripe_webhook",
     "report_user_page",
     "request_conversation_message_edit_suggestion",
+    "request_plan_draft",
     "request_plan_metadata",
+    "request_plan_participation",
     "send_conversation_message",
+    "send_plan_chat_message_view",
     "sign_in_page",
     "sign_out_user",
     "sign_up_page",
     "start_direct_conversation",
     "start_premium_subscription_checkout",
+    "withdraw_plan_participation",
 ]
