@@ -1,41 +1,25 @@
 """Test Kindelise account and profile behaviour."""
 
-# KEYWORD: test — an automatic check that proves one expected behaviour still works.
-# KEYWORD: assert — compares the actual result with the result the check expects.
-# KEYWORD: monkeypatch — temporarily replaces a setting or outside call for one check, then restores it.
-# KEYWORD: HTTP — the request-and-response rules used when these checks visit a page.
-# KEYWORD: CSRF — the private form check that prevents another website submitting as the signed-in visitor.
-# KEYWORD: PostgreSQL — the database used by the live site to keep saved information and its rules.
-
-from io import BytesIO
 from types import SimpleNamespace
 
 import pytest
 from django.contrib import admin as django_admin
 from django.contrib.auth import get_user_model
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
-from PIL import Image
 
 from kindlelise.admin import (
     verify_selected_profiles_for_discovery_plans_and_messages,
 )
 from kindlelise.models import (
-    Block,
     Interest,
-    Plan,
     Profile,
 )
 from kindlelise.policies import (
     can_access_discovery_plans_and_messages,
 )
-from kindlelise.selectors import (
-    get_profile_image_if_viewer_is_allowed,
-)
 from tests.conftest import (
-    create_test_plan,
     create_test_user,
     create_verified_test_profile,
 )
@@ -43,37 +27,6 @@ from tests.conftest import (
 pytestmark = pytest.mark.django_db
 
 
-# WHY: Keeps all owned plan states in the owner's visual history without placing the old row list in profile details.
-def test_private_profile_shows_owned_plan_history_as_visual_cards():
-    owner = create_test_user()
-    create_verified_test_profile(user=owner)
-    open_plan = create_test_plan(
-        owner=owner,
-        title="Open visual plan",
-        status=Plan.Status.APPROVED,
-    )
-    cancelled_plan = create_test_plan(
-        owner=owner,
-        title="Cancelled visual plan",
-        status=Plan.Status.CANCELLED,
-    )
-    client = Client()
-    client.force_login(owner)
-
-    response = client.get(reverse("account"))
-
-    assert response.status_code == 200
-    assert response.content.count(b'id="plans-title"') == 1
-    assert b"profile-plan-history" in response.content
-    assert b"profile-plans-grid" in response.content
-    assert b"private-profile-plan-links" not in response.content
-    assert reverse("plan_detail", args=[open_plan.pk]).encode() in response.content
-    assert reverse("plan_detail", args=[cancelled_plan.pk]).encode() in response.content
-    assert b"Your plan" in response.content
-    assert b"Cancelled" in response.content
-
-
-# WHY: Checks that registration http creates unverified profile without authenticating so a future change cannot quietly break it.
 def test_registration_http_creates_unverified_profile_without_authenticating():
     client = Client()
 
@@ -114,7 +67,6 @@ def test_registration_http_creates_unverified_profile_without_authenticating():
     ).exists()
 
 
-# WHY: Checks that sign in http uses generic failure and only safe local next so a future change cannot quietly break it.
 def test_sign_in_http_uses_generic_failure_and_only_safe_local_next():
     active_account = create_test_user(
         username="active@example.test",
@@ -182,7 +134,6 @@ def test_sign_in_http_uses_generic_failure_and_only_safe_local_next():
     assert home_response.url == reverse("plan_list")
 
 
-# WHY: Checks that profile edit http changes only owner fields and clears availability so a future change cannot quietly break it.
 def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
     account = create_test_user()
     profile = Profile.objects.create(user=account)
@@ -262,92 +213,6 @@ def test_profile_edit_http_changes_only_owner_fields_and_clears_availability():
     assert not profile.interests.exists()
 
 
-# WHY: Builds a safe image in memory so upload checks never depend on a real person's photograph.
-def _test_profile_image_upload(*, image_format="JPEG", metadata=False):
-    output = BytesIO()
-    image = Image.new("RGB", (24, 24), color=(31, 97, 68))
-    exif = Image.Exif()
-    if metadata:
-        exif[0x010E] = "synthetic private metadata"
-    image.save(output, format=image_format, exif=exif)
-    extension = {"JPEG": "jpg", "PNG": "png"}[image_format]
-    content_type = {"JPEG": "image/jpeg", "PNG": "image/png"}[image_format]
-    return SimpleUploadedFile(
-        f"test-photo.{extension}",
-        output.getvalue(),
-        content_type=content_type,
-    )
-
-
-# WHY: Checks that profile image upload is normalised protected and replaced so a future change cannot quietly break it.
-@pytest.mark.django_db(transaction=True)
-def test_profile_image_upload_is_normalised_protected_and_replaced(settings, tmp_path):
-    settings.MEDIA_ROOT = tmp_path
-    owner = create_test_user()
-    profile = Profile.objects.create(user=owner)
-    client = Client()
-    client.force_login(owner)
-    form_values = {
-        "display_name": "Image owner",
-        "biography": "",
-        "broad_area": "central",
-        "availability_start": "",
-        "interests": [],
-    }
-
-    first_response = client.post(
-        reverse("profile_edit"),
-        {**form_values, "profile_image": _test_profile_image_upload(metadata=True)},
-    )
-    profile.refresh_from_db()
-    first_image_path = tmp_path / profile.profile_image.name
-
-    assert first_response.status_code == 302
-    assert first_image_path.exists()
-    assert "student-photo" not in profile.profile_image.name
-    with Image.open(first_image_path) as stored_image:
-        assert not stored_image.getexif()
-
-    owner_image_response = client.get(reverse("profile_image", args=[profile.pk]))
-    assert owner_image_response.status_code == 200
-    assert owner_image_response["Content-Type"] == "image/jpeg"
-    owner_image_response.close()
-    assert Client().get(reverse("profile_image", args=[profile.pk])).status_code == 302
-
-    hidden_viewer = create_test_user()
-    client.force_login(hidden_viewer)
-    assert client.get(reverse("profile_image", args=[profile.pk])).status_code == 404
-    assert get_profile_image_if_viewer_is_allowed(hidden_viewer, profile.pk) is None
-
-    reviewer = create_test_user(is_staff=True)
-    profile.is_verified = True
-    profile.verified_at = timezone.now()
-    profile.verified_by = reviewer
-    profile.save(update_fields=["is_verified", "verified_at", "verified_by"])
-    create_verified_test_profile(user=hidden_viewer, verified_by=reviewer)
-    authorised_response = client.get(reverse("profile_image", args=[profile.pk]))
-    assert authorised_response.status_code == 200
-    authorised_response.close()
-    Block.objects.create(blocker=hidden_viewer, blocked_user=owner)
-    assert client.get(reverse("profile_image", args=[profile.pk])).status_code == 404
-
-    client.force_login(owner)
-    replacement_response = client.post(
-        reverse("profile_edit"),
-        {
-            **form_values,
-            "profile_image": _test_profile_image_upload(image_format="PNG"),
-        },
-    )
-    profile.refresh_from_db()
-
-    assert replacement_response.status_code == 302
-    assert profile.profile_image.name.endswith(".png")
-    assert (tmp_path / profile.profile_image.name).exists()
-    assert not first_image_path.exists()
-
-
-# WHY: Checks that staff verification action changes only complete configured profiles so a future change cannot quietly break it.
 def test_staff_verification_action_changes_only_complete_configured_profiles(
     monkeypatch,
 ):

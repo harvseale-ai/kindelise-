@@ -1,8 +1,5 @@
 """Provide the approved Kindelise test setup helpers."""
 
-# KEYWORD: fixture helper — builds known sample information so many checks can start the same way.
-# KEYWORD: fake — a controlled replacement for an outside service used only while running checks.
-
 from itertools import count
 
 import pytest
@@ -15,7 +12,6 @@ _user_numbers = count(1)
 _interest_numbers = count(1)
 
 
-# WHY: Keeps template tests independent from an earlier local collectstatic manifest.
 @pytest.fixture(autouse=True)
 def use_test_staticfiles_storage(settings):
     """Resolve source static files directly while each isolated test renders pages."""
@@ -27,7 +23,6 @@ def use_test_staticfiles_storage(settings):
     }
 
 
-# WHY: Builds test user with all required starting values and checks applied.
 def create_test_user(username=None, password="Test-pass-742!", **changes):
     """Create an active Django user with supplied safe defaults.
 
@@ -44,7 +39,6 @@ def create_test_user(username=None, password="Test-pass-742!", **changes):
     )
 
 
-# WHY: Builds verified test profile with all required starting values and checks applied.
 def create_verified_test_profile(user=None, verified_by=None, **changes):
     """Create a profile whose staff verification fields are internally consistent.
 
@@ -69,7 +63,6 @@ def create_verified_test_profile(user=None, verified_by=None, **changes):
     return Profile.objects.create(user=user, **values)
 
 
-# WHY: Builds test interest with all required starting values and checks applied.
 def create_test_interest(name=None):
     """Create one controlled interest.
 
@@ -81,7 +74,6 @@ def create_test_interest(name=None):
     return Interest.objects.create(name=name)
 
 
-# WHY: Builds test plan with all required starting values and checks applied.
 def create_test_plan(owner=None, status=Plan.Status.PENDING, **changes):
     """Create a plan in the explicitly requested state.
 
@@ -108,10 +100,8 @@ def create_test_plan(owner=None, status=Plan.Status.PENDING, **changes):
     return Plan.objects.create(owner=owner, **values)
 
 
-# WHY: Builds the two current plan start controls from one readable test datetime.
 def plan_start_form_values(value):
     """Return the date and time values submitted by the current plan form."""
-    # WHY: Matches the local date and time shown to the visitor before the form is submitted.
     if timezone.is_aware(value):
         value = timezone.localtime(value)
     return {
@@ -120,7 +110,6 @@ def plan_start_form_values(value):
     }
 
 
-# WHY: Builds test conversation with all required starting values and checks applied.
 def create_test_conversation(first_user=None, second_user=None):
     """Create one correctly ordered account pair.
 
@@ -139,7 +128,6 @@ def create_test_conversation(first_user=None, second_user=None):
     )
 
 
-# WHY: Keeps the build stripe test event steps in one named place so they can be understood, checked, and reused.
 def build_stripe_test_event(
     event_type="customer.subscription.updated",
     *,
@@ -163,7 +151,6 @@ def build_stripe_test_event(
     }
 
 
-# WHY: Keeps the replace ollama request with fake steps in one named place so they can be understood, checked, and reused.
 def replace_ollama_request_with_fake(monkeypatch, request_owner, outcome):
     """Prevent a network call and return the exact requested test outcome.
 
@@ -173,7 +160,6 @@ def replace_ollama_request_with_fake(monkeypatch, request_owner, outcome):
     Privacy: sends and stores no draft or provider credential.
     """
 
-    # WHY: Returns a controlled reply during checks so no real outside request is made.
     def fake_request(*args, **kwargs):
         fake_request.calls.append((args, kwargs))
         if isinstance(outcome, BaseException):

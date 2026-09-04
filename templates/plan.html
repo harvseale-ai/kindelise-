@@ -29,7 +29,7 @@
       {# Selects which plan state is shown and explains what each card contains. #}
       {# --------------------------------------------------------------------------- #}
 
-      <form class="discovery-filter-form plan-filter-form" method="get" aria-label="Plan filters" novalidate>
+      <form class="discovery-filter-form filter-panels-ready plan-filter-form" method="get" aria-label="Plan filters" novalidate>
           {% if search_query %}<input type="hidden" name="q" value="{{ search_query }}">{% endif %}
           <div class="filter-pill-scroller" role="group" aria-label="Open a plan filter">
             <a class="filter-row-label" href="{% url 'plan_create' %}"><b aria-hidden="true">+</b> Create a plan</a>
@@ -120,7 +120,7 @@
         {# # WHY: Repeats the following markup once for every permitted item supplied to the page. #}
         {% for plan in plans %}
           <li>
-            {% include "includes/plan_card.html" with plan_card_searchable=True %}
+            {% include "includes/plan_card.html" with plan_card_searchable=True plan_card_priority=forloop.first %}
           </li>
         {# # WHY: Shows a clear fallback when the repeated list contains no items. #}
         {% empty %}
@@ -198,7 +198,7 @@
             <h2 id="plan-idea-label"><label for="plan-idea">What would you like company for?</label></h2>
             <span class="helptext">Paste the event details or describe what you want to do. Kindlise will extract an editable draft.</span>
             <div class="profile-field-panel">
-              <textarea id="plan-idea" name="plan_idea" rows="8" maxlength="6000" placeholder="Paste the event title, venue, date, time and overview here—or simply describe your idea.">{{ request.POST.plan_idea|default:'' }}</textarea>
+              <textarea id="plan-idea" name="plan_idea" rows="8" maxlength="6000" placeholder="Paste the event title, venue, date, time and overview here, or simply describe your idea.">{{ request.POST.plan_idea|default:'' }}</textarea>
             </div>
           </section>
 
@@ -321,7 +321,7 @@
       <div class="private-profile-hero">
         <a class="private-profile-back" href="{% url 'plan_list' %}" aria-label="Back to plans"></a>
         {# # WHY: Shows the following part only when its stated page condition is true. #}
-        {% if summary.plan.thumbnail_image %}<img src="{% url 'plan_thumbnail' summary.plan.pk %}" alt="">{% endif %}
+        {% if summary.plan.thumbnail_image %}<img src="{% url 'plan_thumbnail' summary.plan.pk %}?v={{ summary.plan.thumbnail_image.name|urlencode }}" alt="">{% endif %}
       </div>
 
       <div class="private-profile-content private-profile-split-content">

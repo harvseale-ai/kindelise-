@@ -325,17 +325,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const guideVideos = Array.from(
       guideVideoLoop.querySelectorAll("[data-guide-video]"),
     );
-    const guideVideoToggle = guideVideoLoop.querySelector("[data-guide-video-toggle]");
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let activeGuideVideo = 0;
-    let guideVideosPaused = reduceMotion.matches;
-
-    const updateGuideVideoToggle = () => {
-      if (!guideVideoToggle) return;
-      const label = guideVideosPaused ? "Play video" : "Pause video";
-      guideVideoToggle.textContent = guideVideosPaused ? "Play" : "Pause";
-      guideVideoToggle.setAttribute("aria-label", label);
-    };
+    const guideVideosPaused = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
 
     const showGuideVideo = (nextIndex) => {
       const currentVideo = guideVideos[activeGuideVideo];
@@ -367,18 +360,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       guideVideos[activeGuideVideo]?.play().catch(() => {});
     }
-    updateGuideVideoToggle();
-
-    guideVideoToggle?.addEventListener("click", () => {
-      guideVideosPaused = !guideVideosPaused;
-      const currentVideo = guideVideos[activeGuideVideo];
-      if (guideVideosPaused) {
-        currentVideo?.pause();
-      } else {
-        currentVideo?.play().catch(() => {});
-      }
-      updateGuideVideoToggle();
-    });
 
     document.addEventListener("visibilitychange", () => {
       const currentVideo = guideVideos[activeGuideVideo];
@@ -477,6 +458,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // # WHY: Limits this behaviour to the plans page and reuses only cards the server has already permitted.
   const planSearch = document.querySelector("[data-plan-search]");
   if (planSearch) {
+    const searchControl = planSearch.querySelector(".plan-search-control");
     const searchInput = planSearch.querySelector(".plan-search-input");
     const clearSearch = planSearch.querySelector("[data-plan-search-clear]");
     const suggestions = planSearch.querySelector("[data-plan-search-suggestions]");
@@ -525,7 +507,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeSuggestions = () => {
       suggestions.hidden = true;
       suggestions.replaceChildren();
-      searchInput.setAttribute("aria-expanded", "false");
+      searchControl.setAttribute("aria-expanded", "false");
       searchInput.removeAttribute("aria-activedescendant");
       activeSuggestion = -1;
     };
@@ -564,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       activeSuggestion = -1;
       suggestions.hidden = !matches.length;
-      searchInput.setAttribute("aria-expanded", matches.length ? "true" : "false");
+      searchControl.setAttribute("aria-expanded", matches.length ? "true" : "false");
     };
 
     // # WHY: Loads the same bounded open-plan suggestions when the current page has no plan grid to reuse.

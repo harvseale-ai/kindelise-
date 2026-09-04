@@ -1,12 +1,5 @@
 """Test Kindelise Stripe and Premium behaviour."""
 
-# KEYWORD: test — an automatic check that proves one expected behaviour still works.
-# KEYWORD: assert — compares the actual result with the result the check expects.
-# KEYWORD: monkeypatch — temporarily replaces a setting or outside call for one check, then restores it.
-# KEYWORD: HTTP — the request-and-response rules used when these checks visit a page.
-# KEYWORD: CSRF — the private form check that prevents another website submitting as the signed-in visitor.
-# KEYWORD: PostgreSQL — the database used by the live site to keep saved information and its rules.
-
 from types import SimpleNamespace
 
 import pytest
@@ -36,11 +29,7 @@ from tests.conftest import (
 pytestmark = pytest.mark.django_db
 
 
-# WHY: Checks that discovery http enforces free and premium area and interest limits so a future change cannot quietly break it.
-
-
-# WHY: Checks that checkout collects yearly payment and browser return grants nothing so a future change cannot quietly break it.
-def test_checkout_collects_yearly_payment_and_browser_return_grants_nothing(
+def test_billing_entry_points_use_only_the_accounts_own_customer(
     monkeypatch,
     settings,
 ):
@@ -49,7 +38,6 @@ def test_checkout_collects_yearly_payment_and_browser_return_grants_nothing(
     settings.STRIPE_PRICE_ID = "price_test_gbp_499_year"
     submitted_values = {}
 
-    # WHY: Builds checkout with all required starting values and checks applied.
     def create_checkout(**values):
         submitted_values.update(values)
         return SimpleNamespace(
@@ -80,27 +68,15 @@ def test_checkout_collects_yearly_payment_and_browser_return_grants_nothing(
     assert "customer" not in submitted_values
     assert not PlatformSubscription.objects.filter(user=account).exists()
 
-
-# WHY: Checks that customer portal uses only the owning accounts recorded customer so a future change cannot quietly break it.
-def test_customer_portal_uses_only_the_owning_accounts_recorded_customer(
-    monkeypatch,
-    settings,
-):
-    account = create_test_user()
-    other_account = create_test_user()
-    settings.STRIPE_SECRET_KEY = "sk_test_synthetic"
     PlatformSubscription.objects.create(
         user=account,
         stripe_customer_id="cus_test_owner",
     )
-    submitted_values = {}
+    portal_values = {}
 
-    # WHY: Builds portal with all required starting values and checks applied.
     def create_portal(**values):
-        submitted_values.update(values)
-        return SimpleNamespace(
-            url="https://billing.stripe.com/p/session/bps_test_synthetic"
-        )
+        portal_values.update(values)
+        return SimpleNamespace(url="https://billing.stripe.com/p/test")
 
     monkeypatch.setattr(
         "kindlelise.services.billing.stripe.billing_portal.Session.create",
@@ -112,16 +88,15 @@ def test_customer_portal_uses_only_the_owning_accounts_recorded_customer(
     )
 
     assert portal_url.startswith("https://billing.stripe.com/")
-    assert submitted_values["customer"] == "cus_test_owner"
-    assert submitted_values["return_url"] == "https://kindlelise.test/account/"
+    assert portal_values["customer"] == "cus_test_owner"
+    assert portal_values["return_url"] == "https://kindlelise.test/account/"
     with pytest.raises(PermissionDenied):
         open_stripe_customer_portal(
-            other_account,
+            create_test_user(),
             "https://kindlelise.test/account/",
         )
 
 
-# WHY: Checks that stripe paid invoice for configured gbp price grants only annual period so a future change cannot quietly break it.
 def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
     settings,
     monkeypatch,
@@ -136,10 +111,8 @@ def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
         stripe_customer_id="cus_test_paid",
         stripe_subscription_id="sub_test_paid",
         stripe_status="active",
-        # WHY: Stripe may create the active subscription and paid invoice within the same second.
         latest_provider_event_at=now,
     )
-    # WHY: Mirrors the object returned by the installed Stripe library when an invoice only includes an ID.
     monkeypatch.setattr(
         stripe.Subscription,
         "retrieve",
@@ -192,7 +165,6 @@ def test_stripe_paid_invoice_for_configured_gbp_price_grants_only_annual_period(
     assert subscription.has_premium_access()
 
 
-# WHY: Checks that wrong price or unpaid invoice cannot grant premium so a future change cannot quietly break it.
 def test_wrong_price_or_unpaid_invoice_cannot_grant_premium(settings):
     account = create_test_user()
     settings.STRIPE_SECRET_KEY = "sk_test_synthetic"
@@ -262,7 +234,6 @@ def test_wrong_price_or_unpaid_invoice_cannot_grant_premium(settings):
     ).exists()
 
 
-# WHY: Checks that stripe duplicate old equal time and delayed paid events preserve ordering so a future change cannot quietly break it.
 def test_stripe_duplicate_old_equal_time_and_delayed_paid_events_preserve_ordering(
     settings,
 ):
@@ -373,7 +344,6 @@ def test_stripe_duplicate_old_equal_time_and_delayed_paid_events_preserve_orderi
     assert subscription.access_until is None
 
 
-# WHY: Checks that stripe webhook verifies exact body and returns mapped statuses so a future change cannot quietly break it.
 def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
     monkeypatch,
     settings,
@@ -394,7 +364,6 @@ def test_stripe_webhook_verifies_exact_body_and_returns_mapped_statuses(
         },
     )
 
-    # WHY: Keeps the construct event steps in one named place so they can be understood, checked, and reused.
     def construct_event(payload, signature, secret, **values):
         received.update(
             {

@@ -40,6 +40,7 @@ from kindlelise.services.plans import (
     update_owned_plan_before_first_join,
     withdraw_pending_plan_participation,
 )
+from kindlelise.views.common import _responsive_image_response
 
 # =============================================================================
 # SHARED PLAN ACCESS
@@ -330,12 +331,22 @@ def plan_thumbnail_file(request, plan_id):
         image_file = summary["plan"].thumbnail_image.open("rb")
     except (FileNotFoundError, OSError):
         return HttpResponse("Plan image unavailable.", status=404)
+    variant_response = _responsive_image_response(
+        image_file,
+        request.GET.get("variant"),
+    )
+    if variant_response is not None:
+        return variant_response
+    image_file.seek(0)
     # WHY: Streams the server-normalised JPEG under a neutral filename, not its storage path.
-    return FileResponse(
+    response = FileResponse(
         image_file,
         content_type="image/jpeg",
         filename="plan-thumbnail.jpg",
     )
+    # WHY: Image URLs include the saved file name, so a replaced image gets a new cache key.
+    response["Cache-Control"] = "private, max-age=31536000, immutable"
+    return response
 
 # =============================================================================
 # PLAN DETAIL

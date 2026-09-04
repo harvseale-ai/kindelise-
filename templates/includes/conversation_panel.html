@@ -4,7 +4,7 @@
     <a class="back-link" href="{% url 'inbox' %}">← Messages</a>
     <div class="conversation-person">
       {% if other_profile.profile_image %}
-        <img class="profile-image inbox-avatar" src="{% url 'profile_image' other_profile.pk %}" alt="">
+        <img class="profile-image inbox-avatar" src="{% url 'profile_image' other_profile.pk %}?variant=avatar&amp;v={{ other_profile.profile_image.name|urlencode }}" width="64" height="64" decoding="async" alt="">
       {% else %}
         <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
       {% endif %}

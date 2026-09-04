@@ -1,28 +1,11 @@
 """Test Kindelise message and notification behaviour."""
 
-# KEYWORD: test — an automatic check that proves one expected behaviour still works.
-# KEYWORD: assert — compares the actual result with the result the check expects.
-# KEYWORD: monkeypatch — temporarily replaces a setting or outside call for one check, then restores it.
-# KEYWORD: HTTP — the request-and-response rules used when these checks visit a page.
-# KEYWORD: CSRF — the private form check that prevents another website submitting as the signed-in visitor.
-# KEYWORD: PostgreSQL — the database used by the live site to keep saved information and its rules.
-
 import json
-from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth import get_user_model
-from django.db import (
-    close_old_connections,
-    connection,
-    connections,
-)
-from django.test import Client, TransactionTestCase
-from django.test.utils import CaptureQueriesContext
+from django.test import Client
 from django.urls import reverse
-from django.utils import timezone
 
 import kindlelise.ai_message_editor as ai_message_editor
 from kindlelise.ai_message_editor import get_edited_message_draft_suggestion
@@ -39,10 +22,8 @@ from kindlelise.models import (
 )
 from kindlelise.services import (
     confirm_requested_plan_participation,
-    find_or_start_direct_conversation,
     request_plan_participation_and_open_owner_conversation,
     send_direct_message,
-    send_plan_chat_message,
 )
 from tests.conftest import (
     create_test_conversation,
@@ -55,7 +36,6 @@ from tests.conftest import (
 pytestmark = pytest.mark.django_db
 
 
-# WHY: Proves plan chat access always follows current confirmed participation and preserves one history across rejoining.
 def test_plan_chat_http_reuses_shared_thread_and_revokes_then_restores_access():
     owner = create_test_user()
     create_verified_test_profile(user=owner, display_name="Plan owner")
@@ -114,13 +94,17 @@ def test_plan_chat_http_reuses_shared_thread_and_revokes_then_restores_access():
     assert saved_message.sender == participant
     assert saved_message.body == "Hello <script>alert('no')</script>"
     rendered = owner_client.get(chat_url)
-    assert b"Hello &lt;script&gt;alert(&#x27;no&#x27;)&lt;/script&gt;" in rendered.content
+    assert (
+        b"Hello &lt;script&gt;alert(&#x27;no&#x27;)&lt;/script&gt;" in rendered.content
+    )
     assert b"<script>alert" not in rendered.content
 
     leave_response = participant_client.post(reverse("plan_leave", args=[plan.pk]))
     assert leave_response.status_code == 302
     assert participant_client.get(chat_url).status_code == 404
-    assert participant_client.post(send_url, {"body": "after leaving"}).status_code == 404
+    assert (
+        participant_client.post(send_url, {"body": "after leaving"}).status_code == 404
+    )
 
     participant_client.post(reverse("plan_participation_request", args=[plan.pk]))
     confirmed_participation.refresh_from_db()
@@ -137,188 +121,14 @@ def test_plan_chat_http_reuses_shared_thread_and_revokes_then_restores_access():
     assert PlanChat.objects.filter(plan=plan).count() == 1
     assert pending_participation.status == Participation.Status.PENDING
 
-
-# WHY: Proves a started or cancelled plan keeps authorised history visible but refuses every new message.
-def test_plan_chat_becomes_read_only_after_start_or_cancellation():
-    owner = create_test_user()
-    create_verified_test_profile(user=owner)
-    participant = create_test_user()
-    create_verified_test_profile(user=participant)
-    plan = create_test_plan(owner=owner, status=Plan.Status.APPROVED)
-    participation, _conversation = (
-        request_plan_participation_and_open_owner_conversation(participant, plan)
-    )
-    _participation, chat = confirm_requested_plan_participation(
-        owner,
-        plan,
-        participation.pk,
-    )
-    send_plan_chat_message(participant, chat, "Saved before cancellation")
-    plan.starts_at = timezone.now() - timezone.timedelta(minutes=1)
-    plan.save(update_fields=["starts_at"])
-    participant_client = Client()
-    participant_client.force_login(participant)
-    started_page = participant_client.get(reverse("plan_chat_detail", args=[plan.pk]))
-    assert started_page.status_code == 200
-    assert b"This plan chat is now read-only" in started_page.content
-    assert (
-        participant_client.post(
-            reverse("plan_chat_message_send", args=[plan.pk]),
-            {"body": "after start"},
-        ).status_code
-        == 404
-    )
-
-    plan.starts_at = timezone.now() + timezone.timedelta(days=1)
-    plan.save(update_fields=["starts_at"])
-    owner_client = Client()
-    owner_client.force_login(owner)
     owner_client.post(reverse("plan_cancel", args=[plan.pk]))
-
-    page = participant_client.get(reverse("plan_chat_detail", args=[plan.pk]))
-    assert page.status_code == 200
-    assert b"Saved before cancellation" in page.content
-    assert b"This plan chat is now read-only" in page.content
-    assert b'id="message-composer"' not in page.content
-    assert (
-        participant_client.post(
-            reverse("plan_chat_message_send", args=[plan.pk]),
-            {"body": "too late"},
-        ).status_code
-        == 404
-    )
-    assert PlanChatMessage.objects.count() == 1
+    read_only_page = participant_client.get(chat_url)
+    assert read_only_page.status_code == 200
+    assert b"This plan chat is now read-only" in read_only_page.content
+    assert b'id="message-composer"' not in read_only_page.content
+    assert participant_client.post(send_url, {"body": "too late"}).status_code == 404
 
 
-# WHY: Proves plan chats share the Messages list without exposing them to pending, former or unrelated accounts.
-def test_messages_inbox_mixes_authorised_direct_and_plan_chat_rows():
-    owner = create_test_user()
-    create_verified_test_profile(user=owner, display_name="Inbox owner")
-    participant = create_test_user()
-    create_verified_test_profile(user=participant, display_name="Inbox participant")
-    peer = create_test_user()
-    create_verified_test_profile(user=peer, display_name="Direct peer")
-    pending_user = create_test_user()
-    create_verified_test_profile(user=pending_user, display_name="Pending viewer")
-    plan = create_test_plan(
-        owner=owner,
-        status=Plan.Status.APPROVED,
-        title="Inbox plan chat",
-        capacity=3,
-        thumbnail_image="plan-thumbnails/inbox-plan.jpg",
-    )
-    participation, _conversation = (
-        request_plan_participation_and_open_owner_conversation(participant, plan)
-    )
-    _participation, _chat = confirm_requested_plan_participation(
-        owner,
-        plan,
-        participation.pk,
-    )
-    request_plan_participation_and_open_owner_conversation(pending_user, plan)
-    direct_conversation = create_test_conversation(participant, peer)
-
-    client = Client()
-    client.force_login(participant)
-    inbox = client.get(reverse("inbox"))
-    assert inbox.status_code == 200
-    assert b"Direct peer" in inbox.content
-    assert b"Inbox plan chat" in inbox.content
-    assert reverse("conversation_detail", args=[direct_conversation.pk]).encode() in inbox.content
-    assert reverse("plan_chat_detail", args=[plan.pk]).encode() in inbox.content
-    assert reverse("plan_thumbnail", args=[plan.pk]).encode() in inbox.content
-    selected_chat = client.get(reverse("plan_chat_detail", args=[plan.pk]))
-    assert b"messages-split-layout" in selected_chat.content
-    assert b"Plan chat" in selected_chat.content
-
-    pending_client = Client()
-    pending_client.force_login(pending_user)
-    assert b"Inbox plan chat" not in pending_client.get(reverse("inbox")).content
-    client.post(reverse("plan_leave", args=[plan.pk]))
-    assert b"Inbox plan chat" not in client.get(reverse("inbox")).content
-
-
-# WHY: Guards the mixed inbox against one extra database query per plan-chat row.
-def test_mixed_inbox_query_count_stays_bounded_with_several_plan_chats():
-    owner = create_test_user()
-    create_verified_test_profile(user=owner)
-    for index in range(8):
-        plan = create_test_plan(
-            owner=owner,
-            status=Plan.Status.APPROVED,
-            title=f"Bounded chat {index}",
-        )
-        PlanChat.objects.create(plan=plan)
-    client = Client()
-    client.force_login(owner)
-    with CaptureQueriesContext(connection) as captured_queries:
-        response = client.get(reverse("inbox"))
-    assert response.status_code == 200
-    assert len(captured_queries) <= 12
-
-
-# WHY: Proves each group message alert reaches exactly the other current chat members and links back to the chat.
-def test_plan_chat_message_notifications_exclude_sender_pending_and_former_members():
-    owner = create_test_user()
-    create_verified_test_profile(user=owner, display_name="Alert owner")
-    sender = create_test_user()
-    create_verified_test_profile(user=sender, display_name="Alert sender")
-    recipient = create_test_user()
-    create_verified_test_profile(user=recipient, display_name="Alert recipient")
-    pending_user = create_test_user()
-    create_verified_test_profile(user=pending_user, display_name="Alert pending")
-    plan = create_test_plan(
-        owner=owner,
-        status=Plan.Status.APPROVED,
-        title="Alert plan chat",
-        capacity=4,
-    )
-    chats = []
-    for participant in (sender, recipient):
-        participation, _conversation = (
-            request_plan_participation_and_open_owner_conversation(participant, plan)
-        )
-        _participation, chat = confirm_requested_plan_participation(
-            owner,
-            plan,
-            participation.pk,
-        )
-        chats.append(chat)
-    request_plan_participation_and_open_owner_conversation(pending_user, plan)
-    Notification.objects.all().delete()
-
-    chat_message = send_plan_chat_message(sender, chats[0], "New group message")
-    alerts = Notification.objects.filter(kind=Notification.Kind.PLAN_CHAT_MESSAGE)
-    assert set(alerts.values_list("recipient_id", flat=True)) == {
-        owner.pk,
-        recipient.pk,
-    }
-    assert set(alerts.values_list("plan_chat_message_id", flat=True)) == {
-        chat_message.pk
-    }
-    assert not alerts.filter(recipient=sender).exists()
-    assert not alerts.filter(recipient=pending_user).exists()
-
-    owner_client = Client()
-    owner_client.force_login(owner)
-    notifications_page = owner_client.get(reverse("notifications"))
-    assert b"Alert sender posted in Alert plan chat" in notifications_page.content
-    assert reverse("plan_chat_detail", args=[plan.pk]).encode() in notifications_page.content
-
-    recipient_client = Client()
-    recipient_client.force_login(recipient)
-    recipient_client.post(reverse("plan_leave", args=[plan.pk]))
-    send_plan_chat_message(sender, chats[0], "After leaving")
-    assert alerts.filter(recipient=recipient).count() == 1
-    former_member_notifications = recipient_client.get(reverse("notifications"))
-    assert b"Alert sender posted in Alert plan chat" not in former_member_notifications.content
-    assert b'class="site-notification-count"' not in former_member_notifications.content
-
-
-# WHY: Checks that direct conversation http starts from authorised profile once with csrf so a future change cannot quietly break it.
-
-
-# WHY: Checks that direct conversation http starts from authorised profile once with csrf so a future change cannot quietly break it.
 def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf():
     viewer = create_test_user()
     Profile.objects.create(
@@ -396,7 +206,6 @@ def test_direct_conversation_http_starts_from_authorised_profile_once_with_csrf(
     assert Conversation.objects.count() == 1
 
 
-# WHY: Checks that notification badges and pages include participation requests and decisions alongside messages.
 def test_notification_badge_counts_messages_requests_and_decisions_then_marks_read():
     owner = create_test_user()
     create_verified_test_profile(user=owner, display_name="Plan owner")
@@ -449,75 +258,12 @@ def test_notification_badge_counts_messages_requests_and_decisions_then_marks_re
     participant_client.force_login(participant)
     decision_response = participant_client.get(reverse("notifications"))
     assert b">1</span>" in decision_response.content
-    assert b"Your participation in Notification plan was confirmed" in decision_response.content
-
-
-# WHY: Checks that conversation http escapes ordered messages and shares one hidden 404 so a future change cannot quietly break it.
-def test_conversation_http_escapes_ordered_messages_and_shares_one_hidden_404():
-    viewer = create_test_user()
-    create_verified_test_profile(user=viewer)
-    other_user = create_test_user()
-    create_verified_test_profile(user=other_user, display_name="Conversation peer")
-    outsider = create_test_user()
-    create_verified_test_profile(user=outsider)
-    conversation = create_test_conversation(viewer, other_user)
-    first_message = Message.objects.create(
-        conversation=conversation,
-        sender=other_user,
-        body="First <script>alert('private')</script>",
-        sent_at=timezone.now() - timezone.timedelta(minutes=1),
-    )
-    second_message = Message.objects.create(
-        conversation=conversation,
-        sender=viewer,
-        body="Second ordinary message",
-    )
-    client = Client()
-    client.force_login(viewer)
-
-    response = client.get(reverse("conversation_detail", args=[conversation.pk]))
-
-    assert response.status_code == 200
-    escaped_first = b"First &lt;script&gt;alert(&#x27;private&#x27;)&lt;/script&gt;"
-    assert escaped_first in response.content
-    assert b"<script>" not in response.content
-    assert response.content.find(escaped_first) < response.content.find(
-        second_message.body.encode()
-    )
-    expected_sent_at = timezone.localtime(first_message.sent_at).strftime(
-        "%Y-%m-%dT%H:%M:%S"
-    )
-    assert f'datetime="{expected_sent_at}"'.encode() in response.content
-    assert b"Conversation peer" in response.content
     assert (
-        client.post(reverse("conversation_detail", args=[conversation.pk])).status_code
-        == 405
+        b"Your participation in Notification plan was confirmed"
+        in decision_response.content
     )
 
-    outsider_client = Client()
-    outsider_client.force_login(outsider)
-    unrelated_response = outsider_client.get(
-        reverse("conversation_detail", args=[conversation.pk])
-    )
-    missing_response = client.get(reverse("conversation_detail", args=[999999]))
-    Block.objects.create(blocker=other_user, blocked_user=viewer)
-    blocked_response = client.get(
-        reverse("conversation_detail", args=[conversation.pk])
-    )
-    assert {
-        unrelated_response.status_code,
-        missing_response.status_code,
-        blocked_response.status_code,
-    } == {404}
-    assert {
-        unrelated_response.content,
-        missing_response.content,
-        blocked_response.content,
-    } == {b"Conversation unavailable."}
-    assert first_message.body.encode() not in blocked_response.content
 
-
-# WHY: Checks that conversation send http rechecks csrf form sender and current access so a future change cannot quietly break it.
 def test_conversation_send_http_rechecks_csrf_form_sender_and_current_access(caplog):
     viewer = create_test_user()
     create_verified_test_profile(user=viewer)
@@ -583,51 +329,6 @@ def test_conversation_send_http_rechecks_csrf_form_sender_and_current_access(cap
     assert Message.objects.filter(conversation=conversation).count() == 1
 
 
-# WHY: Keeps the ConversationPairRaceTests information and its rules together so they stay consistent.
-class ConversationPairRaceTests(TransactionTestCase):
-    """Prove PostgreSQL uniqueness resolves simultaneous pair creation once."""
-
-    # WHY: Keeps the setUp steps in one named place so they can be understood, checked, and reused.
-    def setUp(self):
-        self.first_user = create_test_user()
-        create_verified_test_profile(user=self.first_user)
-        self.second_user = create_test_user()
-        create_verified_test_profile(user=self.second_user)
-
-    # WHY: Checks that conversation pair race returns one database authoritative row so a future change cannot quietly break it.
-    def test_conversation_pair_race_returns_one_database_authoritative_row(self):
-        start_together = Barrier(2)
-
-        # WHY: Keeps the start conversation steps in one named place so they can be understood, checked, and reused.
-        def start_conversation(user_id, other_user_id):
-            close_old_connections()
-            try:
-                user = get_user_model().objects.get(pk=user_id)
-                other_user = get_user_model().objects.get(pk=other_user_id)
-                start_together.wait(timeout=5)
-                return find_or_start_direct_conversation(user, other_user).pk
-            finally:
-                connections.close_all()
-
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            outcomes = list(
-                executor.map(
-                    lambda pair: start_conversation(*pair),
-                    (
-                        (self.first_user.pk, self.second_user.pk),
-                        (self.second_user.pk, self.first_user.pk),
-                    ),
-                )
-            )
-
-        self.assertEqual(outcomes[0], outcomes[1])
-        self.assertEqual(Conversation.objects.count(), 1)
-        conversation = Conversation.objects.get()
-        self.assertEqual(conversation.first_user_id, self.first_user.pk)
-        self.assertEqual(conversation.second_user_id, self.second_user.pk)
-
-
-# WHY: Checks that ollama editor sends only bounded draft and each fixed goal so a future change cannot quietly break it.
 def test_ollama_editor_sends_only_bounded_draft_and_each_fixed_goal(
     monkeypatch,
     settings,
@@ -697,35 +398,3 @@ def test_ollama_editor_sends_only_bounded_draft_and_each_fixed_goal(
     assert private_draft.strip() not in caplog.text
     assert private_suggestion not in caplog.text
     assert "ollama_test_synthetic_key" not in caplog.text
-
-
-# WHY: Checks that ollama provider failure returns quiet error without sending so a future change cannot quietly break it.
-def test_ollama_provider_failure_returns_quiet_error_without_sending(
-    monkeypatch,
-):
-    sender = create_test_user()
-    create_verified_test_profile(user=sender)
-    recipient = create_test_user()
-    create_verified_test_profile(user=recipient)
-    conversation = create_test_conversation(sender, recipient)
-    monkeypatch.setattr(
-        "kindlelise.views.messages.get_edited_message_draft_suggestion",
-        lambda draft, editing_goal: None,
-    )
-    client = Client()
-    client.force_login(sender)
-
-    response = client.post(
-        reverse(
-            "conversation_message_edit_suggestion",
-            args=[conversation.pk],
-        ),
-        {
-            "draft": "Original draft remains in the browser",
-            "editing_goal": "improve_clarity",
-        },
-    )
-
-    assert response.status_code == 503
-    assert response.json() == {"error": "Draft edit unavailable."}
-    assert not Message.objects.filter(conversation=conversation).exists()

@@ -31,7 +31,11 @@ from kindlelise.services.accounts import (
     mark_all_notifications_read,
     update_signed_in_user_profile,
 )
-from kindlelise.views.common import _profile_broad_area_label, _safe_local_redirect
+from kindlelise.views.common import (
+    _profile_broad_area_label,
+    _responsive_image_response,
+    _safe_local_redirect,
+)
 
 # =============================================================================
 # ENTRY AND HELP PAGES
@@ -346,6 +350,13 @@ def profile_image_file(request, profile_id):
     # WHY: Opens the stored bytes and reads their real format rather than trusting a filename ending.
     try:
         image_file = profile.profile_image.open("rb")
+        variant_response = _responsive_image_response(
+            image_file,
+            request.GET.get("variant"),
+        )
+        if variant_response is not None:
+            return variant_response
+        image_file.seek(0)
         with Image.open(image_file) as stored_image:
             image_format = stored_image.format
         image_file.seek(0)
@@ -363,8 +374,11 @@ def profile_image_file(request, profile_id):
         image_file.close()
         return HttpResponse("Profile image unavailable.", status=404)
     # WHY: Streams the authorised image without revealing its private storage path.
-    return FileResponse(
+    response = FileResponse(
         image_file,
         content_type=content_type,
         filename=f"profile-image.{suffix}",
     )
+    # WHY: Image URLs include the saved file name, so a replaced image gets a new cache key.
+    response["Cache-Control"] = "private, max-age=31536000, immutable"
+    return response

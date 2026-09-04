@@ -6,7 +6,8 @@
 
 {% block content %}
   <article class="guide-page" aria-labelledby="guide-title">
-    <section class="guide-hero" aria-labelledby="guide-title">
+    <h2 class="visually-hidden">How Kindlise works</h2>
+    <div class="guide-hero">
       <div class="guide-hero-copy">
         <p class="eyebrow">Small plans. Real company.</p>
         <h1 id="guide-title">Stay connected in your area.</h1>
@@ -21,7 +22,7 @@
           {% endif %}
         </div>
       </div>
-      <div class="guide-video-placeholder" data-guide-video-loop aria-label="People making plans and spending time together">
+      <div class="guide-video-placeholder" data-guide-video-loop aria-hidden="true">
         <video class="is-active" data-guide-video muted playsinline preload="auto" autoplay aria-hidden="true">
           <source src="{% static 'guide-videos/people-arriving.m4v' %}" type="video/mp4">
         </video>
@@ -30,7 +31,7 @@
         <video data-guide-video data-guide-video-src="{% static 'guide-videos/conversation.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
         <video data-guide-video data-guide-video-src="{% static 'guide-videos/out-together.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
       </div>
-    </section>
+    </div>
 
     <section class="guide-proof-points" aria-label="How Kindlise helps">
       <div><strong>Small plans</strong><span>Low pressure by design.</span></div>
@@ -77,7 +78,7 @@
         <div class="guide-feature-visual guide-plan-preview" aria-hidden="true">
           <div class="guide-plan-preview-card--video" data-guide-plan-video-card>
             <video data-guide-plan-video data-src="{% static 'guide-videos/cards-night.m4v' %}" muted playsinline preload="none" aria-hidden="true"></video>
-            <span>Cards night in</span><small>Saturday · 10:00</small>
+            <span>Cards night</span><small>Saturday · 10:00</small>
           </div>
           <div><span>Gallery visit</span><small>3 places left</small></div>
           <div><span>Live music</span><small>Friday · 19:30</small></div>
@@ -108,11 +109,11 @@
       </section>
 
       <section class="guide-feature" aria-labelledby="guide-people-title">
-        <div class="guide-feature-visual guide-people-preview"{% if guide_profile_cards %} data-guide-card-loop data-guide-visible-cards="4"{% endif %} aria-label="People you can discover">
+        <div class="guide-feature-visual guide-people-preview"{% if guide_profile_cards %} data-guide-card-loop data-guide-visible-cards="4"{% endif %}>
           {% for card in guide_profile_cards %}
             <a class="guide-profile-preview-card" href="{% url 'profile_detail' card.profile.pk %}" data-guide-card{% if forloop.counter > 4 %} hidden{% endif %}>
               {% if card.profile.profile_image %}
-                <img src="{% url 'profile_image' card.profile.pk %}?v={{ card.profile.profile_image.name|urlencode }}" alt="">
+                <img src="{% url 'profile_image' card.profile.pk %}?variant=avatar&amp;v={{ card.profile.profile_image.name|urlencode }}" width="64" height="64" loading="lazy" decoding="async" alt="">
               {% else %}
                 <i aria-hidden="true"></i>
               {% endif %}
@@ -180,7 +181,7 @@
       <ul class="plans-grid guide-featured-plans"{% if guide_plans %} data-guide-card-loop data-guide-visible-cards="4" aria-label="Plans you can explore"{% endif %}>
         {% for plan in guide_plans %}
           <li data-guide-card{% if forloop.counter > 4 %} hidden{% endif %}>
-            {% include "includes/plan_card.html" with selected_filter="all" plan_card_searchable=False %}
+            {% include "includes/plan_card.html" with selected_filter="all" plan_card_searchable=False plan_card_priority=forloop.first %}
           </li>
         {% empty %}
           <li class="plans-empty-state">

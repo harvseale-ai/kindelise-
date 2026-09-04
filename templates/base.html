@@ -14,13 +14,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Kindlise helps people find shared interests, make small local plans and meet safely in public places.">
   <meta name="theme-color" content="#F7F8F6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <title>{% block title %}Kindelise{% endblock %}</title>
   <link rel="icon" href="{% static 'kindlelise-icon.svg' %}" type="image/svg+xml">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&amp;family=Gloria+Hallelujah&amp;family=Kalam:wght@700&amp;family=Open+Sans:wght@400..800&amp;family=Patrick+Hand&amp;family=Rock+Salt&amp;display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&amp;family=Gloria+Hallelujah&amp;family=Kalam:wght@700&amp;family=Patrick+Hand&amp;family=Rock+Salt&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Caveat+Brush&amp;family=Gloria+Hallelujah&amp;family=Kalam:wght@700&amp;family=Patrick+Hand&amp;family=Rock+Salt&amp;display=swap" rel="stylesheet"></noscript>
   <script data-appearance-bootstrap>
     try {
       const savedAppearance = localStorage.getItem("kindlelise-colour-theme");
@@ -29,7 +30,7 @@
       document.documentElement.dataset.theme = "light";
     }
   </script>
-    <link rel="stylesheet" href="{% static 'app.css' %}?v=20260822-plan-title-alignment">
+    <link rel="stylesheet" href="{% static 'app.css' %}?v=20260904-lighthouse">
 </head>
 <body{% if request.resolver_match.url_name == "profile_edit" or request.resolver_match.url_name == "sign_up" or request.resolver_match.url_name == "sign_in" or request.resolver_match.url_name == "report_create" %} class="profile-edit-route"{% elif request.resolver_match.url_name == "plan_create" or request.resolver_match.url_name == "plan_edit" %} class="profile-edit-route plan-form-route"{% elif request.resolver_match.url_name == "account" or request.resolver_match.url_name == "profile" or request.resolver_match.url_name == "profile_detail" or request.resolver_match.url_name == "plan_detail" or request.resolver_match.url_name == "guide" or request.resolver_match.url_name == "notifications" %} class="private-profile-route"{% elif request.resolver_match.url_name == "inbox" %} class="inbox-route"{% elif request.resolver_match.url_name == "conversation_detail" or request.resolver_match.url_name == "plan_chat_detail" %} class="conversation-route"{% elif request.resolver_match.url_name == "plan_list" %} class="plans-route"{% elif request.resolver_match.url_name == "discover" %} class="discovery-route"{% endif %}>
   {# --------------------------------------------------------------------------- #}
@@ -40,15 +41,15 @@
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="{% url 'home' %}" aria-label="Kindlise home" title="Kindlise">
-      <img src="{% static 'kindlelise-mark.svg' %}?v=20260819-tight-mark" alt="">
+      <img src="{% static 'kindlelise-mark.svg' %}?v=20260819-tight-mark" width="46" height="27" alt="">
       <span class="brand-wordmark">kindlise</span>
     </a>
     {% if user.is_authenticated %}
       <form class="plan-search topbar-plan-search" data-plan-search data-plan-search-url="{% url 'plan_search_suggestions' %}" method="get" action="{% url 'plan_list' %}" role="search">
         <label class="visually-hidden" for="plan-search-input">Search open plans</label>
-        <div class="plan-search-control">
+        <div class="plan-search-control" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="plan-search-suggestions">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4"></path></svg>
-          <input id="plan-search-input" class="plan-search-input" type="search" name="q" value="{% if request.resolver_match.url_name == 'plan_list' %}{{ search_query }}{% endif %}" placeholder="kindlise" data-idle-placeholder="kindlise" data-active-placeholder="Search open plans" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="plan-search-suggestions" aria-expanded="false">
+          <input id="plan-search-input" class="plan-search-input" type="search" name="q" value="{% if request.resolver_match.url_name == 'plan_list' %}{{ search_query }}{% endif %}" placeholder="kindlise" data-idle-placeholder="kindlise" data-active-placeholder="Search open plans" autocomplete="off" aria-autocomplete="list" aria-controls="plan-search-suggestions">
           <button class="plan-search-clear" type="button" data-plan-search-clear aria-label="Clear plan search"{% if request.resolver_match.url_name != 'plan_list' or not search_query %} hidden{% endif %}>Clear</button>
         </div>
         <ul class="plan-search-suggestions" id="plan-search-suggestions" data-plan-search-suggestions role="listbox" hidden></ul>

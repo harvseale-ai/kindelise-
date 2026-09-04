@@ -54,7 +54,7 @@
           <a class="inbox-conversation-row{% if conversation.pk == row.conversation.pk %} is-selected{% endif %}" href="{% url 'conversation_detail' row.conversation.pk %}"{% if conversation.pk == row.conversation.pk %} aria-current="page"{% endif %}>
             {# # WHY: Shows the following part only when its stated page condition is true. #}
             {% if row.other_profile.profile_image %}
-              <img class="profile-image inbox-avatar" src="{% url 'profile_image' row.other_profile.pk %}" alt="">
+              <img class="profile-image inbox-avatar" src="{% url 'profile_image' row.other_profile.pk %}?variant=avatar&amp;v={{ row.other_profile.profile_image.name|urlencode }}" width="64" height="64" loading="lazy" decoding="async" alt="">
             {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
             {% else %}
               <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
@@ -68,7 +68,7 @@
           {% else %}
           <a class="inbox-conversation-row{% if plan_chat.pk == row.plan_chat.pk %} is-selected{% endif %}" href="{% url 'plan_chat_detail' row.plan_chat.plan.pk %}"{% if plan_chat.pk == row.plan_chat.pk %} aria-current="page"{% endif %}>
             {% if row.plan_chat.plan.thumbnail_image %}
-              <img class="profile-image inbox-avatar" src="{% url 'plan_thumbnail' row.plan_chat.plan.pk %}" alt="">
+              <img class="profile-image inbox-avatar" src="{% url 'plan_thumbnail' row.plan_chat.plan.pk %}?variant=avatar&amp;v={{ row.plan_chat.plan.thumbnail_image.name|urlencode }}" width="64" height="64" loading="lazy" decoding="async" alt="">
             {% else %}
               <span class="profile-image inbox-avatar inbox-avatar-placeholder" aria-hidden="true"><span></span></span>
             {% endif %}

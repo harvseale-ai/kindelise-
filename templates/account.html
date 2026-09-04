@@ -113,7 +113,7 @@
             <div class="profile-image-preview">
               {# # WHY: Shows the following part only when its stated page condition is true. #}
               {% if profile.profile_image %}
-                <img src="{% url 'profile_image' profile.pk %}" alt="">
+                <img src="{% url 'profile_image' profile.pk %}?v={{ profile.profile_image.name|urlencode }}" alt="">
               {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
               {% else %}
                 <span aria-hidden="true">◎</span>
@@ -269,7 +269,7 @@
         <a class="private-profile-back" href="{% url 'discover' %}" aria-label="Back to Discover"></a>
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if profile.profile_image %}
-          <img src="{% url 'profile_image' profile.pk %}" alt="">
+          <img src="{% url 'profile_image' profile.pk %}?v={{ profile.profile_image.name|urlencode }}" alt="">
         {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
         {% else %}
           <div class="private-profile-placeholder" aria-hidden="true"><span></span></div>
@@ -433,7 +433,7 @@
       <div class="private-profile-hero">
         {# # WHY: Shows the following part only when its stated page condition is true. #}
         {% if summary.profile.profile_image %}
-          <img src="{% url 'profile_image' summary.profile.pk %}" alt="">
+          <img src="{% url 'profile_image' summary.profile.pk %}?v={{ summary.profile.profile_image.name|urlencode }}" alt="">
         {# # WHY: Shows this alternative when the earlier page condition does not apply. #}
         {% else %}
           <div class="private-profile-placeholder" aria-hidden="true"><span></span></div>
@@ -613,7 +613,8 @@
           {# # WHY: Reuses the established plan-card structure for every current and historic owned plan. #}
           {% for plan in summary.plans %}
             <li>
-              <a class="plan-card{% if plan.thumbnail_image %} plan-card--with-image{% endif %}" href="{% url 'plan_detail' plan.pk %}"{% if plan.thumbnail_image %} style="--plan-card-image: url('{% url 'plan_thumbnail' plan.pk %}')"{% endif %}>
+              <a class="plan-card{% if plan.thumbnail_image %} plan-card--with-image{% endif %}" href="{% url 'plan_detail' plan.pk %}">
+                {% if plan.thumbnail_image %}<img class="plan-card-image" src="{% url 'plan_thumbnail' plan.pk %}?variant=card&amp;v={{ plan.thumbnail_image.name|urlencode }}" width="360" height="480" decoding="async"{% if forloop.counter <= 3 %} fetchpriority="high"{% endif %} alt="">{% endif %}
                 <span class="plan-card-content">
                   <strong class="plan-card-title">{{ plan.title }}</strong>
                   <span class="plan-card-description">{{ plan.description }}</span>

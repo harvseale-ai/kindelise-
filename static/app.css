@@ -31,7 +31,7 @@
 :root {
   color-scheme: light;
   --ink: #1B1D1B;
-  --muted: #686E6A;
+  --muted: #646A66;
   --page: #F7F8F6;
   --surface: #FFFFFF;
   --soft: #E7EFE9;
@@ -80,7 +80,7 @@
   --placeholder-surface: linear-gradient(180deg, #F4F5F3 0%, #E7E9E7 100%);
   --placeholder-figure: #C9CDCA;
   --font-semibold: 600;
-  font-family: "Open Sans", Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
 }
 
 :root[data-theme="dark"] {
@@ -2719,14 +2719,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   background: var(--page);
   color: var(--ink);
 }
-.plans-page {
-  --plans-line: var(--border-strong);
-  --plans-muted: var(--muted);
-  --plans-green: var(--image-muted);
-  overflow: hidden;
-  border-radius: 1rem;
-  background: var(--page);
-}
 /* # WHY: Matches the Messages heading proportions so moving between the main pages feels consistent. */
 .plans-page-header {
   min-height: 5.45rem;
@@ -2903,18 +2895,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   padding-inline: 1rem;
   border-radius: .65rem;
 }
-.plans-intro {
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid var(--control);
-}
-.plans-intro p {
-  max-width: 42rem;
-  margin: 0;
-  color: var(--plans-muted);
-  font-size: 1rem;
-  line-height: 1.55;
-}
-
 /* --- Plan card grid --------------------------------------------------------- */
 
 /* # WHY: Matches the space between Discover's filter bar and its results without changing either card design. */
@@ -2936,6 +2916,7 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 }
 .plan-card {
   min-height: 22rem;
+  position: relative;
   display: flex;
   align-items: flex-end;
   overflow: hidden;
@@ -2951,21 +2932,34 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   background: var(--hover);
 }
 .plan-card--with-image {
-  background-image:
-    var(--image-card-overlay),
-    var(--plan-card-image);
-  background-position: center;
-  background-size: cover;
+  background: var(--soft);
 }
 /* # WHY: Places a theme-adjusted gradient over fetched pictures so every plan title and detail stays readable. */
-.plan-card--with-image:hover {
-  background-image:
-    var(--image-card-overlay-hover),
-    var(--plan-card-image);
+.plan-card--with-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: var(--image-card-overlay);
+  transition: background .2s ease;
+}
+.plan-card--with-image:hover::after {
+  background: var(--image-card-overlay-hover);
+}
+.plan-card-image {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  object-fit: cover;
 }
 .plan-card-content {
   min-width: 0;
   width: 100%;
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
 }
@@ -3126,13 +3120,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 
 @media (max-width: 35rem) {
   /* # WHY: Retains the three-card overview on phones while reducing only card type and spacing proportionally. */
-  .plans-route .page-shell > .plans-page {
-    padding-inline: 0;
-  }
-  .plans-page {
-    border-inline: 0;
-    border-radius: 0;
-  }
   .plans-page-header {
     min-height: 7.65rem;
     gap: 1rem;
@@ -3150,24 +3137,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   }
   .plans-create-button span {
     font-size: 1.35rem;
-  }
-  .plans-filter-strip {
-    min-height: 0;
-    gap: .5rem;
-    padding: 0 0 .2rem;
-  }
-  .plans-filter-strip a {
-    min-height: 2.4rem;
-    padding: .55rem 1.15rem;
-    font-size: 1rem;
-  }
-  .plans-intro {
-    min-height: 0;
-    padding: 1.5rem 1rem;
-  }
-  .plans-intro p {
-    font-size: 1rem;
-    line-height: 1.55;
   }
   .plans-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3243,7 +3212,7 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 /* # KEYWORD: :is() — groups several selectors that need the same rule without repeating the declarations. */
 /* # WHY: Connects every component to the master appearance tokens so switching modes never changes layout. */
 :root body,
-:root :is(.profile-edit-page, .inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller) {
+:root :is(.profile-edit-page, .inbox-page, .conversation-page, .private-profile-page, .filter-pill-scroller) {
   background-color: var(--page);
   color: var(--ink);
 }
@@ -3259,10 +3228,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   --profile-panel: var(--soft);
   --profile-line: var(--border);
   --profile-muted: var(--muted);
-}
-:root .plans-page {
-  --plans-line: var(--border);
-  --plans-muted: var(--muted);
 }
 :root :is(.plans-page-header, .conversation-page-header, .private-profile-header, .discovery-filter-panel) {
   border-color: var(--border);
@@ -3305,20 +3270,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 .guide-hero > *,
 .guide-feature > * { min-width: 0; }
 .guide-page p { line-height: 1.65; }
-.guide-titlebar {
-  min-height: 4.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem clamp(1rem, 3vw, 2rem);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background: var(--surface);
-}
-.guide-titlebar .eyebrow,
-.guide-titlebar .back-link { margin: 0; }
-.guide-titlebar .eyebrow { color: var(--ink); font-size: 1.4rem; }
-.guide-titlebar .back-link { color: var(--muted); text-decoration: none; }
 .guide-hero,
 .guide-feature,
 .guide-overview,
@@ -3540,34 +3491,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 .guide-overview-list p { margin: 0; color: var(--muted); }
 .guide-start { padding: clamp(1.5rem, 5vw, 3.5rem); text-align: center; }
 .guide-start-copy { max-width: 38rem; margin-inline: auto; }
-.guide-profile-preview {
-  max-width: 47rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1rem;
-  margin: 2rem auto 0;
-  text-align: left;
-}
-.guide-profile-preview > :is(div, a) {
-  min-height: 12rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: .3rem;
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background: var(--page);
-  box-shadow: 0 .65rem 1.5rem var(--shadow-soft);
-}
-.guide-profile-preview i {
-  width: 3.25rem;
-  height: 3.25rem;
-  margin-bottom: auto;
-  border-radius: 50%;
-  background: var(--placeholder-figure);
-}
-.guide-profile-preview span { color: var(--muted); font-size: .82rem; }
 .guide-profile-preview-card { color: var(--ink); text-decoration: none; }
 .guide-profile-preview-card img {
   width: 4rem;
@@ -3595,12 +3518,9 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   .guide-feature--reverse .guide-feature-visual { order: 2; }
   .guide-hero-copy h1 { max-width: 13ch; }
   .guide-overview-list { grid-template-columns: 1fr; }
-  .guide-profile-preview { grid-template-columns: 1fr; }
-  .guide-profile-preview > :is(div, a) { min-height: 8rem; }
 }
 
 @media (max-width: 30rem) {
-  .guide-titlebar { border-inline: 0; border-radius: 0; }
   .guide-plan-preview { gap: .4rem; padding-inline: .65rem; }
   .guide-plan-preview > div { min-height: 11rem; padding: .55rem; font-size: .75rem; }
   .guide-people-preview { padding: 1rem; }
@@ -3624,14 +3544,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   overflow: visible;
 }
 :root[data-theme="dark"] .guide-page { --guide-dark: #101412; }
-.guide-titlebar {
-  min-height: 5.5rem;
-  padding-inline: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-.guide-titlebar .eyebrow { font-size: 1.2rem; }
 .guide-hero,
 .guide-feature,
 .guide-purpose,
@@ -3702,23 +3614,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   transition: opacity .55s ease;
 }
 .guide-video-placeholder video.is-active { opacity: 1; }
-.guide-video-toggle {
-  min-height: 2.5rem;
-  position: absolute;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 2;
-  padding: .45rem .9rem;
-  border: 1px solid rgba(255, 255, 255, .45);
-  border-radius: 999px;
-  background: rgba(20, 39, 31, .62);
-  color: #fff;
-  box-shadow: 0 .5rem 1.5rem rgba(0, 0, 0, .18);
-  backdrop-filter: blur(.65rem);
-  -webkit-backdrop-filter: blur(.65rem);
-}
-.guide-video-toggle:hover,
-.guide-video-toggle:focus-visible { background: rgba(20, 39, 31, .82); }
 .guide-proof-points {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -3952,17 +3847,7 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   background: var(--surface);
 }
 .guide-start-copy { max-width: 43rem; }
-.guide-profile-preview { max-width: 58rem; gap: 1.5rem; margin-top: 3rem; }
-.guide-profile-preview > :is(div, a) {
-  min-height: 14rem;
-  border: 0;
-  border-radius: .5rem;
-  background: var(--page);
-  box-shadow: 0 1rem 3rem var(--shadow-soft);
-}
-
 @media (max-width: 70rem) {
-  .guide-titlebar { padding-inline: 1.5rem; }
   .guide-hero { grid-template-columns: 1.5rem minmax(18rem, .9fr) minmax(0, 1.1fr) 1.5rem; }
   .guide-feature { grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1fr) 1.5rem; }
   .guide-purpose { grid-template-columns: 1.5rem minmax(0, 1fr) minmax(0, 1fr) 1.5rem; }
@@ -3971,7 +3856,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 @media (max-width: 48rem) {
   .private-profile-route:has(.guide-page) .page-shell { width: 100%; }
   .guide-page { overflow: hidden; }
-  .guide-titlebar { padding-inline: 1rem; }
   .guide-hero {
     grid-template-columns: 1fr;
     padding: 4.5rem 1.25rem 3rem;
@@ -4012,7 +3896,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   .guide-feature > .guide-feature-visual { min-height: 18rem; order: 2; border-top: 0; }
   .guide-overview,
   .guide-start { padding: 4.5rem 1.25rem; }
-  .guide-profile-preview { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 30rem) {
@@ -4021,12 +3904,11 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 .inbox-page,
 .conversation-page,
 .private-profile-page,
-.plans-page,
 .filter-pill-scroller,
 .discovery-filter-panel,
 .discovery-grid > .card,
 .plan-card { border-color: var(--border-strong); }
-:root :is(.inbox-page, .conversation-page, .private-profile-page, .plans-page, .filter-pill-scroller, .discovery-filter-panel, .plan-card),
+:root :is(.inbox-page, .conversation-page, .private-profile-page, .filter-pill-scroller, .discovery-filter-panel, .plan-card),
 :root .discovery-grid > .card { border-color: var(--border-strong); }
 .guide-page .private-profile-header { border-bottom-color: var(--border); }
 
@@ -4239,7 +4121,7 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
 }
 
 /* Messages, profiles and plan shells share the same bright neutral hierarchy. */
-:root[data-theme="light"] :is(.inbox-page, .conversation-page, .private-profile-page, .plans-page) {
+:root[data-theme="light"] :is(.inbox-page, .conversation-page, .private-profile-page) {
   border-color: var(--border);
   background: var(--surface);
   color: var(--ink);
@@ -4349,19 +4231,6 @@ legend { padding-inline: .35rem; font-weight: var(--font-semibold); }
   border-color: var(--border);
   background: var(--surface);
   color: var(--accent-strong);
-}
-:root[data-theme="light"] .plans-filter-strip a {
-  border-color: var(--border);
-  background: var(--soft);
-  color: var(--muted);
-}
-:root[data-theme="light"] .plans-filter-strip a[aria-current="page"] {
-  border-color: var(--accent-strong);
-  background: var(--accent-strong);
-  color: var(--on-accent);
-}
-:root[data-theme="light"] .plans-intro {
-  border-bottom-color: var(--border);
 }
 :root[data-theme="light"] .plan-card:not(.plan-card--with-image) {
   border: 1px solid var(--border);

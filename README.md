@@ -344,27 +344,23 @@ pip-audit --local --skip-editable
 | --- | --- |
 | Django system and deployment checks | Passed with 0 issues |
 | Migration drift check | Passed |
-| Focused PostgreSQL pytest suite | **48 tests passed** |
-| Branch-aware Coverage.py report | **80%**, meeting the configured minimum |
+| Focused PostgreSQL pytest suite | **25 tests passed** |
+| Branch-aware Coverage.py report | **69%**, meeting the configured minimum |
 | Ruff | Passed |
 | Bandit | Passed with no unsuppressed findings |
 | pip-audit | No known vulnerabilities found in installed dependencies |
 | Static collection and dependency consistency | Passed |
 | W3C CSS Validator | **Pass** |
 | HTML Checker | **Pass** |
-| Lighthouse | Performance **94**, Accessibility **100**, Best Practices **100**, SEO **90** |
+| Lighthouse | Plans Performance **93**, Discover **98**, Messages **99**; Accessibility, Best Practices and SEO **100** on all three pages |
 
 [View screenshots of the HTML, CSS and Lighthouse results](https://docs.google.com/document/d/1JyWivhJncSulWrqepOKu2DkVEdx2hoze0tvE9_bE7eY/edit?tab=t.0).
 
-The focused automated suite covers authentication, profile ownership, staff
-verification, discovery limits, images, plan capacity and concurrency,
-participation requests and decisions, direct and plan-chat messaging,
-notifications, blocks, private reports, Stripe events, Ollama boundaries, CSRF
-and privacy responses. External provider calls
-use controlled replacements during automated tests. The configured coverage
-total focuses on the core application and omits generated migrations plus the
-Django Admin, public metadata fetcher and Ollama provider adapter. Their key
-permission, URL-safety, media and privacy boundaries remain directly tested.
+The deliberately small automated suite covers the critical paths: account
+access and ownership, profile privacy, plan creation and participation,
+capacity locking, direct and plan-chat messaging, notifications, blocks,
+private reports, Stripe events, Ollama data boundaries, CSRF and safe error
+responses. External provider calls use controlled replacements during tests.
 
 Manual browser results are recorded in
 [`docs/MANUAL_TESTING.md`](docs/MANUAL_TESTING.md).
